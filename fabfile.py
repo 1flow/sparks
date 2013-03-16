@@ -2,7 +2,6 @@
 
 import os
 import sys
-import warnings
 
 from fabric.api              import env, run, sudo, local, task
 from fabric.operations       import put
@@ -11,25 +10,12 @@ from fabric.contrib.files    import append, exists, sed
 from fabric.context_managers import cd, settings, hide
 from fabric.colors           import yellow, cyan
 
-
-if __name__ in ('__main__', 'fabfile') and __package__ is None:
+if __package__ is None:
     # See #2 comment of http://stackoverflow.com/a/11537218/654755
     # and http://www.python.org/dev/peps/pep-0366/
     sys.path.append(os.path.expanduser('~/Dropbox'))
-    sys.path.append(os.path.expanduser('~/Dropbox/sparks'))
-    __package__ = "sparks.fabfile"
 
-with warnings.catch_warnings():
-    # Avoid: RuntimeWarning: Parent module 'sparks.fabfile'
-    #        not found while handling absolute import
-    # I know the situation is very special…
-    warnings.filterwarnings('ignore', category=RuntimeWarning)
-
-    try:
-        from sparks import fabric as sf
-
-    except ImportError:
-        from . import fabric as sf
+from sparks import fabric as sf
 
 # ================================================ Fabric configuration
 

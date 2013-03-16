@@ -3,11 +3,11 @@
 import sys
 import os
 
-try:
-    from sparks import fabric as sf
+if __package__ is None:
+    # See ./fabfile.py for explanations
+    sys.path.append(os.path.expanduser('~/Dropbox'))
 
-except ImportError:
-    from . import fabric as sf
+from sparks import fabric as sf
 
 if sf.lsb_release:
     if sf.is_vm:
