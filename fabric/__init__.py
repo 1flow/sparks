@@ -298,8 +298,10 @@ def brew_add(pkgs):
 
         .. note:: we always use FORCE_UNSAFE_CONFIGURE=1 to avoid errors::
 
-            checking whether mknod can create fifo without root privileges... configure: error: in `/private/tmp/coreutils-zCgv/coreutils-8.21':
-            configure: error: you should not run configure as root (set FORCE_UNSAFE_CONFIGURE=1 in environment to bypass this check)
+            checking whether mknod can create fifo without root privileges...
+             configure: error: in `/private/tmp/coreutils-zCgv/coreutils-8.21':
+            configure: error: you should not run configure as root (set
+                FORCE_UNSAFE_CONFIGURE=1 in environment to bypass this check)
             See `config.log' for more details
             READ THIS: https://github.com/mxcl/homebrew/wiki/troubleshooting
     """
