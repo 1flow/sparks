@@ -565,10 +565,11 @@ def mydevenv():
     with cd(sf.tilde('sources')):
         sf.symlink('../Dropbox/sparks', 'sparks')
 
-    git_clone_or_update('flake8', 'https://github.com/bmcustodio/flake8.git')
+    # Not yet ready
+    #git_clone_or_update('1flow', 'dev.1flow.net:/home/groups/oneflow.git')
+
     git_clone_or_update('licorn', 'dev.licorn.org:/home/groups/licorn.git')
     git_clone_or_update('mylicorn', 'my.licorn.org:/home/groups/mylicorn.git')
-    #git_clone_or_update('1flow', 'dev.1flow.net:/home/groups/oneflow.git')
 
 
 @task
