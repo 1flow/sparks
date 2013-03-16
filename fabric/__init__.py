@@ -228,7 +228,7 @@ def apt_is_installed(pkg):
 
     # OMG, this is so ugly. but `dpkg -l %s` will answer
     # 'un <package> uninstalled' + exit 0 if not installed.
-    return is_installed('dpkg -l | grep " %s "' % pkg)
+    return is_installed('dpkg -l | grep -E "^(ii|rc)  %s "' % pkg)
 
 
 def apt_update():
