@@ -542,9 +542,11 @@ def mydevenv():
 
     deployment()
 
-    # NO clone, it's already in my dropbox! via mydotfiles
+    # NO clone, it's already in my dropbox!
     #git_clone_or_update('sparks', 'git@github.com:Karmak23/sparks.git')
 
+    # Just symlink it to my sources for centralization/normalization
+    # purposes. Or is it just bad-habits? ;-)
     with cd(sf.tilde('sources')):
         sf.symlink('../Dropbox/sparks', 'sparks')
 
