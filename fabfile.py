@@ -340,8 +340,9 @@ def dev_web():
 
     dev_mini()
 
-    # Because of http://stackoverflow.com/q/7214474/654755
-    sf.ppa('ppa:chris-lea/node.js')
+    if not is_osx:
+        # Because of http://stackoverflow.com/q/7214474/654755
+        sf.ppa('ppa:chris-lea/node.js')
 
     sf.pkg_add(('nodejs', 'npm', ))
 
