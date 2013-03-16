@@ -11,7 +11,7 @@ except ImportError:
     lsb_release = None
 
 try:
-    from fabric.api              import run, sudo, local
+    from fabric.api              import run, sudo, local, task
     from fabric.contrib.files    import exists
     from fabric.context_managers import cd
     from fabric.colors           import green
@@ -371,6 +371,34 @@ def pkg_upgrade():
         return apt_upgrade()
     else:
         return brew_upgrade()
+
+# ============================================= Global package upgrades
+
+
+@task
+def update():
+
+    #pip_update()
+    #npm_update()
+    #gem_update()
+
+    if lsb:
+        apt_update()
+    else:
+        brew_update()
+
+
+@task
+def upgrade(update=False):
+
+    #pip_update()
+    #npm_upgrade()
+    #gem_update()
+
+    if lsb:
+        apt_upgrade()
+    else:
+        brew_upgrade()
 
 # ============================================ Local system information
 
