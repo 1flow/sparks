@@ -223,10 +223,21 @@ def sys_del_useless():
     if is_osx:
         return
 
-    sf.apt_del(('apport', 'landscape-client-ui-install', 'gnome-orca',
+    sf.apt_del(('apport', 'python-apport',
+                'landscape-client-ui-install', 'gnome-orca',
                 'brltty', 'libbrlapi0.5', 'python3-brlapi', 'python-brlapi',
                 'ubuntuone-client', 'ubuntuone-control-panel',
                 'rhythmbox-ubuntuone', 'python-ubuntuone-client', 'onboard'))
+
+
+@task
+def sys_default_services():
+
+    if is_osx:
+        # Activate locate on OSX.
+        sudo('launchctl load -w '
+             '/System/Library/LaunchDaemons/com.apple.locate.plist', quiet=True)
+
 
 # ------------------------------------------------- Development recipes
 
@@ -397,6 +408,7 @@ def base():
     sys_easy_sudo()
     sys_unattended()
     sys_del_useless()
+    sys_default_services()
 
     install_homebrew()
 
