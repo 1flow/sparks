@@ -239,6 +239,10 @@ def sys_default_services():
              '/System/Library/LaunchDaemons/com.apple.locate.plist', quiet=True)
 
 
+@task(aliases=('lperms', ))
+def local_perms():
+    with cd(sf.tilde()):
+        local('chmod 700 .ssh; chmod 600 .ssh/*')
 # ------------------------------------------------- Development recipes
 
 
