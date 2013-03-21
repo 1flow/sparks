@@ -11,15 +11,24 @@ except ImportError:
     lsb_release = None
 
 try:
-    from fabric.api              import run, sudo, local, task
+    from fabric.api              import run, sudo, local, task, env
     from fabric.contrib.files    import exists
     from fabric.context_managers import cd
     from fabric.colors           import green
+
+
+    if not env.all_hosts:
+        env.host_string = 'localhost'
 
     _wrap_fabric = False
 
 except ImportError:
     _wrap_fabric = True
+
+
+# Global way to turn all of this module silent.
+quiet = False
+
 # =============================================================== Utils
 
 
@@ -139,14 +148,16 @@ def search(search_command):
 # ---------------------------------------------- PIP package management
 
 
-def pip_perms():
+def pip_perms(verbose=True):
     """ Apply correct permissions on /usr/local/lib/*. Thanks PIP :-/ """
 
-    print(green('Restoring correct permissions in /usr/local/lib…'))
+    if verbose and not quiet:
+        print(green('Restoring correct permissions in /usr/local/lib…'))
+
     silent_sudo('find /usr/local/lib -type f -print0 '
-                '| xargs -0 -n 1024 chmod 644')
+                '| xargs -0 -n 1024 chmod u+rw,g+r,o+r')
     silent_sudo('find /usr/local/lib -type d -print0 '
-                '| xargs -0 -n 1024 chmod 755')
+                '| xargs -0 -n 1024 chmod u+rwx,g+rx,o+rx')
 
 
 def pip_is_installed(pkg):
@@ -377,6 +388,8 @@ def pkg_upgrade():
 
 @task
 def update():
+    """ Refresh all package management tools data (packages lists, receipes…).
+    """
 
     #pip_update()
     #npm_update()
@@ -390,6 +403,8 @@ def update():
 
 @task
 def upgrade(update=False):
+    """ Upgrade all outdated packages,
+        from all packages management tools at once. """
 
     #pip_update()
     #npm_upgrade()

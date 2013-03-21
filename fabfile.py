@@ -239,6 +239,10 @@ def sys_default_services():
              '/System/Library/LaunchDaemons/com.apple.locate.plist', quiet=True)
 
 
+@task(aliases=('lperms', ))
+def local_perms():
+    with cd(sf.tilde()):
+        local('chmod 700 .ssh; chmod 600 .ssh/*')
 # ------------------------------------------------- Development recipes
 
 
@@ -344,9 +348,19 @@ def dev_web():
         # Because of http://stackoverflow.com/q/7214474/654755
         sf.ppa('ppa:chris-lea/node.js')
 
-    sf.pkg_add(('nodejs', 'npm', ))
+    # NOTE: nodejs` PPA version already includes `npm`,
+    # no need to install it via a separate package on Ubuntu.
+    sf.pkg_add(('nodejs', ))
 
-    sf.npm_add(('less', 'yo', 'yeoman-bootstrap',
+    # But on others, we need.
+    if is_osx:
+        sf.pkg_add(('npm', ))
+
+    sf.npm_add(('less', 'yo',
+
+                # Not yet ready (package throws exceptions on install)
+                #'yeoman-bootstrap',
+
                 'bower', 'grunt-cli',
                 'generator-angular',
                 'coffeescript-compiler', 'coffeescript-concat',
@@ -591,6 +605,10 @@ def mydotfiles(overwrite=False, locally=False):
                 local('mkdir .config') if locally else run('mkdir .config')
 
             with cd('.config'):
+                # These don't handle the Dropboxed configuration / data
+                # correctly. We won't symlink their data automatically.
+                symlink_blacklist = ('caffeine', )
+
                 base_path   = sf.tilde(sf.dotfiles('dot.config'))
                 ln_src_path = os.path.join('..', base_path)
 
@@ -598,6 +616,12 @@ def mydotfiles(overwrite=False, locally=False):
                 # host, not the remote target.
                 for entry in os.listdir(base_path):
                     if entry.startswith('.'):
+                        continue
+
+                    if entry in symlink_blacklist:
+                        if not exists(entry):
+                            print("Please copy %s to ~/.config/ yourself."
+                                  % os.path.join(ln_src_path, entry))
                         continue
 
                     # But this will do the symlink remotely.
