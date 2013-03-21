@@ -605,6 +605,10 @@ def mydotfiles(overwrite=False, locally=False):
                 local('mkdir .config') if locally else run('mkdir .config')
 
             with cd('.config'):
+                # These don't handle the Dropboxed configuration / data
+                # correctly. We won't symlink their data automatically.
+                symlink_blacklist = ('caffeine', )
+
                 base_path   = sf.tilde(sf.dotfiles('dot.config'))
                 ln_src_path = os.path.join('..', base_path)
 
@@ -612,6 +616,12 @@ def mydotfiles(overwrite=False, locally=False):
                 # host, not the remote target.
                 for entry in os.listdir(base_path):
                     if entry.startswith('.'):
+                        continue
+
+                    if entry in symlink_blacklist:
+                        if not exists(entry):
+                            print("Please copy %s to ~/.config/ yourself."
+                                  % os.path.join(ln_src_path, entry))
                         continue
 
                     # But this will do the symlink remotely.
