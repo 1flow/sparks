@@ -388,6 +388,8 @@ def pkg_upgrade():
 
 @task
 def update():
+    """ Refresh all package management tools data (packages lists, receipes…).
+    """
 
     #pip_update()
     #npm_update()
@@ -401,6 +403,8 @@ def update():
 
 @task
 def upgrade(update=False):
+    """ Upgrade all outdated packages,
+        from all packages management tools at once. """
 
     #pip_update()
     #npm_upgrade()
