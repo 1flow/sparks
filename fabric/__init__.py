@@ -11,10 +11,14 @@ except ImportError:
     lsb_release = None
 
 try:
-    from fabric.api              import run, sudo, local, task
+    from fabric.api              import run, sudo, local, task, env
     from fabric.contrib.files    import exists
     from fabric.context_managers import cd
     from fabric.colors           import green
+
+
+    if not env.all_hosts:
+        env.host_string = 'localhost'
 
     _wrap_fabric = False
 
