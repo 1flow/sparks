@@ -348,9 +348,19 @@ def dev_web():
         # Because of http://stackoverflow.com/q/7214474/654755
         sf.ppa('ppa:chris-lea/node.js')
 
-    sf.pkg_add(('nodejs', 'npm', ))
+    # NOTE: nodejs` PPA version already includes `npm`,
+    # no need to install it via a separate package on Ubuntu.
+    sf.pkg_add(('nodejs', ))
 
-    sf.npm_add(('less', 'yo', 'yeoman-bootstrap',
+    # But on others, we need.
+    if is_osx:
+        sf.pkg_add(('npm', ))
+
+    sf.npm_add(('less', 'yo',
+
+                # Not yet ready (package throws exceptions on install)
+                #'yeoman-bootstrap',
+
                 'bower', 'grunt-cli',
                 'generator-angular',
                 'coffeescript-compiler', 'coffeescript-concat',
