@@ -24,6 +24,11 @@ try:
 
 except ImportError:
     _wrap_fabric = True
+
+
+# Global way to turn all of this module silent.
+quiet = False
+
 # =============================================================== Utils
 
 
@@ -143,10 +148,12 @@ def search(search_command):
 # ---------------------------------------------- PIP package management
 
 
-def pip_perms():
+def pip_perms(verbose=True):
     """ Apply correct permissions on /usr/local/lib/*. Thanks PIP :-/ """
 
-    print(green('Restoring correct permissions in /usr/local/lib…'))
+    if verbose and not quiet:
+        print(green('Restoring correct permissions in /usr/local/lib…'))
+
     silent_sudo('find /usr/local/lib -type f -print0 '
                 '| xargs -0 -n 1024 chmod 644')
     silent_sudo('find /usr/local/lib -type d -print0 '
