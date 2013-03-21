@@ -155,9 +155,9 @@ def pip_perms(verbose=True):
         print(green('Restoring correct permissions in /usr/local/lib…'))
 
     silent_sudo('find /usr/local/lib -type f -print0 '
-                '| xargs -0 -n 1024 chmod 644')
+                '| xargs -0 -n 1024 chmod u+rw,g+r,o+r')
     silent_sudo('find /usr/local/lib -type d -print0 '
-                '| xargs -0 -n 1024 chmod 755')
+                '| xargs -0 -n 1024 chmod u+rwx,g+rx,o+rx')
 
 
 def pip_is_installed(pkg):
