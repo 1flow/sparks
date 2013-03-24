@@ -172,6 +172,12 @@ def install_powerline(remote_configuration=None):
 
 @task
 @sf.with_remote_configuration
+def test(remote_configuration=None):
+    run('uname -a; uptime')
+
+
+@task
+@sf.with_remote_configuration
 def sys_easy_sudo(remote_configuration=None):
     """ Allow sudo to run without password for @sudo members. """
 
