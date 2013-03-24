@@ -43,12 +43,19 @@ class RemoteConfiguration(object):
                   "print lsb_release.get_lsb_information()'", quiet=True)
 
         try:
-            self.lsb    = ast.literal_eval(out)
+            self.lsb    = SimpleObject(from_dict=ast.literal_eval(out))
             self.is_osx = False
 
         except SyntaxError:
             self.lsb    = None
             self.is_osx = True
+
+            out = run("python -c 'import platform; "
+                      "print platform.mac_ver()'", quiet=True)
+
+            self.mac = SimpleObject(from_dict=dict(zip(
+                                    ('release', 'version', 'machine'),
+                                    ast.literal_eval(out))))
 
         out = run("python -c 'import os; print os.uname()'", quiet=True)
 
@@ -71,8 +78,11 @@ class RemoteConfiguration(object):
 
         self.is_vm = self.is_parallel or self.is_vmware
 
-        print('Remote: {type} {host} {vm}{arch}, {user} in {home}.'.format(
-              type=yellow('LSB' if self.lsb else 'OSX'),
+        print('Remote is {release} {host} {vm}{arch}, '
+              '{user} in {home}.'.format(
+              release='Apple OSX {0}'.format(self.mac.release)
+              if self.is_osx
+              else self.lsb.DESCRIPTION,
               host=cyan(self.uname.nodename),
               vm=('VMWare ' if self.is_vmware else 'Parallels ')
               if self.is_vm else '',

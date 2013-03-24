@@ -498,6 +498,10 @@ def deployment(remote_configuration=None):
     sf.pkg_del(('fabric', 'python-paramiko', ))
 
     sf.pkg_add(('dsh', ))
+
+    if not remote_configuration.is_osx:
+        sf.pkg_add(('python-all-dev', ))
+
     sf.pip_add(('fabric', ))
 
 
