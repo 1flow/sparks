@@ -573,6 +573,19 @@ def graphshortcuts():
               % (key, value))
 
 
+@task(aliases=('coc', ))
+def clear_osx_cache():
+    if not is_osx:
+        return
+
+    # cf. http://support.apple.com/kb/HT3540
+    # from http://apple.stackexchange.com/q/33312
+    # because opendirectoryd takes 100% CPU on my MBPr.
+    run('dscl . -list Computers | grep -v "^localhost$" '
+        '| while read computer_name ; do sudo dscl . -delete '
+        'Computers/"$computer_name" ; done', quiet=True)
+
+
 # =========================================== My personnal environments
 
 
