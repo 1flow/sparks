@@ -9,7 +9,7 @@ from ..foundations.classes import SimpleObject
 import nofabric
 
 try:
-    from fabric.api              import run, sudo, local, task
+    from fabric.api              import run, sudo, local, task, env
     from fabric.contrib.files    import exists
     from fabric.context_managers import cd
     from fabric.colors           import green, yellow, cyan
@@ -35,9 +35,15 @@ quiet = False
 
 # =========================================== Remote system information
 
+remote_configuration = None
+
 
 class RemoteConfiguration(object):
-    def __init__(self):
+    """ Define an easy to use object with remote machine configuration. """
+
+    def __init__(self, host_string):
+
+        self.host_string = host_string
 
         out = run("python -c 'import lsb_release; "
                   "print lsb_release.get_lsb_information()'", quiet=True)
@@ -91,8 +97,6 @@ class RemoteConfiguration(object):
               home=self.tilde,
               ))
 
-remote_configuration = None
-
 
 def with_remote_configuration(func):
 
@@ -100,7 +104,11 @@ def with_remote_configuration(func):
     def wrapped(*args, **kwargs):
         global remote_configuration
         if remote_configuration is None:
-            remote_configuration = RemoteConfiguration()
+            remote_configuration = RemoteConfiguration(env.host_string)
+
+        elif remote_configuration.host_string != env.host_string:
+            # host changed: fabric is running the same task on another host.
+            remote_configuration = RemoteConfiguration(env.host_string)
 
         return func(*args, remote_configuration=remote_configuration, **kwargs)
 
