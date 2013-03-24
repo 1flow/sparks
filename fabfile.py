@@ -22,8 +22,6 @@ from sparks import fabric as sf
 env.use_ssh_config = True
 env.roledefs       = sf.dsh_to_roledefs()
 
-is_osx = sf.lsb is None
-
 
 def info(text):
     print(cyan(text))
@@ -33,10 +31,11 @@ def info(text):
 # -------------------------------------- Standalone application recipes
 
 
-def install_chrome():
+@sf.with_remote_configuration
+def install_chrome(remote_configuration=None):
     """ Install Google Chrome via .DEB packages from Google. """
 
-    if is_osx:
+    if remote_configuration.is_osx:
         if not exists('/Applications/Google Chrome.app'):
             # TODO: implement me.
             info("Please install Google Chrome manually.")
@@ -53,10 +52,11 @@ def install_chrome():
         sf.apt_add('google-chrome-stable')
 
 
-def install_skype():
+@sf.with_remote_configuration
+def install_skype(remote_configuration=None):
     """ Install Skype 32bit via Ubuntu partner repository. """
 
-    if is_osx:
+    if remote_configuration.is_osx:
         if not exists('/Applications/Skype.app'):
             # TODO: implement me.
             info("Please install %s manually." % yellow('Skype'))
@@ -66,10 +66,11 @@ def install_skype():
                    % sf.lsb.CODENAME, 'skype', '/usr/bin/skype')
 
 
-def install_sublime(overwrite=False):
+@sf.with_remote_configuration
+def install_sublime(overwrite=False, remote_configuration=None):
     """ Install Sublime Text 2 in /opt via a downloaded .tar.bz2. """
 
-    if is_osx:
+    if remote_configuration.is_osx:
         if not exists('/Applications/Sublime Text.app'):
             # TODO: implement me.
             info("Please install Sublime Text manually.")
@@ -105,10 +106,11 @@ def install_sublime(overwrite=False):
                 '/usr/share/applications', use_sudo=True)
 
 
-def install_homebrew():
+@sf.with_remote_configuration
+def install_homebrew(remote_configuration=None):
     """ Install Homebrew on OSX from http://mxcl.github.com/homebrew/ """
 
-    if not is_osx:
+    if not remote_configuration.is_osx:
         return
 
     if exists('/usr/local/bin/brew'):
@@ -131,10 +133,11 @@ def install_homebrew():
             sf.brew_update()
 
 
-def install_1password():
+@sf.with_remote_configuration
+def install_1password(remote_configuration=None):
     """ NOT IMPLEMENTED: Install 1Password. """
 
-    if is_osx:
+    if remote_configuration.is_osx:
         if not exists('/Applications/1Password.app'):
             info('Please install %s manually.' % yellow('1Password'))
 
@@ -143,10 +146,11 @@ def install_1password():
         sf.apt_add('wine')
 
 
-def install_powerline():
+@sf.with_remote_configuration
+def install_powerline(remote_configuration=None):
     """ Install the Ubuntu Mono patched font and powerline (runs dev_mini). """
 
-    if is_osx:
+    if remote_configuration.is_osx:
         if not exists(sf.tilde('Library/Fonts/UbuntuMono-B-Powerline.ttf')):
             git_clone_or_update('ubuntu-mono-powerline-ttf',
                                 'https://github.com/pdf/'
@@ -167,10 +171,11 @@ def install_powerline():
 
 
 @task
-def sys_easy_sudo():
+@sf.with_remote_configuration
+def sys_easy_sudo(remote_configuration=None):
     """ Allow sudo to run without password for @sudo members. """
 
-    if is_osx:
+    if remote_configuration.is_osx:
         # GNU sed is needed for fabric `sed` command to succeed.
         sf.brew_add('gnu-sed')
         sf.symlink('/usr/local/bin/gsed', '/usr/local/bin/sed')
@@ -192,10 +197,11 @@ def sys_easy_sudo():
 
 
 @task
-def sys_unattended():
+@sf.with_remote_configuration
+def sys_unattended(remote_configuration=None):
     """ Install unattended-upgrades and set it up for daily auto-run. """
 
-    if is_osx:
+    if remote_configuration.is_osx:
         info("Skipped unattended-upgrades (not on LSB).")
         return
 
@@ -213,14 +219,15 @@ def sys_unattended():
 
 
 @task
-def sys_del_useless():
+@sf.with_remote_configuration
+def sys_del_useless(remote_configuration=None):
     """ Remove useless or annoying packages (LSB only).
 
         .. note:: cannot remove these, they remove world: ``at-spi2-core``
             ``qt-at-spi``.
     """
 
-    if is_osx:
+    if remote_configuration.is_osx:
         return
 
     sf.apt_del(('apport', 'python-apport',
@@ -231,24 +238,27 @@ def sys_del_useless():
 
 
 @task
-def sys_default_services():
+@sf.with_remote_configuration
+def sys_default_services(remote_configuration=None):
     """ Activate some system services I need / use. """
 
-    if is_osx:
+    if remote_configuration.is_osx:
         # Activate locate on OSX.
         sudo('launchctl load -w '
              '/System/Library/LaunchDaemons/com.apple.locate.plist', quiet=True)
 
 
 @task
-def sys_admin_pkgs():
+@sf.with_remote_configuration
+def sys_admin_pkgs(remote_configuration=None):
     """ Install some sysadmin related applications. """
 
     sf.pkg_add(('wget', 'multitail', ))
 
 
 @task(aliases=('lperms', ))
-def local_perms():
+@sf.with_remote_configuration
+def local_perms(remote_configuration=None):
     with cd(sf.tilde()):
         local('chmod 700 .ssh; chmod 600 .ssh/*')
 
@@ -256,7 +266,8 @@ def local_perms():
 # ------------------------------------------------- Development recipes
 
 
-def git_clone_or_update(project, github_source):
+@sf.with_remote_configuration
+def git_clone_or_update(project, github_source, remote_configuration=None):
     """ Clones or update a repository. """
 
     dev_mini()
@@ -272,7 +283,8 @@ def git_clone_or_update(project, github_source):
 
 
 @task
-def dev_graphviz():
+@sf.with_remote_configuration
+def dev_graphviz(remote_configuration=None):
     """ Graphviz and required packages for PYgraphviz. """
 
     # graphviz-dev will fail on OSX, but graphiv will install
@@ -283,10 +295,11 @@ def dev_graphviz():
 
 
 @task
-def dev_pil(virtualenv=None):
+@sf.with_remote_configuration
+def dev_pil(virtualenv=None, remote_configuration=None):
     """ Required packages to build Python PIL. """
 
-    if is_osx:
+    if remote_configuration.is_osx:
         pilpkgs = ('jpeg', 'libpng', 'libxml2',
                    'freetype', 'libxslt', 'lzlib',
                    'imagemagick')
@@ -297,20 +310,19 @@ def dev_pil(virtualenv=None):
 
     sf.pkg_add(pilpkgs)
 
-    if not is_osx:
+    if not remote_configuration.is_osx:
         # Be protective by default, this should be done
         # only in LXC / Virtual machines guests, in order
         # not to pollute the base host system.
         if confirm('Create symlinks in /usr/lib?', default=False):
-
-            arch = sf.uname.machine
 
             with cd('/usr/lib'):
                 # TODO: check it works (eg. it suffices
                 # to correctly build PIL via PIP).
                 for libname in ('libjpeg', 'libfreetype', 'libz'):
                     sf.symlink('/usr/lib/%s-linux-gnu/%s.so'
-                               % (arch, libname), '%s.so' % libname)
+                               % (remote_configuration.arch, libname),
+                               '%s.so' % libname)
 
             # TODO:     with prefix('workon myvenv'):
             # This must be done in the virtualenv, not system-wide.
@@ -320,51 +332,56 @@ def dev_pil(virtualenv=None):
 
 
 @task
-def dev_tildesources():
+@sf.with_remote_configuration
+def dev_tildesources(remote_configuration=None):
     """ Create ~/sources if not existing. """
 
     with cd(sf.tilde()):
         if not exists('sources'):
-            if sf.is_vm:
-                if sf.is_parallel:
+            if remote_configuration.is_vm:
+                if remote_configuration.is_parallel:
                     sf.symlink('/media/psf/Home/sources', 'sources')
             else:
                 run('mkdir sources')
 
 
 @task
-def dev_mysql():
+@sf.with_remote_configuration
+def dev_mysql(remote_configuration=None):
     """ MySQL development environment (for python packages build). """
 
-    sf.pkg_add('' if is_osx else 'libmysqlclient-dev')
+    sf.pkg_add('' if remote_configuration.is_osx else 'libmysqlclient-dev')
 
 
 @task
-def dev_sqlite():
+@sf.with_remote_configuration
+def dev_sqlite(remote_configuration=None):
     """ SQLite development environment (for python packages build). """
 
-    if not is_osx:
+    if not remote_configuration.is_osx:
         sf.pkg_add(('libsqlite3-dev', 'python-all-dev', ))
 
     sf.pip_add(('pysqlite', ))
 
 
 @task
-def dev_mini():
+@sf.with_remote_configuration
+def dev_mini(remote_configuration=None):
     """ Git and ~/sources/ """
 
-    sf.pkg_add(('git' if is_osx else 'git-core'))
+    sf.pkg_add(('git' if remote_configuration.is_osx else 'git-core'))
 
     dev_tildesources()
 
 
 @task
-def dev_web():
+@sf.with_remote_configuration
+def dev_web(remote_configuration=None):
     """ Web development packages (NodeJS, Less, Compass…). """
 
     dev_mini()
 
-    if not is_osx:
+    if not remote_configuration.is_osx:
         # Because of http://stackoverflow.com/q/7214474/654755
         sf.ppa('ppa:chris-lea/node.js')
 
@@ -373,7 +390,7 @@ def dev_web():
     sf.pkg_add(('nodejs', ))
 
     # But on others, we need.
-    if is_osx:
+    if remote_configuration.is_osx:
         sf.pkg_add(('npm', ))
 
     sf.npm_add(('less', 'yo',
@@ -390,12 +407,13 @@ def dev_web():
 
 
 @task
-def dev():
+@sf.with_remote_configuration
+def dev(remote_configuration=None):
     """ Generic development (dev_mini + git-flow + Python & Ruby utils). """
 
     dev_mini()
 
-    if is_osx:
+    if remote_configuration.is_osx:
         # On OSX:
         #    - ruby & gem are already installed.
         #     - via Brew, python will install PIP.
@@ -424,31 +442,37 @@ def dev():
 
 
 @task
-def db_sqlite():
+@sf.with_remote_configuration
+def db_sqlite(remote_configuration=None):
     """ SQLite database library. """
 
-    sf.pkg_add('sqlite' if is_osx else 'sqlite3')
+    sf.pkg_add('sqlite' if remote_configuration.is_osx else 'sqlite3')
 
 
 @task
-def db_mysql():
+@sf.with_remote_configuration
+def db_mysql(remote_configuration=None):
     """ MySQL database server. """
 
-    sf.pkg_add('mysql' if is_osx else 'mysql-server')
+    sf.pkg_add('mysql' if remote_configuration.is_osx else 'mysql-server')
 
 
 @task
-def db_postgres():
+@sf.with_remote_configuration
+def db_postgres(remote_configuration=None):
     """ PostgreSQL database server. """
 
-    sf.pkg_add('postgresql' if is_osx else 'postgresql-9.1')
+    sf.pkg_add('postgresql'
+               if remote_configuration.is_osx
+               else 'postgresql-9.1')
 
 
 # -------------------------------------- Server or console applications
 
 
 @task
-def base():
+@sf.with_remote_configuration
+def base(remote_configuration=None):
     """ sys_* + brew (on OSX) + byobu, bash-completion, htop. """
 
     sys_easy_sudo()
@@ -460,11 +484,12 @@ def base():
     install_homebrew()
 
     sf.pkg_add(('byobu', 'bash-completion',
-                'htop-osx' if is_osx else 'htop'))
+                'htop-osx' if remote_configuration.is_osx else 'htop'))
 
 
 @task
-def deployment():
+@sf.with_remote_configuration
+def deployment(remote_configuration=None):
     """ Install Fabric (via PIP for latest paramiko). """
 
     # We remove the system packages in case they were previously
@@ -477,10 +502,11 @@ def deployment():
 
 
 @task
-def lxc():
+@sf.with_remote_configuration
+def lxc(remote_configuration=None):
     """ LXC local runner (guests manager). """
 
-    if is_osx:
+    if remote_configuration.is_osx:
         info("Skipped LXC host setup (not on LSB).")
         return
 
@@ -492,7 +518,8 @@ def lxc():
 
 
 @task
-def graphdev():
+@sf.with_remote_configuration
+def graphdev(remote_configuration=None):
     """ Graphical applications for the typical development environment.
 
         .. todo:: clean / refactor contents (OSX mainly).
@@ -500,7 +527,7 @@ def graphdev():
 
     sf.pkg_add(('pdksh', 'zsh', ))
 
-    if is_osx:
+    if remote_configuration.is_osx:
         # TODO: download/install on OSX:
         for app in ('iTerm', 'TotalFinder', 'Google Chrome', 'Airfoil', 'Adium',
                     'iStat Menus', 'LibreOffice', 'Firefox', 'Aperture',
@@ -515,10 +542,11 @@ def graphdev():
 
 
 @task
-def graphdb():
+@sf.with_remote_configuration
+def graphdb(remote_configuration=None):
     """ Graphical and client packages for databases. """
 
-    if is_osx:
+    if remote_configuration.is_osx:
         info("Skipped graphical DB-related packages (not on LSB).")
         return
 
@@ -526,10 +554,11 @@ def graphdb():
 
 
 @task
-def graph():
+@sf.with_remote_configuration
+def graph(remote_configuration=None):
     """ Poweruser graphical applications. """
 
-    if is_osx:
+    if remote_configuration.is_osx:
         info("Skipped graphical APT packages (not on LSB).")
         return
 
@@ -556,9 +585,10 @@ def graph():
 
 
 @task(aliases=('graphkbd', 'kbd', ))
-def graphshortcuts():
+@sf.with_remote_configuration
+def graphshortcuts(remote_configuration=None):
     """ Gconf / Dconf keyboard shortcuts for back-from-resume loose. """
-    if is_osx:
+    if remote_configuration.is_osx:
         return
 
     for key, value in (('activate-window-menu', "['<Shift><Alt>space']"),
@@ -574,8 +604,9 @@ def graphshortcuts():
 
 
 @task(aliases=('coc', ))
-def clear_osx_cache():
-    if not is_osx:
+@sf.with_remote_configuration
+def clear_osx_cache(remote_configuration=None):
+    if not remote_configuration.is_osx:
         return
 
     # cf. http://support.apple.com/kb/HT3540
@@ -590,21 +621,23 @@ def clear_osx_cache():
 
 
 @task
-def myapps():
+@sf.with_remote_configuration
+def myapps(remote_configuration=None):
     """ Skype + Chrome + Sublime + 1Password """
 
     install_skype()
     install_chrome()
     install_sublime()
 
-    if not sf.is_vm:
+    if not remote_configuration.is_vm:
         # No need to pollute the VM with wine,
         # I already have 1Password installed under OSX.
         install_1password()
 
 
 @task
-def mydevenv():
+@sf.with_remote_configuration
+def mydevenv(remote_configuration=None):
     """ Clone my professional / personnal projects with GIT in ~/sources """
 
     install_powerline()
@@ -630,7 +663,8 @@ def mydevenv():
 
 
 @task
-def mydotfiles(overwrite=False, locally=False):
+@sf.with_remote_configuration
+def mydotfiles(overwrite=False, locally=False, remote_configuration=None):
     """ Symlink a bunch of things to Dropbox/… """
 
     with cd(sf.tilde()):
@@ -645,7 +679,7 @@ def mydotfiles(overwrite=False, locally=False):
             sf.symlink(sf.dotfiles('dot.%s' % filename),
                        '.%s' % filename, overwrite=overwrite, locally=locally)
 
-        if not is_osx:
+        if not remote_configuration.is_osx:
             if not exists('.config'):
                 local('mkdir .config') if locally else run('mkdir .config')
 
@@ -675,7 +709,8 @@ def mydotfiles(overwrite=False, locally=False):
 
 
 @task(aliases=('myenv', ))
-def myfullenv():
+@sf.with_remote_configuration
+def myfullenv(remote_configuration=None):
     """ sudo + full + fullgraph + mydev + mypkg + mydot """
 
     base()
@@ -689,7 +724,7 @@ def myfullenv():
     mydevenv()
 
     # ask questions last, when everything else has been installed / setup.
-    if not is_osx and confirm(
+    if not remote_configuration.is_osx and confirm(
                 'Reinstall bcmwl-kernel-source (MacbookAir(3,2) late 2010)?',
                 default=False):
         # Reinstall / rebuild the BCM wlan driver.
@@ -698,21 +733,23 @@ def myfullenv():
 
 
 @task(aliases=('mysetup', ))
-def mybootstrap():
+@sf.with_remote_configuration
+def mybootstrap(remote_configuration=None):
     """ Bootstrap my personal environment on the local machine. """
 
     sf.apt_add(('ssh', ), locally=True)
 
-    mydotfiles(locally=True)
+    mydotfiles(remote_configuration=None, locally=True)
 
 # ============================================= LXC guests environments
 
 
 @task
-def lxc_base():
+@sf.with_remote_configuration
+def lxc_base(remote_configuration=None):
     """ Base packages for an LXC guest (base+LANG+dev). """
 
-    if is_osx:
+    if remote_configuration.is_osx:
         info('Skipped lxc_base (not on LSB).')
         return
 
@@ -733,7 +770,8 @@ def lxc_base():
 
 
 @task
-def lxc_server():
+@sf.with_remote_configuration
+def lxc_server(remote_configuration=None):
     """ LXC base + server packages (Pg). """
 
     lxc_base()
