@@ -232,6 +232,7 @@ def sys_del_useless():
 
 @task
 def sys_default_services():
+    """ Activate some system services I need / use. """
 
     if is_osx:
         # Activate locate on OSX.
@@ -239,10 +240,19 @@ def sys_default_services():
              '/System/Library/LaunchDaemons/com.apple.locate.plist', quiet=True)
 
 
+@task
+def sys_admin_pkgs():
+    """ Install some sysadmin related applications. """
+
+    sf.pkg_add(('wget', 'multitail', ))
+
+
 @task(aliases=('lperms', ))
 def local_perms():
     with cd(sf.tilde()):
         local('chmod 700 .ssh; chmod 600 .ssh/*')
+
+
 # ------------------------------------------------- Development recipes
 
 
@@ -330,6 +340,16 @@ def dev_mysql():
 
 
 @task
+def dev_sqlite():
+    """ SQLite development environment (for python packages build). """
+
+    if not is_osx:
+        sf.pkg_add(('libsqlite3-dev', 'python-all-dev', ))
+
+    sf.pip_add(('pysqlite', ))
+
+
+@task
 def dev_mini():
     """ Git and ~/sources/ """
 
@@ -404,6 +424,13 @@ def dev():
 
 
 @task
+def db_sqlite():
+    """ SQLite database library. """
+
+    sf.pkg_add('sqlite' if is_osx else 'sqlite3')
+
+
+@task
 def db_mysql():
     """ MySQL database server. """
 
@@ -416,6 +443,7 @@ def db_postgres():
 
     sf.pkg_add('postgresql' if is_osx else 'postgresql-9.1')
 
+
 # -------------------------------------- Server or console applications
 
 
@@ -427,6 +455,7 @@ def base():
     sys_unattended()
     sys_del_useless()
     sys_default_services()
+    sys_admin_pkgs()
 
     install_homebrew()
 
@@ -594,9 +623,12 @@ def mydotfiles(overwrite=False, locally=False):
     with cd(sf.tilde()):
 
         sf.symlink('Dropbox/bin', 'bin', overwrite=overwrite, locally=locally)
+        sf.symlink('Dropbox/configuration/virtualenvs', '.virtualenvs',
+                   overwrite=overwrite, locally=locally)
 
         for filename in ('dsh', 'ssh', 'ackrc', 'bashrc', 'fabricrc',
-                         'gitconfig', 'gitignore', 'dupload.conf'):
+                         'gitconfig', 'gitignore', 'dupload.conf',
+                         'multitailrc'):
             sf.symlink(sf.dotfiles('dot.%s' % filename),
                        '.%s' % filename, overwrite=overwrite, locally=locally)
 
