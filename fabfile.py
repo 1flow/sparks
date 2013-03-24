@@ -558,7 +558,7 @@ def graph():
 @task(aliases=('graphkbd', 'kbd', ))
 def graphshortcuts():
     """ Gconf / Dconf keyboard shortcuts for back-from-resume loose. """
-    if not sf.lsb:
+    if is_osx:
         return
 
     for key, value in (('activate-window-menu', "['<Shift><Alt>space']"),
