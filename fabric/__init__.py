@@ -12,7 +12,7 @@ try:
     from fabric.api              import run, sudo, local, task, env
     from fabric.contrib.files    import exists
     from fabric.context_managers import cd
-    from fabric.colors           import green, yellow, cyan
+    from fabric.colors           import green, cyan
 
     #from fabric.api              import env
 
