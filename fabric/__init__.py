@@ -267,7 +267,7 @@ def gem_search(pkgs):
 
 @with_remote_configuration
 def apt_usable(remote_configuration=None):
-    return remote_configuration.lsb is not None
+    return not remote_configuration.is_osx
 
 
 def apt_is_installed(pkg):
@@ -331,7 +331,7 @@ def apt_search(pkgs):
 
 @with_remote_configuration
 def brew_usable(remote_configuration=None):
-    return remote_configuration.lsb is None
+    return remote_configuration.is_osx
 
 
 def brew_is_installed(pkg):
