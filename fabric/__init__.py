@@ -514,8 +514,7 @@ def update(remote_configuration=None):
 @task
 @with_remote_configuration
 def upgrade(update=False, remote_configuration=None):
-    """ Upgrade all outdated packages,
-        from all packages management tools at once. """
+    """ Upgrade all outdated packages from all pkg management tools at once. """
 
     #pip_update()
     #npm_upgrade()

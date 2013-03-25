@@ -173,6 +173,9 @@ def install_powerline(remote_configuration=None):
 @task
 @sf.with_remote_configuration
 def test(remote_configuration=None):
+    """ Just run `uname -a; uptime` remotely, to test the connection
+        or sparks core libs. """
+
     run('uname -a; uptime')
 
 
@@ -265,6 +268,8 @@ def sys_admin_pkgs(remote_configuration=None):
 @task(aliases=('lperms', ))
 @sf.with_remote_configuration
 def local_perms(remote_configuration=None):
+    """ Re-apply correct permissions on well-known files (eg .ssh/*) """
+
     with cd(sf.tilde()):
         local('chmod 700 .ssh; chmod 600 .ssh/*')
 
@@ -616,6 +621,8 @@ def graphshortcuts(remote_configuration=None):
 @task(aliases=('coc', ))
 @sf.with_remote_configuration
 def clear_osx_cache(remote_configuration=None):
+    """ Clears some OSX cache, to avoid opendirectoryd to hog CPU. """
+
     if not remote_configuration.is_osx:
         return
 
