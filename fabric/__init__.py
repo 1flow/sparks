@@ -12,7 +12,7 @@ try:
     from fabric.api              import run, sudo, local, task, env
     from fabric.contrib.files    import exists
     from fabric.context_managers import cd
-    from fabric.colors           import green, yellow, cyan
+    from fabric.colors           import green, cyan
 
     #from fabric.api              import env
 
@@ -36,12 +36,13 @@ quiet = False
 # =========================================== Remote system information
 
 remote_configuration = None
+local_configuration  = None
 
 
 class RemoteConfiguration(object):
     """ Define an easy to use object with remote machine configuration. """
 
-    def __init__(self, host_string):
+    def __init__(self, host_string, verbose=False):
 
         self.host_string = host_string
 
@@ -84,18 +85,62 @@ class RemoteConfiguration(object):
 
         self.is_vm = self.is_parallel or self.is_vmware
 
-        print('Remote is {release} {host} {vm}{arch}, '
-              '{user} in {home}.'.format(
-              release='Apple OSX {0}'.format(self.mac.release)
-              if self.is_osx
-              else self.lsb.DESCRIPTION,
-              host=cyan(self.uname.nodename),
-              vm=('VMWare ' if self.is_vmware else 'Parallels ')
-              if self.is_vm else '',
-              arch=self.uname.machine,
-              user=cyan(self.user),
-              home=self.tilde,
-              ))
+        if verbose:
+            print('Remote is {release} {host} {vm}{arch}, '
+                  '{user} in {home}.'.format(
+                  release='Apple OSX {0}'.format(self.mac.release)
+                  if self.is_osx
+                  else self.lsb.DESCRIPTION,
+                  host=cyan(self.uname.nodename),
+                  vm=('VMWare ' if self.is_vmware else 'Parallels ')
+                  if self.is_vm else '',
+                  arch=self.uname.machine,
+                  user=cyan(self.user),
+                  home=self.tilde,
+                  ))
+
+
+class LocalConfiguration(object):
+    """ Define an easy to use object with local machine configuration.
+
+        This class doesn't use fabric, it's used to bootstrap the local
+        machine when it's empty and doesn't have fabric installed yet.
+    """
+    def __init__(self, host_string):
+
+        self.host_string = host_string
+
+        try:
+            import lsb_release
+            self.lsb    = SimpleObject(
+                from_dict=lsb_release.get_lsb_information())
+            self.is_osx = False
+
+        except ImportError:
+            import platform
+            self.lsb    = None
+            self.is_osx = True
+            self.mac    = SimpleObject(from_dict=dict(zip(
+                                       ('release', 'version', 'machine'),
+                                       platform.mac_ver())))
+
+        self.uname = SimpleObject(from_dict=dict(zip(
+                                  ('sysname', 'nodename', 'release',
+                                  'version', 'machine'),
+                                  os.uname())))
+
+        self.user, self.tilde = nofabric._local('echo "${USER},${HOME}"',
+                                                ).output.strip().split(',')
+
+        # TODO: implement me (and under OSX too).
+        self.is_vmware = False
+
+        # NOTE: this test could fail in VMs where nothing is mounted from
+        # the host. In my own configs, this never occurs, but who knows.
+        # TODO: check this works under OSX too, or enhance the test.
+        self.is_parallel = nofabric._local('mount | grep prl_fs').succeeded
+
+        self.is_vm = self.is_parallel or self.is_vmware
 
 
 def with_remote_configuration(func):
@@ -104,15 +149,37 @@ def with_remote_configuration(func):
     def wrapped(*args, **kwargs):
         global remote_configuration
         if remote_configuration is None:
-            remote_configuration = RemoteConfiguration(env.host_string)
+            remote_configuration = find_configuration_type(env.host_string)
 
         elif remote_configuration.host_string != env.host_string:
             # host changed: fabric is running the same task on another host.
-            remote_configuration = RemoteConfiguration(env.host_string)
+            remote_configuration = find_configuration_type(env.host_string)
 
         return func(*args, remote_configuration=remote_configuration, **kwargs)
 
     return wrapped
+
+
+def with_local_configuration(func):
+
+    @functools.wraps(func)
+    def wrapped(*args, **kwargs):
+        global local_configuration
+        if local_configuration is None:
+            local_configuration = LocalConfiguration()
+
+        return func(*args, local_configuration=local_configuration, **kwargs)
+
+    return wrapped
+
+
+def find_configuration_type(hostname):
+    if hostname in ('localhost', 'localhost.localdomain',
+                    '127.0.0.1', '127.0.1.1'):
+        return LocalConfiguration(hostname)
+
+    else:
+        return RemoteConfiguration(hostname)
 
 
 # =============================================================== Utils
@@ -267,7 +334,7 @@ def gem_search(pkgs):
 
 @with_remote_configuration
 def apt_usable(remote_configuration=None):
-    return remote_configuration.lsb is not None
+    return not remote_configuration.is_osx
 
 
 def apt_is_installed(pkg):
@@ -331,7 +398,7 @@ def apt_search(pkgs):
 
 @with_remote_configuration
 def brew_usable(remote_configuration=None):
-    return remote_configuration.lsb is None
+    return remote_configuration.is_osx
 
 
 def brew_is_installed(pkg):
