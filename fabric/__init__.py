@@ -59,10 +59,15 @@ class RemoteConfiguration(object):
 
             out = run("python -c 'import platform; "
                       "print platform.mac_ver()'", quiet=True)
-
-            self.mac = SimpleObject(from_dict=dict(zip(
+            try:
+                self.mac = SimpleObject(from_dict=dict(zip(
                                     ('release', 'version', 'machine'),
                                     ast.literal_eval(out))))
+            except SyntaxError:
+                # something went very wrong,
+                # none of the detection methods worked.
+                raise RuntimeError(
+                    'cannot determine platform of {0}'.format(host_string))
 
         out = run("python -c 'import os; print os.uname()'", quiet=True)
 
@@ -514,8 +519,7 @@ def update(remote_configuration=None):
 @task
 @with_remote_configuration
 def upgrade(update=False, remote_configuration=None):
-    """ Upgrade all outdated packages,
-        from all packages management tools at once. """
+    """ Upgrade all outdated packages from all pkg management tools at once. """
 
     #pip_update()
     #npm_upgrade()
