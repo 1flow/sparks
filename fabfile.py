@@ -6,7 +6,7 @@ import sys
 from fabric.api              import env, run, sudo, local, task
 from fabric.operations       import put
 from fabric.contrib.console  import confirm
-from fabric.contrib.files    import append, exists, sed
+from fabric.contrib.files    import contains, append, exists, sed
 from fabric.context_managers import cd, settings, hide
 from fabric.colors           import yellow, cyan
 
@@ -265,6 +265,29 @@ def sys_admin_pkgs(remote_configuration=None):
     sf.pkg_add(('wget', 'multitail', ))
 
 
+@task
+@sf.with_remote_configuration
+def sys_ssh_powerline(remote_configuration=None):
+    """ Make remote SSHd accept the POWERLINE_SHELL environment variable. """
+
+    git_clone_or_update('powerline-shell',
+                        'git@github.com:Karmak23/powerline-shell.git')
+
+    if remote_configuration.is_osx:
+        # No need to reload on OSX, cf. http://superuser.com/q/478035/206338
+        config     = '/private/etc/sshd_config'
+        reload_ssh = None
+
+    else:
+        config     = '/etc/ssh/sshd_config'
+        reload_ssh = 'reload ssh'
+
+    if not contains(config, 'AcceptEnv POWERLINE_SHELL', use_sudo=True):
+        append(config, 'AcceptEnv POWERLINE_SHELL', use_sudo=True)
+        if reload_ssh:
+            sudo(reload_ssh)
+
+
 @task(aliases=('lperms', ))
 @sf.with_remote_configuration
 def local_perms(remote_configuration=None):
@@ -491,7 +514,7 @@ def base(remote_configuration=None):
     sys_del_useless()
     sys_default_services()
     sys_admin_pkgs()
-
+    sys_ssh_powerline()
     install_homebrew()
 
     sf.pkg_add(('byobu', 'bash-completion',
