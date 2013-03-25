@@ -31,6 +31,7 @@ def usable(module, suffix, name):
 
     except AttributeError:
         # no usability condition, it's OK to use.
+        #print '>>', usable_name, 'FORCE True'
         return True
 
 
