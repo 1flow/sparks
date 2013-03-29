@@ -255,6 +255,7 @@ def search(search_command):
 # ---------------------------------------------- PIP package management
 
 
+@task
 def pip_perms(verbose=True):
     """ Apply correct permissions on /usr/local/lib/*. Thanks PIP :-/ """
 
