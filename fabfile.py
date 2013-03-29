@@ -803,7 +803,7 @@ def lxc_base(remote_configuration=None):
     # Remove firefox's locale, it's completely sys_del_useless in a LXC.
     sf.apt_del(('firefox-locale-fr', 'firefox-locale-en', ))
 
-    # TODO: unattended-upgrades, nullmailer
+    # TODO: nullmailer, bsd-mailx… Cf. my LXC documentation.
 
     # install a dev env.
     dev()
