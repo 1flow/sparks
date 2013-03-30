@@ -429,25 +429,25 @@ def brew_add(pkgs):
 
     for pkg in list_or_split(pkgs):
         if not brew_is_installed(pkg):
-            sudo('FORCE_UNSAFE_CONFIGURE=1 brew install %s' % pkg)
+            run('FORCE_UNSAFE_CONFIGURE=1 brew install %s' % pkg)
 
 
 def brew_del(pkgs):
     for pkg in list_or_split(pkgs):
         if brew_is_installed(pkg):
-            sudo('brew remove %s' % pkg)
+            run('brew remove %s' % pkg)
 
 
 def brew_update():
     """ Update Homebrew formulas. """
 
-    sudo('brew update')
+    run('brew update')
 
 
 def brew_upgrade():
     """ Upgrade outdated brew packages. """
 
-    sudo('brew upgrade')
+    run('brew upgrade')
 
 
 def brew_search(pkgs):
