@@ -124,7 +124,9 @@ def install_homebrew(remote_configuration=None):
 
     else:
         sudo('ruby -e "$(curl -fsSL https://raw.github.com/mxcl/homebrew/go)"')
+
         sudo('brew doctor')
+        sf.brew_add(('git', ))
 
         # TODO: implement this.
         info('Please install OSX CLI tools for Xcode manually.')
@@ -510,12 +512,14 @@ def base(remote_configuration=None):
     """ sys_* + brew (on OSX) + byobu, bash-completion, htop. """
 
     sys_easy_sudo()
+
+    install_homebrew()
+
     sys_unattended()
     sys_del_useless()
     sys_default_services()
     sys_admin_pkgs()
     sys_ssh_powerline()
-    install_homebrew()
 
     sf.pkg_add(('byobu', 'bash-completion',
                 'htop-osx' if remote_configuration.is_osx else 'htop'))
