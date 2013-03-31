@@ -136,6 +136,25 @@ def install_homebrew(remote_configuration=None):
 
 
 @sf.with_remote_configuration
+def install_ntfs_support(remote_configuration=None, force=False):
+
+    if not remote_configuration.is_osx:
+        return
+
+    sf.brew_add(('fuse4x', 'ntfs-3g', ))
+
+    if force or not exists('/sbin/mount_ntfs.orig'):
+        sudo('mv /sbin/mount_ntfs /sbin/mount_ntfs.orig')
+        sudo('ln -s /usr/local/Cellar/ntfs-3g/*/sbin/mount_ntfs '
+             '/sbin/mount_ntfs')
+
+    if force or not exists('/Library/Extensions/fuse4x.kext') or force:
+        sudo('cp -rfX /usr/local/Cellar/fuse4x-kext/*/Library/'
+             'Extensions/fuse4x.kext /Library/Extensions')
+        sudo('chmod +s /Library/Extensions/fuse4x.kext/Support/load_fuse4x')
+
+
+@sf.with_remote_configuration
 def install_1password(remote_configuration=None):
     """ NOT IMPLEMENTED: Install 1Password. """
 
@@ -520,6 +539,7 @@ def base(remote_configuration=None):
     sys_default_services()
     sys_admin_pkgs()
     sys_ssh_powerline()
+    install_ntfs_support()
 
     sf.pkg_add(('byobu', 'bash-completion',
                 'htop-osx' if remote_configuration.is_osx else 'htop'))
