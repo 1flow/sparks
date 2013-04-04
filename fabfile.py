@@ -2,9 +2,10 @@
 
 import os
 import sys
+import uuid
 
 from fabric.api              import env, run, sudo, local, task
-from fabric.operations       import put
+from fabric.operations       import get, put
 from fabric.contrib.console  import confirm
 from fabric.contrib.files    import contains, append, exists, sed
 from fabric.context_managers import cd, settings, hide
@@ -124,7 +125,9 @@ def install_homebrew(remote_configuration=None):
 
     else:
         sudo('ruby -e "$(curl -fsSL https://raw.github.com/mxcl/homebrew/go)"')
+
         sudo('brew doctor')
+        sf.brew_add(('git', ))
 
         # TODO: implement this.
         info('Please install OSX CLI tools for Xcode manually.')
@@ -264,6 +267,9 @@ def sys_admin_pkgs(remote_configuration=None):
 
     sf.pkg_add(('wget', 'multitail', ))
 
+    if not remote_configuration.is_osx:
+        sf.apt_add(('acl', 'attr', 'colordiff', ))
+
 
 @task
 @sf.with_remote_configuration
@@ -295,6 +301,54 @@ def local_perms(remote_configuration=None):
 
     with cd(sf.tilde()):
         local('chmod 700 .ssh; chmod 600 .ssh/*')
+
+
+@task(aliases=('dupe_perms', 'dupe_acls', 'acls', ))
+@sf.with_remote_configuration
+def replicate_acls(remote_configuration=None,
+                   origin=None, path=None, apply=False):
+    """ Replicate locally the ACLs and Unix permissions of a given path.
+
+        This helps correcting strange permissions errors from a well-known
+        good machine.
+
+        Usage:
+
+            fabl acls:origin=10.0.3.37,path=/bin
+            # Then:
+            fabl acls:origin=10.0.3.37,path=/bin,apply=True
+    """
+
+    if origin is None or path is None:
+        raise ValueError('Missing arguments')
+
+    sys_admin_pkgs()
+
+    local_perms_file  = str(uuid.uuid4())
+    remote_perms_file = str(uuid.uuid4())
+
+    with cd('/tmp'):
+
+        # GET correct permissions form origin server.
+        with settings(host_string=origin):
+            with cd('/tmp'):
+                sudo('getfacl -pR "%s" > "%s"' % (path, remote_perms_file))
+                get(remote_perms_file, '/tmp')
+                sudo('rm "%s"' % remote_perms_file, quiet=True)
+
+        if env.host_string != 'localhost':
+            # TODO: find a way to transfer from one server to another directly.
+            put(remote_perms_file)
+
+        # gather local permissions, compare them, and reapply
+        sudo('getfacl -pR "%s" > "%s"' % (path, local_perms_file))
+        sudo('colordiff -U 3 "%s" "%s" || true' % (local_perms_file,
+                                                   remote_perms_file))
+
+        sudo('setfacl --restore="%s" %s || true' % (remote_perms_file,
+             '' if apply else '--test'))
+
+        sudo('rm "%s" "%s"' % (remote_perms_file, local_perms_file), quiet=True)
 
 
 # ------------------------------------------------- Development recipes
@@ -510,12 +564,14 @@ def base(remote_configuration=None):
     """ sys_* + brew (on OSX) + byobu, bash-completion, htop. """
 
     sys_easy_sudo()
+
+    install_homebrew()
+
     sys_unattended()
     sys_del_useless()
     sys_default_services()
     sys_admin_pkgs()
     sys_ssh_powerline()
-    install_homebrew()
 
     sf.pkg_add(('byobu', 'bash-completion',
                 'htop-osx' if remote_configuration.is_osx else 'htop'))
