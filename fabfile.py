@@ -64,7 +64,8 @@ def install_skype(remote_configuration=None):
 
     else:
         sf.ppa_pkg('deb http://archive.canonical.com/ubuntu %s partner'
-                   % sf.lsb.CODENAME, 'skype', '/usr/bin/skype')
+                   % remote_configuration.lsb.CODENAME,
+                   'skype', '/usr/bin/skype')
 
 
 @sf.with_remote_configuration
@@ -656,7 +657,7 @@ def graph(remote_configuration=None):
         info("Skipped graphical APT packages (not on LSB).")
         return
 
-    if not sf.lsb.ID.lower() == 'ubuntu':
+    if not remote_configuration.lsb.ID.lower() == 'ubuntu':
         info("Skipped graphe PPA packages (not on Ubuntu).")
         return
 
@@ -664,11 +665,12 @@ def graph(remote_configuration=None):
                 'dconf-tools', 'gconf-editor', 'pidgin', 'vlc', 'mplayer',
                 'indicator-multiload'))
 
-    if sf.lsb.RELEASE.startswith('13') or sf.lsb.RELEASE == '12.10':
+    if remote_configuration.lsb.RELEASE.startswith('13') \
+            or remote_configuration.lsb.RELEASE == '12.10':
         sf.ppa_pkg('ppa:freyja-dev/unity-tweak-tool-daily',
                    'unity-tweak-tool', '/usr/bin/unity-tweak-tool')
 
-    elif sf.lsb.RELEASE == '12.04':
+    elif remote_configuration.lsb.RELEASE == '12.04':
         sf.ppa_pkg('ppa:myunity/ppa', 'myunity', '/usr/bin/myunity')
 
     sf.ppa_pkg('ppa:tiheum/equinox', ('faience-icon-theme',
@@ -745,7 +747,7 @@ def mydevenv(remote_configuration=None):
 
     # NO clone, it's already in my dropbox!
     #git_clone_or_update('sparks', 'git@github.com:Karmak23/sparks.git')
-
+    #
     # Just symlink it to my sources for centralization/normalization
     # purposes. Or is it just bad-habits? ;-)
     with cd(sf.tilde('sources')):
