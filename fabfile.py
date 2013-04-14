@@ -753,6 +753,9 @@ def mydevenv(remote_configuration=None):
     with cd(sf.tilde('sources')):
         sf.symlink('../Dropbox/sparks', 'sparks')
 
+    git_clone_or_update('pelican-themes',
+                        'git@github.com:Karmak23/pelican-themes.git')
+
     # Not yet ready
     #git_clone_or_update('1flow', 'dev.1flow.net:/home/groups/oneflow.git')
 
