@@ -527,9 +527,23 @@ def dev(remote_configuration=None):
     #TODO: if exists virtualenv and is_lxc(machine):
 
     # We remove the DEB packages to avoid duplicates and conflicts.
-    sf.pkg_del(('ipython', ))
+    # It's usually older than the PIP package.
+    sf.pkg_del(('ipython', 'ipython3', ))
 
-    sf.pip_add(('yolk', 'ipython', 'flake8', 'pylint', ))
+    if remote_configuration.is_osx:
+        # The brew python3 receipe installs pip3 and development files.
+        py3_pkgs = ('python3', )
+
+    else:
+        py3_pkgs = ('python3.3', 'python3.3-dev', 'python3.3-examples',
+                    'python3.3-minimal', 'python3-pip', )
+
+    sf.pkg_add(py3_pkgs)
+
+    sf.pip2_add(('yolk', 'ipython', 'flake8', ))
+
+    # yolk & flake8 fail because of distribute incompatible with Python 3.
+    sf.pip3_add(('ipython', ))
 
     sf.gem_add(('git-up', ))
 
