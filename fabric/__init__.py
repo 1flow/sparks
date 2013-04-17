@@ -11,7 +11,7 @@ import nofabric
 try:
     from fabric.api              import run, sudo, local, task, env
     from fabric.contrib.files    import exists
-    from fabric.context_managers import cd
+    from fabric.context_managers import cd, prefix
     from fabric.colors           import green, cyan
 
     #from fabric.api              import env
@@ -46,8 +46,11 @@ class RemoteConfiguration(object):
 
         self.host_string = host_string
 
-        out = run("python -c 'import lsb_release; "
-                  "print lsb_release.get_lsb_information()'", quiet=True)
+        # Be sure we don't get stuck in a virtualenv for free.
+        with prefix('deactivate'):
+            out = run("python -c 'import lsb_release; "
+                      "print lsb_release.get_lsb_information()'",
+                      quiet=not verbose)
 
         try:
             self.lsb    = SimpleObject(from_dict=ast.literal_eval(out))
@@ -57,8 +60,10 @@ class RemoteConfiguration(object):
             self.lsb    = None
             self.is_osx = True
 
-            out = run("python -c 'import platform; "
-                      "print platform.mac_ver()'", quiet=True)
+            # Be sure we don't get stuck in a virtualenv for free.
+            with prefix('deactivate'):
+                out = run("python -c 'import platform; "
+                          "print platform.mac_ver()'", quiet=True)
             try:
                 self.mac = SimpleObject(from_dict=dict(zip(
                                     ('release', 'version', 'machine'),
@@ -69,12 +74,19 @@ class RemoteConfiguration(object):
                 raise RuntimeError(
                     'cannot determine platform of {0}'.format(host_string))
 
-        out = run("python -c 'import os; print os.uname()'", quiet=True)
+        # Be sure we don't get stuck in a virtualenv for free.
+        with prefix('deactivate'):
+            out = run("python -c 'import os; print os.uname()'",
+                      quiet=not verbose)
 
         self.uname = SimpleObject(from_dict=dict(zip(
                                   ('sysname', 'nodename', 'release',
                                   'version', 'machine'),
                                   ast.literal_eval(out))))
+
+        #
+        # No need to `deactivate` for the next calls, they are pure shell.
+        #
 
         self.user, self.tilde = run('echo "${USER},${HOME}"',
                                     quiet=True).strip().split(',')
