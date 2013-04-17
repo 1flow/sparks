@@ -97,7 +97,7 @@ class RemoteConfiguration(object):
         # NOTE: this test could fail in VMs where nothing is mounted from
         # the host. In my own configs, this never occurs, but who knows.
         # TODO: check this works under OSX too, or enhance the test.
-        self.is_parallel = run('mount | grep prl_fs', quiet=True,
+        self.is_parallel = run('mount | grep prl_fs', quiet=not verbose,
                                warn_only=True).succeeded
 
         self.is_vm = self.is_parallel or self.is_vmware
@@ -232,16 +232,16 @@ def dsh_to_roledefs():
 
 def symlink(source, destination, overwrite=False, locally=False):
 
-    prefix = ''
+    rm_prefix = ''
 
     if exists(destination):
         if overwrite:
-            prefix = 'rm -rf "%s"; ' % destination
+            rm_prefix = 'rm -rf "%s"; ' % destination
 
         else:
             return
 
-    command = '%s ln -sf "%s" "%s"' % (prefix, source, destination)
+    command = '%s ln -sf "%s" "%s"' % (rm_prefix, source, destination)
 
     local(command) if locally else run(command)
 
@@ -309,6 +309,8 @@ def pip_search(pkgs):
 
 # ---------------------------------------------- NPM package management
 
+# TODO: npm_usable
+
 
 def npm_is_installed(pkg):
     """ Return ``True`` if a given NodeJS package is installed. """
@@ -329,6 +331,8 @@ def npm_search(pkgs):
                      "| sed -e 's/ =.*$//g'" % pkg)
 
 # ---------------------------------------------- GEM package management
+
+# TODO: gem_usable
 
 
 def gem_is_installed(pkg):
