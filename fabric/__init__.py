@@ -192,7 +192,7 @@ def with_local_configuration(func):
 
 def find_configuration_type(hostname):
     if hostname in ('localhost', 'localhost.localdomain',
-                    '127.0.0.1', '127.0.1.1'):
+                    '127.0.0.1', '127.0.1.1', '::1'):
         return LocalConfiguration(hostname)
 
     else:
