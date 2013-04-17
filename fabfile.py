@@ -18,6 +18,12 @@ if __package__ is None:
 
 from sparks import fabric as sf
 
+# ===================================================== Local variables
+
+local_osx_apps = '~/Downloads/{Mac,OSX}*/'
+central_osx_apps = 'duncan:oliviercortes.com/sparks/osx'
+
+
 # ================================================ Fabric configuration
 
 env.use_ssh_config = True
@@ -714,6 +720,18 @@ def clear_osx_cache(remote_configuration=None):
         '| while read computer_name ; do sudo dscl . -delete '
         'Computers/"$computer_name" ; done', quiet=True)
 
+
+@task
+@sf.with_remote_configuration
+def upload_osx_apps(remote_configuration=None):
+    """ Upload local OSX Apps to my central location for easy redistribution
+        without harvesting the internet on every new machine.
+
+        .. note:: there is currently no “ clean outdated files ” procedure…
+    """
+
+    run('mkdir -p %s' % central_osx_apps.split(':')[1], quiet=True)
+    run('rsync -av %s %s' % (local_osx_apps, central_osx_apps))
 
 # =========================================== My personnal environments
 
