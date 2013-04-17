@@ -250,8 +250,7 @@ def symlink(source, destination, overwrite=False, locally=False):
 
 
 def silent_sudo(command):
-    #with settings(hide('warnings', 'running',
-    #        'stdout', 'stderr'), warn_only=True):
+
     return sudo(command, quiet=True, warn_only=True)
 
 
@@ -262,6 +261,7 @@ def is_installed(test_installed_command):
 
 
 def search(search_command):
+
     return sudo(search_command, quiet=True)
 
 # ---------------------------------------------- PIP package management
@@ -280,13 +280,37 @@ def pip_perms(verbose=True):
                 '| xargs -0 -n 1024 chmod u+rwx,g+rx,o+rx')
 
 
-def pip_is_installed(pkg):
+@with_remote_configuration
+def pip3_find_executable(remote_configuration=None):
+
+    # run() hangs the 3rd time when called from `contrib/pkgmgr.py`.
+    #print('lookup pip3 in %s' % remote_configuration)
+
+    for pip_exec in ('pip3', 'pip-3.5', 'pip-3.4', 'pip-3.3', 'pip-3.2'):
+        if run('which %s' % pip_exec):
+            return pip_exec
+
+    return None
+
+
+def __pip_is_installed_internal(pkg, py3=False):
     """ Return ``True`` if a given Python module is installed via PIP. """
 
-    return is_installed("pip freeze | grep -i '%s=='" % pkg)
+    if py3:
+        pip = pip3_find_executable()
+    else:
+        pip = 'pip'
+
+    return is_installed("%s freeze | grep -i '%s=='" % (pip, pkg))
 
 
-def pip_add(pkgs):
+def __pip_add_internal(pkgs, py3=False):
+
+    if py3:
+        pip = pip3_find_executable()
+    else:
+        pip = 'pip'
+
     # Go to a neutral location before PIP tries to "mkdir build"
     # WARNING: this could be vulnerable to symlink attack when we
     # force unlink of hard-coded build/, but in this case PIP is
@@ -294,8 +318,8 @@ def pip_add(pkgs):
     with cd('/var/tmp'):
         installed = False
         for pkg in list_or_split(pkgs):
-            if not pip_is_installed(pkg):
-                sudo("pip install -U %s " % pkg)
+            if not __pip_is_installed_internal(pkg, py3=py3):
+                sudo("%s install -U %s " % (pip, pkg))
                 installed = True
 
         if installed:
@@ -303,9 +327,59 @@ def pip_add(pkgs):
             pip_perms()
 
 
-def pip_search(pkgs):
+def __pip_search_internal(pkgs, py3=False):
+
+    if py3:
+        pip = pip3_find_executable()
+    else:
+        pip = 'pip'
+
     for pkg in list_or_split(pkgs):
-        yield search("pip search %s" % pkg)
+        yield search("%s search %s" % (pip, pkg))
+
+# -------------------------------------- PIP2 / PIP3 package management
+# We implement both for results to be visually separated.
+
+
+def pip2_is_installed(pkg):
+
+    return __pip_is_installed_internal(pkg)
+
+
+def pip2_add(pkgs):
+
+    return __pip_add_internal(pkgs)
+
+
+def pip2_search(pkgs):
+
+    return __pip_search_internal(pkgs)
+
+
+@with_remote_configuration
+def pip3_usable(remote_configuration=None):
+
+    # XXX: run() hangs the 3rd time when called from `contrib/pkgmgr.py`.
+    # until I find why, pip3 is disabled; this allows to still use others.
+    return False
+
+    return pip3_find_executable() is not None
+
+
+def pip3_is_installed(pkg):
+
+    return __pip_is_installed_internal(pkg, py3=True)
+
+
+def pip3_add(pkgs):
+
+    return __pip_add_internal(pkgs, py3=True)
+
+
+def pip3_search(pkgs):
+
+    return __pip_search_internal(pkgs, py3=True)
+
 
 # ---------------------------------------------- NPM package management
 
