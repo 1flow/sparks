@@ -26,9 +26,9 @@ except ImportError:
     # Everything will fail except the base system detection. We define the bare
     # minimum for it to work on a local Linux/OSX system.
 
-    run   = nofabric._run
-    local = nofabric._local
-    sudo  = nofabric._sudo
+    run   = nofabric._run # NOQA
+    local = nofabric._local # NOQA
+    sudo  = nofabric._sudo # NOQA
 
 # Global way to turn all of this module silent.
 quiet = False
