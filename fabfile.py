@@ -18,6 +18,12 @@ if __package__ is None:
 
 from sparks import fabric as sf
 
+# ===================================================== Local variables
+
+local_osx_apps = '~/Downloads/{Mac,OSX}*/'
+central_osx_apps = 'duncan:oliviercortes.com/sparks/osx'
+
+
 # ================================================ Fabric configuration
 
 env.use_ssh_config = True
@@ -64,7 +70,8 @@ def install_skype(remote_configuration=None):
 
     else:
         sf.ppa_pkg('deb http://archive.canonical.com/ubuntu %s partner'
-                   % sf.lsb.CODENAME, 'skype', '/usr/bin/skype')
+                   % remote_configuration.lsb.CODENAME,
+                   'skype', '/usr/bin/skype')
 
 
 @sf.with_remote_configuration
@@ -520,9 +527,23 @@ def dev(remote_configuration=None):
     #TODO: if exists virtualenv and is_lxc(machine):
 
     # We remove the DEB packages to avoid duplicates and conflicts.
-    sf.pkg_del(('ipython', ))
+    # It's usually older than the PIP package.
+    sf.pkg_del(('ipython', 'ipython3', ))
 
-    sf.pip_add(('yolk', 'ipython', 'flake8', 'pylint', ))
+    if remote_configuration.is_osx:
+        # The brew python3 receipe installs pip3 and development files.
+        py3_pkgs = ('python3', )
+
+    else:
+        py3_pkgs = ('python3.3', 'python3.3-dev', 'python3.3-examples',
+                    'python3.3-minimal', 'python3-pip', )
+
+    sf.pkg_add(py3_pkgs)
+
+    sf.pip2_add(('yolk', 'ipython', 'flake8', ))
+
+    # yolk & flake8 fail because of distribute incompatible with Python 3.
+    sf.pip3_add(('ipython', ))
 
     sf.gem_add(('git-up', ))
 
@@ -656,7 +677,7 @@ def graph(remote_configuration=None):
         info("Skipped graphical APT packages (not on LSB).")
         return
 
-    if not sf.lsb.ID.lower() == 'ubuntu':
+    if not remote_configuration.lsb.ID.lower() == 'ubuntu':
         info("Skipped graphe PPA packages (not on Ubuntu).")
         return
 
@@ -664,11 +685,12 @@ def graph(remote_configuration=None):
                 'dconf-tools', 'gconf-editor', 'pidgin', 'vlc', 'mplayer',
                 'indicator-multiload'))
 
-    if sf.lsb.RELEASE.startswith('13') or sf.lsb.RELEASE == '12.10':
+    if remote_configuration.lsb.RELEASE.startswith('13') \
+            or remote_configuration.lsb.RELEASE == '12.10':
         sf.ppa_pkg('ppa:freyja-dev/unity-tweak-tool-daily',
                    'unity-tweak-tool', '/usr/bin/unity-tweak-tool')
 
-    elif sf.lsb.RELEASE == '12.04':
+    elif remote_configuration.lsb.RELEASE == '12.04':
         sf.ppa_pkg('ppa:myunity/ppa', 'myunity', '/usr/bin/myunity')
 
     sf.ppa_pkg('ppa:tiheum/equinox', ('faience-icon-theme',
@@ -713,6 +735,18 @@ def clear_osx_cache(remote_configuration=None):
         'Computers/"$computer_name" ; done', quiet=True)
 
 
+@task
+@sf.with_remote_configuration
+def upload_osx_apps(remote_configuration=None):
+    """ Upload local OSX Apps to my central location for easy redistribution
+        without harvesting the internet on every new machine.
+
+        .. note:: there is currently no “ clean outdated files ” procedure…
+    """
+
+    run('mkdir -p %s' % central_osx_apps.split(':')[1], quiet=True)
+    run('rsync -av %s %s' % (local_osx_apps, central_osx_apps))
+
 # =========================================== My personnal environments
 
 
@@ -745,11 +779,14 @@ def mydevenv(remote_configuration=None):
 
     # NO clone, it's already in my dropbox!
     #git_clone_or_update('sparks', 'git@github.com:Karmak23/sparks.git')
-
+    #
     # Just symlink it to my sources for centralization/normalization
     # purposes. Or is it just bad-habits? ;-)
     with cd(sf.tilde('sources')):
         sf.symlink('../Dropbox/sparks', 'sparks')
+
+    git_clone_or_update('pelican-themes',
+                        'git@github.com:Karmak23/pelican-themes.git')
 
     # Not yet ready
     #git_clone_or_update('1flow', 'dev.1flow.net:/home/groups/oneflow.git')

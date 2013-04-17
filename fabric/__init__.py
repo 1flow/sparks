@@ -11,7 +11,7 @@ import nofabric
 try:
     from fabric.api              import run, sudo, local, task, env
     from fabric.contrib.files    import exists
-    from fabric.context_managers import cd
+    from fabric.context_managers import cd, prefix
     from fabric.colors           import green, cyan
 
     #from fabric.api              import env
@@ -26,9 +26,9 @@ except ImportError:
     # Everything will fail except the base system detection. We define the bare
     # minimum for it to work on a local Linux/OSX system.
 
-    run   = nofabric._run
-    local = nofabric._local
-    sudo  = nofabric._sudo
+    run   = nofabric._run # NOQA
+    local = nofabric._local # NOQA
+    sudo  = nofabric._sudo # NOQA
 
 # Global way to turn all of this module silent.
 quiet = False
@@ -46,8 +46,11 @@ class RemoteConfiguration(object):
 
         self.host_string = host_string
 
-        out = run("python -c 'import lsb_release; "
-                  "print lsb_release.get_lsb_information()'", quiet=True)
+        # Be sure we don't get stuck in a virtualenv for free.
+        with prefix('deactivate'):
+            out = run("python -c 'import lsb_release; "
+                      "print lsb_release.get_lsb_information()'",
+                      quiet=not verbose)
 
         try:
             self.lsb    = SimpleObject(from_dict=ast.literal_eval(out))
@@ -57,8 +60,10 @@ class RemoteConfiguration(object):
             self.lsb    = None
             self.is_osx = True
 
-            out = run("python -c 'import platform; "
-                      "print platform.mac_ver()'", quiet=True)
+            # Be sure we don't get stuck in a virtualenv for free.
+            with prefix('deactivate'):
+                out = run("python -c 'import platform; "
+                          "print platform.mac_ver()'", quiet=True)
             try:
                 self.mac = SimpleObject(from_dict=dict(zip(
                                     ('release', 'version', 'machine'),
@@ -69,12 +74,19 @@ class RemoteConfiguration(object):
                 raise RuntimeError(
                     'cannot determine platform of {0}'.format(host_string))
 
-        out = run("python -c 'import os; print os.uname()'", quiet=True)
+        # Be sure we don't get stuck in a virtualenv for free.
+        with prefix('deactivate'):
+            out = run("python -c 'import os; print os.uname()'",
+                      quiet=not verbose)
 
         self.uname = SimpleObject(from_dict=dict(zip(
                                   ('sysname', 'nodename', 'release',
                                   'version', 'machine'),
                                   ast.literal_eval(out))))
+
+        #
+        # No need to `deactivate` for the next calls, they are pure shell.
+        #
 
         self.user, self.tilde = run('echo "${USER},${HOME}"',
                                     quiet=True).strip().split(',')
@@ -85,7 +97,7 @@ class RemoteConfiguration(object):
         # NOTE: this test could fail in VMs where nothing is mounted from
         # the host. In my own configs, this never occurs, but who knows.
         # TODO: check this works under OSX too, or enhance the test.
-        self.is_parallel = run('mount | grep prl_fs', quiet=True,
+        self.is_parallel = run('mount | grep prl_fs', quiet=not verbose,
                                warn_only=True).succeeded
 
         self.is_vm = self.is_parallel or self.is_vmware
@@ -180,7 +192,7 @@ def with_local_configuration(func):
 
 def find_configuration_type(hostname):
     if hostname in ('localhost', 'localhost.localdomain',
-                    '127.0.0.1', '127.0.1.1'):
+                    '127.0.0.1', '127.0.1.1', '::1'):
         return LocalConfiguration(hostname)
 
     else:
@@ -220,16 +232,16 @@ def dsh_to_roledefs():
 
 def symlink(source, destination, overwrite=False, locally=False):
 
-    prefix = ''
+    rm_prefix = ''
 
     if exists(destination):
         if overwrite:
-            prefix = 'rm -rf "%s"; ' % destination
+            rm_prefix = 'rm -rf "%s"; ' % destination
 
         else:
             return
 
-    command = '%s ln -sf "%s" "%s"' % (prefix, source, destination)
+    command = '%s ln -sf "%s" "%s"' % (rm_prefix, source, destination)
 
     local(command) if locally else run(command)
 
@@ -238,8 +250,7 @@ def symlink(source, destination, overwrite=False, locally=False):
 
 
 def silent_sudo(command):
-    #with settings(hide('warnings', 'running',
-    #        'stdout', 'stderr'), warn_only=True):
+
     return sudo(command, quiet=True, warn_only=True)
 
 
@@ -250,6 +261,7 @@ def is_installed(test_installed_command):
 
 
 def search(search_command):
+
     return sudo(search_command, quiet=True)
 
 # ---------------------------------------------- PIP package management
@@ -268,13 +280,37 @@ def pip_perms(verbose=True):
                 '| xargs -0 -n 1024 chmod u+rwx,g+rx,o+rx')
 
 
-def pip_is_installed(pkg):
+@with_remote_configuration
+def pip3_find_executable(remote_configuration=None):
+
+    # run() hangs the 3rd time when called from `contrib/pkgmgr.py`.
+    #print('lookup pip3 in %s' % remote_configuration)
+
+    for pip_exec in ('pip3', 'pip-3.5', 'pip-3.4', 'pip-3.3', 'pip-3.2'):
+        if run('which %s' % pip_exec):
+            return pip_exec
+
+    return None
+
+
+def __pip_is_installed_internal(pkg, py3=False):
     """ Return ``True`` if a given Python module is installed via PIP. """
 
-    return is_installed("pip freeze | grep -i '%s=='" % pkg)
+    if py3:
+        pip = pip3_find_executable()
+    else:
+        pip = 'pip'
+
+    return is_installed("%s freeze | grep -i '%s=='" % (pip, pkg))
 
 
-def pip_add(pkgs):
+def __pip_add_internal(pkgs, py3=False):
+
+    if py3:
+        pip = pip3_find_executable()
+    else:
+        pip = 'pip'
+
     # Go to a neutral location before PIP tries to "mkdir build"
     # WARNING: this could be vulnerable to symlink attack when we
     # force unlink of hard-coded build/, but in this case PIP is
@@ -282,8 +318,8 @@ def pip_add(pkgs):
     with cd('/var/tmp'):
         installed = False
         for pkg in list_or_split(pkgs):
-            if not pip_is_installed(pkg):
-                sudo("pip install -U %s " % pkg)
+            if not __pip_is_installed_internal(pkg, py3=py3):
+                sudo("%s install -U %s " % (pip, pkg))
                 installed = True
 
         if installed:
@@ -291,11 +327,63 @@ def pip_add(pkgs):
             pip_perms()
 
 
-def pip_search(pkgs):
+def __pip_search_internal(pkgs, py3=False):
+
+    if py3:
+        pip = pip3_find_executable()
+    else:
+        pip = 'pip'
+
     for pkg in list_or_split(pkgs):
-        yield search("pip search %s" % pkg)
+        yield search("%s search %s" % (pip, pkg))
+
+# -------------------------------------- PIP2 / PIP3 package management
+# We implement both for results to be visually separated.
+
+
+def pip2_is_installed(pkg):
+
+    return __pip_is_installed_internal(pkg)
+
+
+def pip2_add(pkgs):
+
+    return __pip_add_internal(pkgs)
+
+
+def pip2_search(pkgs):
+
+    return __pip_search_internal(pkgs)
+
+
+@with_remote_configuration
+def pip3_usable(remote_configuration=None):
+
+    # XXX: run() hangs the 3rd time when called from `contrib/pkgmgr.py`.
+    # until I find why, pip3 is disabled; this allows to still use others.
+    return False
+
+    return pip3_find_executable() is not None
+
+
+def pip3_is_installed(pkg):
+
+    return __pip_is_installed_internal(pkg, py3=True)
+
+
+def pip3_add(pkgs):
+
+    return __pip_add_internal(pkgs, py3=True)
+
+
+def pip3_search(pkgs):
+
+    return __pip_search_internal(pkgs, py3=True)
+
 
 # ---------------------------------------------- NPM package management
+
+# TODO: npm_usable
 
 
 def npm_is_installed(pkg):
@@ -317,6 +405,8 @@ def npm_search(pkgs):
                      "| sed -e 's/ =.*$//g'" % pkg)
 
 # ---------------------------------------------- GEM package management
+
+# TODO: gem_usable
 
 
 def gem_is_installed(pkg):
