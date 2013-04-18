@@ -288,7 +288,7 @@ def pip3_find_executable(remote_configuration=None):
     #print('lookup pip3 in %s' % remote_configuration)
 
     for pip_exec in ('pip3', 'pip-3.5', 'pip-3.4', 'pip-3.3', 'pip-3.2'):
-        if run('which %s' % pip_exec):
+        if run('which %s' % pip_exec, quiet=True, warn_only=True).succeeded:
             return pip_exec
 
     return None
