@@ -1,5 +1,6 @@
 # -*- coding: utf8 -*-
 
+import sys
 import os
 import ast
 import functools
@@ -47,7 +48,7 @@ class RemoteConfiguration(object):
         self.host_string = host_string
 
         # Be sure we don't get stuck in a virtualenv for free.
-        with prefix('deactivate'):
+        with prefix('deactivate >/dev/null 2>&1 || true'):
             out = run("python -c 'import lsb_release; "
                       "print lsb_release.get_lsb_information()'",
                       quiet=not verbose)
@@ -61,7 +62,7 @@ class RemoteConfiguration(object):
             self.is_osx = True
 
             # Be sure we don't get stuck in a virtualenv for free.
-            with prefix('deactivate'):
+            with prefix('deactivate >/dev/null 2>&1 || true'):
                 out = run("python -c 'import platform; "
                           "print platform.mac_ver()'", quiet=True)
             try:
@@ -75,7 +76,7 @@ class RemoteConfiguration(object):
                     'cannot determine platform of {0}'.format(host_string))
 
         # Be sure we don't get stuck in a virtualenv for free.
-        with prefix('deactivate'):
+        with prefix('deactivate >/dev/null 2>&1 || true'):
             out = run("python -c 'import os; print os.uname()'",
                       quiet=not verbose)
 
@@ -196,7 +197,7 @@ def find_configuration_type(hostname):
         return LocalConfiguration(hostname)
 
     else:
-        return RemoteConfiguration(hostname)
+        return RemoteConfiguration(hostname, verbose='--verbose' in sys.argv)
 
 
 # =============================================================== Utils
@@ -287,7 +288,7 @@ def pip3_find_executable(remote_configuration=None):
     #print('lookup pip3 in %s' % remote_configuration)
 
     for pip_exec in ('pip3', 'pip-3.5', 'pip-3.4', 'pip-3.3', 'pip-3.2'):
-        if run('which %s' % pip_exec):
+        if run('which %s' % pip_exec, quiet=True, warn_only=True).succeeded:
             return pip_exec
 
     return None

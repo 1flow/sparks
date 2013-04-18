@@ -386,7 +386,7 @@ def dev_graphviz(remote_configuration=None):
     # the -dev requisites via brew.
     sf.pkg_add(('graphviz', 'pkg-config', 'graphviz-dev'))
 
-    sf.pip_add(('pygraphviz', ))
+    sf.pip2_add(('pygraphviz', ))
 
 
 @task
@@ -456,7 +456,7 @@ def dev_sqlite(remote_configuration=None):
     if not remote_configuration.is_osx:
         sf.pkg_add(('libsqlite3-dev', 'python-all-dev', ))
 
-    sf.pip_add(('pysqlite', ))
+    sf.pip2_add(('pysqlite', ))
 
 
 @task
@@ -516,13 +516,18 @@ def dev(remote_configuration=None):
         #    - git-flow-avh brings small typing enhancements.
 
         sf.brew_add(('git-flow-avh', 'ack', 'python', ))
-        sf.pip_add(('virtualenv', 'virtualenvwrapper', ))
 
     else:
         # On Ubuntu, `ack` is `ack-grep`.
         sf.apt_add(('git-flow', 'ack-grep', 'python-pip',
-                    'python-virtualenv', 'virtualenvwrapper',
                     'ruby', 'ruby-dev', 'rubygems', ))
+
+        # Remove eventually DEB installed old packages (see just after).
+        sf.apt_del(('python-virtualenv', 'virtualenvwrapper', ))
+
+    # Add them from PIP, to have latest
+    # version which handles python 3.3 gracefully.
+    sf.pip2_add(('virtualenv', 'virtualenvwrapper', ))
 
     #TODO: if exists virtualenv and is_lxc(machine):
 
@@ -544,6 +549,8 @@ def dev(remote_configuration=None):
 
     # yolk & flake8 fail because of distribute incompatible with Python 3.
     sf.pip3_add(('ipython', ))
+
+    sf.pip3_add(('virtualenv', 'virtualenvwrapper', ))
 
     sf.gem_add(('git-up', ))
 
@@ -613,7 +620,7 @@ def deployment(remote_configuration=None):
     if not remote_configuration.is_osx:
         sf.pkg_add(('python-all-dev', ))
 
-    sf.pip_add(('fabric', ))
+    sf.pip2_add(('fabric', ))
 
 
 @task
