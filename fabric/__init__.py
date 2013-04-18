@@ -1,6 +1,5 @@
 # -*- coding: utf8 -*-
 
-import sys
 import os
 import ast
 import functools
@@ -32,7 +31,8 @@ except ImportError:
     sudo  = nofabric._sudo # NOQA
 
 # Global way to turn all of this module silent.
-quiet = False
+quiet = not bool(os.environ.get('SPARKS_VERBOSE', False))
+
 
 # =========================================== Remote system information
 
@@ -192,12 +192,13 @@ def with_local_configuration(func):
 
 
 def find_configuration_type(hostname):
+
     if hostname in ('localhost', 'localhost.localdomain',
                     '127.0.0.1', '127.0.1.1', '::1'):
         return LocalConfiguration(hostname)
 
     else:
-        return RemoteConfiguration(hostname, verbose='--verbose' in sys.argv)
+        return RemoteConfiguration(hostname, verbose=not quiet)
 
 
 # =============================================================== Utils
