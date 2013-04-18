@@ -550,7 +550,9 @@ def dev(remote_configuration=None):
     # yolk & flake8 fail because of distribute incompatible with Python 3.
     sf.pip3_add(('ipython', ))
 
-    sf.pip3_add(('virtualenv', 'virtualenvwrapper', ))
+    # No need yet, it's already available from the system, in Python 2,
+    # and can perfectly generate a virtualenv for Python 3.3.
+    #sf.pip3_add(('virtualenv', 'virtualenvwrapper', ))
 
     sf.gem_add(('git-up', ))
 
