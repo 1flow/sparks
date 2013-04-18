@@ -47,7 +47,7 @@ class RemoteConfiguration(object):
         self.host_string = host_string
 
         # Be sure we don't get stuck in a virtualenv for free.
-        with prefix('deactivate'):
+        with prefix('deactivate >/dev/null 2>&1 || true'):
             out = run("python -c 'import lsb_release; "
                       "print lsb_release.get_lsb_information()'",
                       quiet=not verbose)
@@ -61,7 +61,7 @@ class RemoteConfiguration(object):
             self.is_osx = True
 
             # Be sure we don't get stuck in a virtualenv for free.
-            with prefix('deactivate'):
+            with prefix('deactivate >/dev/null 2>&1 || true'):
                 out = run("python -c 'import platform; "
                           "print platform.mac_ver()'", quiet=True)
             try:
@@ -75,7 +75,7 @@ class RemoteConfiguration(object):
                     'cannot determine platform of {0}'.format(host_string))
 
         # Be sure we don't get stuck in a virtualenv for free.
-        with prefix('deactivate'):
+        with prefix('deactivate >/dev/null 2>&1 || true'):
             out = run("python -c 'import os; print os.uname()'",
                       quiet=not verbose)
 
