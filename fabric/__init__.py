@@ -1,5 +1,6 @@
 # -*- coding: utf8 -*-
 
+import sys
 import os
 import ast
 import functools
@@ -196,7 +197,7 @@ def find_configuration_type(hostname):
         return LocalConfiguration(hostname)
 
     else:
-        return RemoteConfiguration(hostname)
+        return RemoteConfiguration(hostname, verbose='--verbose' in sys.argv)
 
 
 # =============================================================== Utils
