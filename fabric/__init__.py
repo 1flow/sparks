@@ -3,6 +3,7 @@
 import os
 import ast
 import functools
+import platform
 
 from ..foundations.classes import SimpleObject
 
@@ -31,13 +32,13 @@ except ImportError:
     sudo  = nofabric._sudo # NOQA
 
 # Global way to turn all of this module silent.
-quiet = not bool(os.environ.get('SPARKS_VERBOSE', False))
-
-
-# =========================================== Remote system information
+quiet  = not bool(os.environ.get('SPARKS_VERBOSE', False))
 
 remote_configuration = None
 local_configuration  = None
+
+
+# =========================================== Remote system information
 
 
 class RemoteConfiguration(object):
@@ -123,7 +124,11 @@ class LocalConfiguration(object):
 
         This class doesn't use fabric, it's used to bootstrap the local
         machine when it's empty and doesn't have fabric installed yet.
-    """
+
+        .. warning:: this class won't probably play well in a virtualenv.
+            Unlike the :class:`RemoteConfiguration` class, I don't think
+            it's pertinent and wanted to :program:`deactivate` first.
+     """
     def __init__(self, host_string):
 
         self.host_string = host_string
@@ -135,7 +140,6 @@ class LocalConfiguration(object):
             self.is_osx = False
 
         except ImportError:
-            import platform
             self.lsb    = None
             self.is_osx = True
             self.mac    = SimpleObject(from_dict=dict(zip(
@@ -642,3 +646,7 @@ def dotfiles(filename):
     """
 
     return os.path.join('Dropbox/configuration/dotfiles', filename)
+
+
+if local_configuration is None:
+    local_configuration = LocalConfiguration()
