@@ -10,35 +10,80 @@ from ..foundations.classes import SimpleObject
 import nofabric
 
 try:
-    from fabric.api              import run, sudo, local, task, env
+    from fabric.api              import run as fabric_run
+    from fabric.api              import sudo as fabric_sudo
+    from fabric.api              import local as fabric_local
+    from fabric.api              import env
     from fabric.contrib.files    import exists
-    from fabric.context_managers import cd, prefix
-    from fabric.colors           import green, cyan
+    from fabric.context_managers import prefix
+    from fabric.colors           import cyan
+
+    # used in sparks submodules, not directly here. Thus the # NOQA.
+    from fabric.api              import task # NOQA
+    from fabric.context_managers import cd # NOQA
+    from fabric.colors           import green # NOQA
 
     #from fabric.api              import env
-
     #if not env.all_hosts:
     #    env.host_string = 'localhost'
 
     _wrap_fabric = False
 
+    #
+    # NOTE: we re-wrap fabric functions into ours, which test against localhost.
+    #   This allows multiprocessing to run correctly on localhost, via real
+    #   local commands.
+    #   Else, paramiko will fail with obscure errors (observed in the `pkgmgr`),
+    #   and it's horribly terrible to debug (trust me).
+    #   Hoping nobody will try to multiprocessing.Process(fabric) via sparks
+    #   (or not). This only seems to work when fabric does the @parallel jobs,
+    #   not when trying to run fabric tasks in multiprocessing.* encapsulation.
+    #
+
+    def run(*args, **kwargs):
+        if is_localhost(env.host_string):
+            return nofabric.run(*args, **kwargs)
+
+        else:
+            return fabric_run(*args, **kwargs)
+
+    def local(*args, **kwargs):
+        if is_localhost(env.host_string):
+            return nofabric.local(*args, **kwargs)
+
+        else:
+            return fabric_local(*args, **kwargs)
+
+    def sudo(*args, **kwargs):
+        if is_localhost(env.host_string):
+            return nofabric.sudo(*args, **kwargs)
+
+        else:
+            return fabric_sudo(*args, **kwargs)
+
 except ImportError:
-    # If fabric is not available, this means we are imported from 1nstall.py.
+    # If fabric is not available, this means we are imported from 1nstall.py,
+    # or more generaly fabric is not installed.
     # Everything will fail except the base system detection. We define the bare
     # minimum for it to work on a local Linux/OSX system.
 
-    run   = nofabric._run # NOQA
-    local = nofabric._local # NOQA
-    sudo  = nofabric._sudo # NOQA
+    run   = nofabric.run # NOQA
+    local = nofabric.local # NOQA
+    sudo  = nofabric.sudo # NOQA
 
 # Global way to turn all of this module silent.
-quiet  = not bool(os.environ.get('SPARKS_VERBOSE', False))
+quiet = not bool(os.environ.get('SPARKS_VERBOSE', False))
 
 remote_configuration = None
 local_configuration  = None
 
 
-# =========================================== Remote system information
+# =================================================== Remote system information
+
+
+def is_localhost(hostname):
+    return hostname in ('localhost', 'localhost.localdomain',
+                        '127.0.0.1', '127.0.1.1', '::1')
 
 
 class RemoteConfiguration(object):
@@ -129,9 +174,9 @@ class LocalConfiguration(object):
             Unlike the :class:`RemoteConfiguration` class, I don't think
             it's pertinent and wanted to :program:`deactivate` first.
      """
-    def __init__(self, host_string):
+    def __init__(self, host_string=None):
 
-        self.host_string = host_string
+        self.host_string = host_string or 'localhost'
 
         try:
             import lsb_release
@@ -151,8 +196,8 @@ class LocalConfiguration(object):
                                   'version', 'machine'),
                                   os.uname())))
 
-        self.user, self.tilde = nofabric._local('echo "${USER},${HOME}"',
-                                                ).output.strip().split(',')
+        self.user, self.tilde = nofabric.local('echo "${USER},${HOME}"',
+                                               ).output.strip().split(',')
 
         # TODO: implement me (and under OSX too).
         self.is_vmware = False
@@ -160,7 +205,7 @@ class LocalConfiguration(object):
         # NOTE: this test could fail in VMs where nothing is mounted from
         # the host. In my own configs, this never occurs, but who knows.
         # TODO: check this works under OSX too, or enhance the test.
-        self.is_parallel = nofabric._local('mount | grep prl_fs').succeeded
+        self.is_parallel = nofabric.local('mount | grep prl_fs').succeeded
 
         self.is_vm = self.is_parallel or self.is_vmware
 
@@ -197,15 +242,14 @@ def with_local_configuration(func):
 
 def find_configuration_type(hostname):
 
-    if hostname in ('localhost', 'localhost.localdomain',
-                    '127.0.0.1', '127.0.1.1', '::1'):
-        return LocalConfiguration(hostname)
+    if is_localhost(hostname):
+        return LocalConfiguration()
 
     else:
         return RemoteConfiguration(hostname, verbose=not quiet)
 
 
-# =============================================================== Utils
+# ======================================================================= Utils
 
 
 def list_or_split(pkgs):
@@ -251,381 +295,6 @@ def symlink(source, destination, overwrite=False, locally=False):
 
     local(command) if locally else run(command)
 
-
-# ========================================== Package management helpers
-
-
-def silent_sudo(command):
-
-    return sudo(command, quiet=True, warn_only=True)
-
-
-def is_installed(test_installed_command):
-    """ Return ``True`` if :param:`test_installed_command` succeeded. """
-
-    return silent_sudo(test_installed_command).succeeded
-
-
-def search(search_command):
-
-    return sudo(search_command, quiet=True)
-
-# ---------------------------------------------- PIP package management
-
-
-@task
-def pip_perms(verbose=True):
-    """ Apply correct permissions on /usr/local/lib/*. Thanks PIP :-/ """
-
-    if verbose and not quiet:
-        print(green('Restoring correct permissions in /usr/local/lib…'))
-
-    silent_sudo('find /usr/local/lib -type f -print0 '
-                '| xargs -0 -n 1024 chmod u+rw,g+r,o+r')
-    silent_sudo('find /usr/local/lib -type d -print0 '
-                '| xargs -0 -n 1024 chmod u+rwx,g+rx,o+rx')
-
-
-@with_remote_configuration
-def pip3_find_executable(remote_configuration=None):
-
-    # run() hangs the 3rd time when called from `contrib/pkgmgr.py`.
-    #print('lookup pip3 in %s' % remote_configuration)
-
-    for pip_exec in ('pip3', 'pip-3.5', 'pip-3.4', 'pip-3.3', 'pip-3.2'):
-        if run('which %s' % pip_exec, quiet=True, warn_only=True).succeeded:
-            return pip_exec
-
-    return None
-
-
-def __pip_is_installed_internal(pkg, py3=False):
-    """ Return ``True`` if a given Python module is installed via PIP. """
-
-    if py3:
-        pip = pip3_find_executable()
-    else:
-        pip = 'pip'
-
-    return is_installed("%s freeze | grep -i '%s=='" % (pip, pkg))
-
-
-def __pip_add_internal(pkgs, py3=False):
-
-    if py3:
-        pip = pip3_find_executable()
-    else:
-        pip = 'pip'
-
-    # Go to a neutral location before PIP tries to "mkdir build"
-    # WARNING: this could be vulnerable to symlink attack when we
-    # force unlink of hard-coded build/, but in this case PIP is
-    # vulnerable during the install phase too :-/
-    with cd('/var/tmp'):
-        installed = False
-        for pkg in list_or_split(pkgs):
-            if not __pip_is_installed_internal(pkg, py3=py3):
-                sudo("%s install -U %s " % (pip, pkg))
-                installed = True
-
-        if installed:
-            silent_sudo('rm -rf build')
-            pip_perms()
-
-
-def __pip_search_internal(pkgs, py3=False):
-
-    if py3:
-        pip = pip3_find_executable()
-    else:
-        pip = 'pip'
-
-    for pkg in list_or_split(pkgs):
-        yield search("%s search %s" % (pip, pkg))
-
-# -------------------------------------- PIP2 / PIP3 package management
-# We implement both for results to be visually separated.
-
-
-def pip2_is_installed(pkg):
-
-    return __pip_is_installed_internal(pkg)
-
-
-def pip2_add(pkgs):
-
-    return __pip_add_internal(pkgs)
-
-
-def pip2_search(pkgs):
-
-    return __pip_search_internal(pkgs)
-
-
-@with_remote_configuration
-def pip3_usable(remote_configuration=None):
-
-    # XXX: run() hangs the 3rd time when called from `contrib/pkgmgr.py`.
-    # until I find why, pip3 is disabled; this allows to still use others.
-    return False
-
-    return pip3_find_executable() is not None
-
-
-def pip3_is_installed(pkg):
-
-    return __pip_is_installed_internal(pkg, py3=True)
-
-
-def pip3_add(pkgs):
-
-    return __pip_add_internal(pkgs, py3=True)
-
-
-def pip3_search(pkgs):
-
-    return __pip_search_internal(pkgs, py3=True)
-
-
-# ---------------------------------------------- NPM package management
-
-# TODO: npm_usable
-
-
-def npm_is_installed(pkg):
-    """ Return ``True`` if a given NodeJS package is installed. """
-
-    return is_installed("npm list -i %s | grep ' %s@'" % (pkg, pkg))
-
-
-def npm_add(pkgs):
-    for pkg in list_or_split(pkgs):
-        if not npm_is_installed(pkg):
-            sudo('npm install %s' % pkg)
-
-
-def npm_search(pkgs):
-    # 2>&1 is necessary to catch the http/NAME (they are on stderr)
-    for pkg in list_or_split(pkgs):
-        yield search("npm search %s 2>&1 | grep -vE '^(npm |NAME).*' "
-                     "| sed -e 's/ =.*$//g'" % pkg)
-
-# ---------------------------------------------- GEM package management
-
-# TODO: gem_usable
-
-
-def gem_is_installed(pkg):
-    """ Return ``True`` if a given Ruby gem is installed. """
-
-    return is_installed('gem list -i %s' % pkg)
-
-
-def gem_add(pkgs):
-    for pkg in list_or_split(pkgs):
-        if not gem_is_installed(pkg):
-            sudo('gem install %s' % pkg)
-
-
-def gem_search(pkgs):
-    for pkg in list_or_split(pkgs):
-        yield search("gem search -r %s 2>&1 | grep -vE '^(\*\*\*|$)'" % pkg)
-
-# ---------------------------------------------- APT package management
-
-
-@with_remote_configuration
-def apt_usable(remote_configuration=None):
-    return not remote_configuration.is_osx
-
-
-def apt_is_installed(pkg):
-    """ Return ``True`` if a given package is installed via APT/dpkg. """
-
-    # OMG, this is so ugly. but `dpkg -l %s` will answer
-    # 'un <package> uninstalled' + exit 0 if not installed.
-    return is_installed('dpkg -l | grep -E "^(ii|rc)  %s "' % pkg)
-
-
-def apt_update():
-    """ Update APT packages list. """
-
-    sudo('apt-get update -q')
-
-
-def apt_upgrade():
-    """ Upgrade outdated Debian packages. """
-
-    sudo('apt-get -u dist-upgrade -q --yes --force-yes')
-
-
-def apt_add(pkgs):
-    for pkg in list_or_split(pkgs):
-        if not apt_is_installed(pkg):
-            sudo('apt-get -q install --yes --force-yes %s' % pkg)
-
-
-def apt_del(pkgs):
-    for pkg in list_or_split(pkgs):
-        if apt_is_installed(pkg):
-            sudo('apt-get -q remove --purge --yes --force-yes %s' % pkg)
-
-
-def ppa(src):
-    sudo('add-apt-repository -y "%s"' % src)
-    apt_update()
-
-
-def key(key):
-    """ Add a GPG key to the local APT key database. """
-
-    sudo('wget -q -O - %s | apt-key add -' % key)
-
-
-def ppa_pkg(src, pkgs, check_path=None):
-
-    if check_path and exists(check_path):
-        return
-
-    ppa(src)
-    apt_add(pkgs)
-
-
-def apt_search(pkgs):
-    for pkg in list_or_split(pkgs):
-        yield search("apt-cache search %s" % pkg)
-
-
-# --------------------------------------------- Brew package management
-
-@with_remote_configuration
-def brew_usable(remote_configuration=None):
-    return remote_configuration.is_osx
-
-
-def brew_is_installed(pkg):
-    """ Return ``True`` if a given application is installed via Brew (on OSX).
-    """
-
-    return is_installed('brew list %s >/dev/null 2>&1' % pkg)
-
-
-def brew_add(pkgs):
-    """ Add a local package via Homebrew (on OSX).
-
-        .. note:: we always use FORCE_UNSAFE_CONFIGURE=1 to avoid errors::
-
-            checking whether mknod can create fifo without root privileges...
-             configure: error: in `/private/tmp/coreutils-zCgv/coreutils-8.21':
-            configure: error: you should not run configure as root (set
-                FORCE_UNSAFE_CONFIGURE=1 in environment to bypass this check)
-            See `config.log' for more details
-            READ THIS: https://github.com/mxcl/homebrew/wiki/troubleshooting
-    """
-
-    for pkg in list_or_split(pkgs):
-        if not brew_is_installed(pkg):
-            run('FORCE_UNSAFE_CONFIGURE=1 brew install %s' % pkg)
-
-
-def brew_del(pkgs):
-    for pkg in list_or_split(pkgs):
-        if brew_is_installed(pkg):
-            run('brew remove %s' % pkg)
-
-
-def brew_update():
-    """ Update Homebrew formulas. """
-
-    run('brew update')
-
-
-def brew_upgrade():
-    """ Upgrade outdated brew packages. """
-
-    run('brew upgrade')
-
-
-def brew_search(pkgs):
-    for pkg in list_or_split(pkgs):
-        yield search("brew search %s 2>&1 | grep -v 'No formula found for' "
-                     "| tr ' ' '\n' | sort -u" % pkg)
-
-
-# ------------------------------------------ Generic package management
-
-
-@with_remote_configuration
-def pkg_is_installed(pkg, remote_configuration=None):
-    if remote_configuration.lsb:
-        return apt_is_installed(pkg)
-    else:
-        return brew_is_installed(pkg)
-
-
-@with_remote_configuration
-def pkg_add(pkgs, remote_configuration=None):
-    if remote_configuration.lsb:
-        return apt_add(pkgs)
-    else:
-        return brew_add(pkgs)
-
-
-@with_remote_configuration
-def pkg_del(pkgs, remote_configuration=None):
-    if remote_configuration.lsb:
-        return apt_del(pkgs)
-    else:
-        return brew_del(pkgs)
-
-
-@with_remote_configuration
-def pkg_update(remote_configuration=None):
-    if remote_configuration.lsb:
-        return apt_update()
-    else:
-        return brew_update()
-
-
-@with_remote_configuration
-def pkg_upgrade(remote_configuration=None):
-    if remote_configuration.lsb:
-        return apt_upgrade()
-    else:
-        return brew_upgrade()
-
-# ============================================= Global package upgrades
-
-
-@task
-@with_remote_configuration
-def update(remote_configuration=None):
-    """ Refresh all package management tools data (packages lists, receipes…).
-    """
-
-    #pip_update()
-    #npm_update()
-    #gem_update()
-
-    if remote_configuration.lsb:
-        apt_update()
-    else:
-        brew_update()
-
-
-@task
-@with_remote_configuration
-def upgrade(update=False, remote_configuration=None):
-    """ Upgrade all outdated packages from all pkg management tools at once. """
-
-    #pip_update()
-    #npm_upgrade()
-    #gem_update()
-
-    if remote_configuration.lsb:
-        apt_upgrade()
-    else:
-        brew_upgrade()
 
 # ========================================================== User configuration
 

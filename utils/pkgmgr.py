@@ -12,7 +12,7 @@ if __package__ is None:
     # See ../fabfile.py for explanations
     sys.path.append(os.path.expanduser('~/Dropbox'))
 
-from sparks import fabric as sf
+from sparks import pkg
 
 env.host_string = 'localhost'
 colors = [yellow, green, cyan, blue]
@@ -67,11 +67,9 @@ def wrap(module, suffix, args):
     ps = []
 
     for index, name, func in lookup(module, suffix):
-        ps.append(multiprocessing.Process(target=encapsulate,
-                                          args=(func, name,
-                                                args, suffix, index, )))
-
-    for p in ps:
+        p = multiprocessing.Process(target=encapsulate,
+                                    args=(func, name, args, suffix, index, ))
+        ps.append(p)
         p.start()
 
     for p in ps:
@@ -79,10 +77,11 @@ def wrap(module, suffix, args):
 
 
 def search(args):
-    print('>> searching', ', '.join(red(a) for a in args),
-          'in', names(sf, '_search'), '…')
+    sys.stderr.write(u'>> searching {0} in {1}…\n'.format(
+                     u', '.join(red(a) for a in args),
+                     names(pkg, '_search')))
 
-    wrap(sf, '_search', args)
+    wrap(pkg, '_search', args)
 
 
 def install(args):
