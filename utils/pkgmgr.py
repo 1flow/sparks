@@ -79,8 +79,8 @@ def wrap(module, suffix, args):
 
 
 def search(args):
-    print '>> searching', ', '.join(red(a) for a in args), \
-          'in', names(sf, '_search'), '…'
+    print('>> searching', ', '.join(red(a) for a in args),
+          'in', names(sf, '_search'), '…')
 
     wrap(sf, '_search', args)
 
