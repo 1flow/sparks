@@ -13,7 +13,7 @@ import subprocess
 from ..foundations.classes import SimpleObject
 
 
-def _run(command, *a, **kw):
+def run(command, *a, **kw):
 
     output = SimpleObject()
 
@@ -35,7 +35,7 @@ def _run(command, *a, **kw):
     return output
 
 
-def _sudo(command, *a, **kw):
-    return _run('sudo %s' % command, *a, **kw)
+def sudo(command, *a, **kw):
+    return run('sudo %s' % command, *a, **kw)
 
-_local = _run
+local = run
