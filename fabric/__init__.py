@@ -7,7 +7,7 @@ import platform
 
 from ..foundations.classes import SimpleObject
 
-import nofabric
+from . import nofabric
 
 try:
     from fabric.api              import run as fabric_run
