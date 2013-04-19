@@ -5,6 +5,14 @@ import os
 import sys
 import multiprocessing
 
+# Use this in case paramiko seems to go crazy. Trust me, it can do, especially
+# when using the multiprocessing module.
+#
+#import logging
+#logging.basicConfig(format=
+#                    '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+#                    level=logging.INFO)
+
 from fabric.api import env
 from fabric.colors import yellow, red, green, cyan, blue
 
@@ -17,6 +25,9 @@ from sparks import pkg
 env.host_string = 'localhost'
 colors = [yellow, green, cyan, blue]
 colnum = len(colors)
+
+
+#LOGGER = logging.getLogger(__name__)
 
 
 def usable(module, suffix, name):
