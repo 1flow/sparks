@@ -17,13 +17,15 @@ def run(command, *a, **kw):
 
     output = SimpleObject()
 
+    output.command = command
+
     try:
         #print '>> running', command
         output.output = subprocess.check_output(command,
-                                                shell=kw.pop('shell', True))
+                                                shell=kw.pop('shell', True),
+                                                universal_newlines=True)
 
-    except subprocess.CalledProcessError, e:
-        output.command   = e.cmd
+    except subprocess.CalledProcessError as e:
         output.output    = e.output
         output.failed    = True
         output.succeeded = False

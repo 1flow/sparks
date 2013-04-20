@@ -1,1 +1,1 @@
-import fabric
+from . import fabric
