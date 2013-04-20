@@ -16,7 +16,7 @@ if __package__ is None:
     # and http://www.python.org/dev/peps/pep-0366/
     sys.path.append(os.path.expanduser('~/Dropbox'))
 
-from sparks import fabric as sf
+from sparks import pkg, fabric as sf
 
 # ===================================================== Local variables
 
@@ -55,8 +55,8 @@ def install_chrome(remote_configuration=None):
         append('/etc/apt/sources.list.d/google-chrome.list',
                'deb http://dl.google.com/linux/chrome/deb/ stable main',
                use_sudo=True)
-        sf.apt_update()
-        sf.apt_add('google-chrome-stable')
+        pkg.apt_update()
+        pkg.apt_add('google-chrome-stable')
 
 
 @sf.with_remote_configuration
@@ -124,23 +124,23 @@ def install_homebrew(remote_configuration=None):
     if exists('/usr/local/bin/brew'):
 
         if confirm('Update Brew Formulæ?', default=False):
-            sf.brew_update()
+            pkg.brew_update()
 
         if confirm('Upgrade outdated Brew packages?',
                    default=False):
-            sf.brew_upgrade()
+            pkg.brew_upgrade()
 
     else:
         sudo('ruby -e "$(curl -fsSL https://raw.github.com/mxcl/homebrew/go)"')
 
         sudo('brew doctor')
-        sf.brew_add(('git', ))
+        pkg.brew_add(('git', ))
 
         # TODO: implement this.
         info('Please install OSX CLI tools for Xcode manually.')
 
         if confirm('Is the installation OK?'):
-            sf.brew_update()
+            pkg.brew_update()
 
 
 @sf.with_remote_configuration
@@ -153,7 +153,7 @@ def install_1password(remote_configuration=None):
 
     else:
         # TODO: implement me
-        sf.apt_add('wine')
+        pkg.apt_add('wine')
 
 
 @sf.with_remote_configuration
@@ -196,7 +196,7 @@ def sys_easy_sudo(remote_configuration=None):
 
     if remote_configuration.is_osx:
         # GNU sed is needed for fabric `sed` command to succeed.
-        sf.brew_add('gnu-sed')
+        pkg.brew_add('gnu-sed')
         sf.symlink('/usr/local/bin/gsed', '/usr/local/bin/sed')
 
         sudoers = '/private/etc/sudoers'
@@ -224,13 +224,15 @@ def sys_unattended(remote_configuration=None):
         info("Skipped unattended-upgrades (not on LSB).")
         return
 
-    sf.apt_add('unattended-upgrades')
+    pkg.apt_add('unattended-upgrades')
 
     # always install the files, in case they
     # already exist and have different contents.
-    put(os.path.join('Dropbox', 'configuration', 'data', 'uu-periodic.conf'),
+    put(os.path.join(os.path.expanduser('~'), 'Dropbox', 'configuration',
+        'data', 'uu-periodic.conf'),
         '/etc/apt/apt.conf.d/10periodic', use_sudo=True)
-    put(os.path.join('Dropbox', 'configuration', 'data', 'uu-upgrades.conf'),
+    put(os.path.join(os.path.expanduser('~'), 'Dropbox', 'configuration',
+        'data', 'uu-upgrades.conf'),
         '/etc/apt/apt.conf.d/50unattended-upgrades', use_sudo=True)
 
     # Too long. It will be done by CRON anyway.
@@ -249,7 +251,7 @@ def sys_del_useless(remote_configuration=None):
     if remote_configuration.is_osx:
         return
 
-    sf.apt_del(('apport', 'python-apport',
+    pkg.apt_del(('apport', 'python-apport',
                 'landscape-client-ui-install', 'gnome-orca',
                 'brltty', 'libbrlapi0.5', 'python3-brlapi', 'python-brlapi',
                 'ubuntuone-client', 'ubuntuone-control-panel',
@@ -272,10 +274,10 @@ def sys_default_services(remote_configuration=None):
 def sys_admin_pkgs(remote_configuration=None):
     """ Install some sysadmin related applications. """
 
-    sf.pkg_add(('wget', 'multitail', ))
+    pkg.pkg_add(('wget', 'multitail', ))
 
     if not remote_configuration.is_osx:
-        sf.apt_add(('acl', 'attr', 'colordiff', ))
+        pkg.apt_add(('acl', 'attr', 'colordiff', ))
 
 
 @task
@@ -384,9 +386,9 @@ def dev_graphviz(remote_configuration=None):
 
     # graphviz-dev will fail on OSX, but graphiv will install
     # the -dev requisites via brew.
-    sf.pkg_add(('graphviz', 'pkg-config', 'graphviz-dev'))
+    pkg.pkg_add(('graphviz', 'pkg-config', 'graphviz-dev'))
 
-    sf.pip2_add(('pygraphviz', ))
+    pkg.pip2_add(('pygraphviz', ))
 
 
 @task
@@ -403,7 +405,7 @@ def dev_pil(virtualenv=None, remote_configuration=None):
                    'libfreetype6-dev', 'libxslt1-dev', 'zlib1g-dev',
                    'imagemagick')
 
-    sf.pkg_add(pilpkgs)
+    pkg.pkg_add(pilpkgs)
 
     if not remote_configuration.is_osx:
         # Be protective by default, this should be done
@@ -445,7 +447,7 @@ def dev_tildesources(remote_configuration=None):
 def dev_mysql(remote_configuration=None):
     """ MySQL development environment (for python packages build). """
 
-    sf.pkg_add('' if remote_configuration.is_osx else 'libmysqlclient-dev')
+    pkg.pkg_add('' if remote_configuration.is_osx else 'libmysqlclient-dev')
 
 
 @task
@@ -454,9 +456,9 @@ def dev_sqlite(remote_configuration=None):
     """ SQLite development environment (for python packages build). """
 
     if not remote_configuration.is_osx:
-        sf.pkg_add(('libsqlite3-dev', 'python-all-dev', ))
+        pkg.pkg_add(('libsqlite3-dev', 'python-all-dev', ))
 
-    sf.pip2_add(('pysqlite', ))
+    pkg.pip2_add(('pysqlite', ))
 
 
 @task
@@ -464,7 +466,7 @@ def dev_sqlite(remote_configuration=None):
 def dev_mini(remote_configuration=None):
     """ Git and ~/sources/ """
 
-    sf.pkg_add(('git' if remote_configuration.is_osx else 'git-core'))
+    pkg.pkg_add(('git' if remote_configuration.is_osx else 'git-core'))
 
     dev_tildesources()
 
@@ -482,11 +484,11 @@ def dev_web(remote_configuration=None):
 
     # NOTE: nodejs` PPA version already includes `npm`,
     # no need to install it via a separate package on Ubuntu.
-    sf.pkg_add(('nodejs', ))
+    pkg.pkg_add(('nodejs', ))
 
     # But on others, we need.
     if remote_configuration.is_osx:
-        sf.pkg_add(('npm', ))
+        pkg.pkg_add(('npm', ))
 
     sf.npm_add(('less', 'yo',
 
@@ -498,7 +500,7 @@ def dev_web(remote_configuration=None):
                 'coffeescript-compiler', 'coffeescript-concat',
                 'coffeescript_compiler_tools'))
 
-    sf.gem_add(('compass', ))
+    pkg.gem_add(('compass', ))
 
 
 @task
@@ -515,25 +517,25 @@ def dev(remote_configuration=None):
         #     - virtualenv* come only via PIP.
         #    - git-flow-avh brings small typing enhancements.
 
-        sf.brew_add(('git-flow-avh', 'ack', 'python', ))
+        pkg.brew_add(('git-flow-avh', 'ack', 'python', ))
 
     else:
         # On Ubuntu, `ack` is `ack-grep`.
-        sf.apt_add(('git-flow', 'ack-grep', 'python-pip',
+        pkg.apt_add(('git-flow', 'ack-grep', 'python-pip',
                     'ruby', 'ruby-dev', 'rubygems', ))
 
         # Remove eventually DEB installed old packages (see just after).
-        sf.apt_del(('python-virtualenv', 'virtualenvwrapper', ))
+        pkg.apt_del(('python-virtualenv', 'virtualenvwrapper', ))
 
     # Add them from PIP, to have latest
     # version which handles python 3.3 gracefully.
-    sf.pip2_add(('virtualenv', 'virtualenvwrapper', ))
+    pkg.pip2_add(('virtualenv', 'virtualenvwrapper', ))
 
     #TODO: if exists virtualenv and is_lxc(machine):
 
     # We remove the DEB packages to avoid duplicates and conflicts.
     # It's usually older than the PIP package.
-    sf.pkg_del(('ipython', 'ipython3', ))
+    pkg.pkg_del(('ipython', 'ipython3', ))
 
     if remote_configuration.is_osx:
         # The brew python3 receipe installs pip3 and development files.
@@ -543,18 +545,18 @@ def dev(remote_configuration=None):
         py3_pkgs = ('python3.3', 'python3.3-dev', 'python3.3-examples',
                     'python3.3-minimal', 'python3-pip', )
 
-    sf.pkg_add(py3_pkgs)
+    pkg.pkg_add(py3_pkgs)
 
-    sf.pip2_add(('yolk', 'ipython', 'flake8', ))
+    pkg.pip2_add(('yolk', 'ipython', 'flake8', ))
 
     # yolk & flake8 fail because of distribute incompatible with Python 3.
-    sf.pip3_add(('ipython', ))
+    pkg.pip3_add(('ipython', ))
 
     # No need yet, it's already available from the system, in Python 2,
     # and can perfectly generate a virtualenv for Python 3.3.
-    #sf.pip3_add(('virtualenv', 'virtualenvwrapper', ))
+    #pkg.pip3_add(('virtualenv', 'virtualenvwrapper', ))
 
-    sf.gem_add(('git-up', ))
+    pkg.gem_add(('git-up', ))
 
 # --------------------------------------------------- Databases recipes
 
@@ -564,7 +566,7 @@ def dev(remote_configuration=None):
 def db_sqlite(remote_configuration=None):
     """ SQLite database library. """
 
-    sf.pkg_add('sqlite' if remote_configuration.is_osx else 'sqlite3')
+    pkg.pkg_add('sqlite' if remote_configuration.is_osx else 'sqlite3')
 
 
 @task
@@ -572,7 +574,7 @@ def db_sqlite(remote_configuration=None):
 def db_mysql(remote_configuration=None):
     """ MySQL database server. """
 
-    sf.pkg_add('mysql' if remote_configuration.is_osx else 'mysql-server')
+    pkg.pkg_add('mysql' if remote_configuration.is_osx else 'mysql-server')
 
 
 @task
@@ -580,9 +582,9 @@ def db_mysql(remote_configuration=None):
 def db_postgres(remote_configuration=None):
     """ PostgreSQL database server. """
 
-    sf.pkg_add('postgresql'
-               if remote_configuration.is_osx
-               else 'postgresql-9.1')
+    pkg.pkg_add('postgresql'
+                if remote_configuration.is_osx
+                else 'postgresql-9.1')
 
 
 # -------------------------------------- Server or console applications
@@ -603,7 +605,7 @@ def base(remote_configuration=None):
     sys_admin_pkgs()
     sys_ssh_powerline()
 
-    sf.pkg_add(('byobu', 'bash-completion',
+    pkg.pkg_add(('byobu', 'bash-completion',
                 'htop-osx' if remote_configuration.is_osx else 'htop'))
 
 
@@ -615,14 +617,14 @@ def deployment(remote_configuration=None):
     # We remove the system packages in case they were previously
     # installed, because PIP's versions are more recent.
     # Paramiko <1.8 doesn't handle SSH agent correctly and we need it.
-    sf.pkg_del(('fabric', 'python-paramiko', ))
+    pkg.pkg_del(('fabric', 'python-paramiko', ))
 
-    sf.pkg_add(('dsh', ))
+    pkg.pkg_add(('dsh', ))
 
     if not remote_configuration.is_osx:
-        sf.pkg_add(('python-all-dev', ))
+        pkg.pkg_add(('python-all-dev', ))
 
-    sf.pip2_add(('fabric', ))
+    pkg.pip2_add(('fabric', ))
 
 
 @task
@@ -634,7 +636,7 @@ def lxc(remote_configuration=None):
         info("Skipped LXC host setup (not on LSB).")
         return
 
-    sf.apt_add('lxc')
+    pkg.apt_add('lxc')
 
 # ------------------------------------ Client or graphical applications
 
@@ -649,7 +651,7 @@ def graphdev(remote_configuration=None):
         .. todo:: clean / refactor contents (OSX mainly).
     """
 
-    sf.pkg_add(('pdksh', 'zsh', ))
+    pkg.pkg_add(('pdksh', 'zsh', ))
 
     if remote_configuration.is_osx:
         # TODO: download/install on OSX:
@@ -660,7 +662,7 @@ def graphdev(remote_configuration=None):
                 info("Please install %s manually." % yellow(app))
         return
 
-    sf.apt_add(('gitg', 'meld', 'regexxer', 'cscope', 'exuberant-ctags',
+    pkg.apt_add(('gitg', 'meld', 'regexxer', 'cscope', 'exuberant-ctags',
                 'vim-gnome', 'terminator', 'gedit-developer-plugins',
                 'gedit-plugins', 'geany', 'geany-plugins', ))
 
@@ -674,7 +676,7 @@ def graphdb(remote_configuration=None):
         info("Skipped graphical DB-related packages (not on LSB).")
         return
 
-    sf.apt_add('pgadmin3')
+    pkg.apt_add('pgadmin3')
 
 
 @task
@@ -690,7 +692,7 @@ def graph(remote_configuration=None):
         info("Skipped graphe PPA packages (not on Ubuntu).")
         return
 
-    sf.apt_add(('synaptic', 'gdebi', 'compizconfig-settings-manager',
+    pkg.apt_add(('synaptic', 'gdebi', 'compizconfig-settings-manager',
                 'dconf-tools', 'gconf-editor', 'pidgin', 'vlc', 'mplayer',
                 'indicator-multiload'))
 
@@ -879,7 +881,7 @@ def myfullenv(remote_configuration=None):
 def mybootstrap(remote_configuration=None):
     """ Bootstrap my personal environment on the local machine. """
 
-    sf.apt_add(('ssh', ), locally=True)
+    pkg.apt_add(('ssh', ), locally=True)
 
     mydotfiles(remote_configuration=None, locally=True)
 
@@ -897,13 +899,13 @@ def lxc_base(remote_configuration=None):
 
     base()
 
-    sf.apt_update()
+    pkg.apt_update()
 
     # install the locale before everything, else DPKG borks.
-    sf.apt_add(('language-pack-fr', 'language-pack-en', ))
+    pkg.apt_add(('language-pack-fr', 'language-pack-en', ))
 
     # Remove firefox's locale, it's completely sys_del_useless in a LXC.
-    sf.apt_del(('firefox-locale-fr', 'firefox-locale-en', ))
+    pkg.apt_del(('firefox-locale-fr', 'firefox-locale-en', ))
 
     # TODO: nullmailer, bsd-mailx… Cf. my LXC documentation.
 
