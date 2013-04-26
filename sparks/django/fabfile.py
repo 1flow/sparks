@@ -10,8 +10,8 @@ import logging
 
 try:
     from fabric.api              import env, run, sudo, task, local
-    #from fabric.operations       import put
-    from fabric.contrib.files    import exists
+    from fabric.operations       import put
+    from fabric.contrib.files    import exists, upload_template
     from fabric.context_managers import cd, prefix, settings
 
 except ImportError:
@@ -75,8 +75,9 @@ def is_local_environment():
 
 def git_pull():
 
-    # push everything first.
-    local('git pa')
+    # Push everything first. This is not strictly mandatory.
+    # Don't fail if local user doesn't have my `pa` alias.
+    local('git pa || true')
 
     with cd(env.root):
         if not is_local_environment():
@@ -91,46 +92,104 @@ def activate_venv():
 
 @task
 def restart_celery():
+    """ Restart celery (only if detected as installed). """
 
     if exists('/etc/init.d/celeryd'):
         sudo("/etc/init.d/celeryd restart")
 
 
 @task
-def restart_gunicorn():
-
-    if exists('/etc/init.d/gunicorn'):
-        run("sudo /etc/init.d/gunicorn restart")
-
-
-@task
 def restart_supervisor():
+    """ (Re-)upload configuration files and reload gunicorn via supervisor.
+
+        This will reload only one service, even if supervisor handles more
+        than one on the remote server. Thus it's safe for production to
+        reload test :-)
+
+    """
 
     if exists('/etc/init.d/supervisord'):
-        run("sudo /etc/init.d/supervisord restart")
+
+        # We need something more unique than project, in case we have
+        # many environments on the same remote machine.
+        program_name = '{0}_{0}'.format(env.project, env.environment)
+
+        #
+        # Upload an environment-specific supervisor configuration file.
+        #
+
+        superconf = os.path.join(env.root, 'config',
+                                 'gunicorn_supervisor_{0}.conf'.format(
+                                 env.environment))
+
+        # os.path.exists(): we are looking for a LOCAL file!
+        if not os.path.exists(superconf):
+            superconf = os.path.join(os.path.dirname(__file__),
+                                     'gunicorn_supervisor.template')
+
+        destination = '/etc/supervisor/conf.d/{0}.conf'.format(program_name)
+
+        context = {
+            'root': env.root,
+            'user': env.user,
+            'branch': env.branch,
+            'project': env.project,
+            'program': program_name,
+            'user_home': env.user_home,
+            'virtualenv': env.virtualenv,
+            'environment': env.environment,
+        }
+
+        upload_template(superconf, destination, context=context)
+
+        #
+        # Upload an environment-specific gunicorn configuration file.
+        #
+
+        uniconf = os.path.join(env.root, 'config',
+                               'gunicorn_conf_{0}.py'.format(env.environment))
+
+        # os.path.exists(): we are looking for a LOCAL file!
+        if not os.path.exists(uniconf):
+            uniconf = os.path.join(os.path.dirname(__file__),
+                                   'gunicorn_conf_default.py')
+
+        put(uniconf, '/etc/supervisor/conf.d/', use_sudo=True)
+        #
+        # Reload supervisor, it will restart gunicorn.
+        #
+
+        # cf. http://stackoverflow.com/a/9310434/654755
+
+        sudo("supervisorctl restart {0}".format(program_name))
 
 
 @task
 def requirements():
+    """ Install PIP requirements (and dev-requirements). """
+
     with cd(env.root):
         with activate_venv():
 
             if is_local_environment():
                 dev_req = os.path.join(env.root, env.dev_requirements_file)
 
+                # exists(): we are looking for a remote file!
                 if not exists(dev_req):
                     dev_req = os.path.join(os.path.dirname(__file__),
                                            'dev-requirements.txt')
+                    #TODO: "put" it there !!
 
                 run("pip install -U --requirement {requirements_file}".format(
                     requirements_file=dev_req))
 
             req = os.path.join(env.root, env.requirements_file)
-            LOGGER.info(req)
 
+            # exists(): we are looking for a remote file!
             if not exists(req):
                 req = os.path.join(os.path.dirname(__file__),
                                    'requirements.txt')
+                #TODO: "put" it there !!
 
             run("pip install -U --requirement {requirements_file}".format(
                 requirements_file=req))
@@ -138,6 +197,8 @@ def requirements():
 
 @task
 def collectstatic():
+    """ Run the Django collectstatic management command. """
+
     with cd(env.root):
         with activate_venv():
             run('./manage.py collectstatic --noinput')
@@ -145,6 +206,8 @@ def collectstatic():
 
 @task
 def syncdb():
+    """ Run the Django syndb management command. """
+
     with cd(env.root):
         with activate_venv():
             run('chmod 755 manage.py', quiet=True)
@@ -153,6 +216,8 @@ def syncdb():
 
 @task
 def migrate(*args):
+    """ Run the Django migrate management command. """
+
     with cd(env.root):
         with activate_venv():
             run("./manage.py migrate " + ' '.join(args))
@@ -160,7 +225,7 @@ def migrate(*args):
 
 @task
 def createdb():
-    """ Create the PostgreSQL database. Should do OK if already existing.
+    """ Create the PostgreSQL user & database. It's OK if already existing.
 
     OSX Installation notes:
 
@@ -210,6 +275,7 @@ def createdb():
 
 @task(aliases=('initial', ))
 def runable():
+    """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
 
     createdb()
     requirements()
@@ -220,7 +286,9 @@ def runable():
 
 @task
 def deploy():
+    """ Pull code, ensure runable, restart services. """
+
     git_pull()
     runable()
-    restart_gunicorn()
+    restart_celery()
     restart_supervisor()

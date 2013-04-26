@@ -6,13 +6,16 @@ My *foundations* repository, which I use to bootstrap any new project or machine
 - Can deploy many machines at a time (eg `fab -R lxc-group lxc_base -P -z 10` works as expected).
 - Works on Ubuntu and OSX *hosts* and *targets*, even mixed (I use both, daily).
 - Is implemented with a lot of tasks and subtasks, which can be re-used to your liking (see `fab --list`).
-- Contains a unified package search tool (`utils/pkgmgr.py`, see below).
+- Includes a unified package search tool (`utils/pkgmgr.py`, see below).
+- Contains some modules and a dedicated `fabfile` for bootstraping `Django` projects very quickly. It still needs a little love on the sysadmin side, because installation of system dependancies like PostgreSQL or redis/memcache must be handled manually (there's a start in the `fabfile`, but it's inactive for now).
 
 In the near future:
-- it will contain some modules for bootstraping `Django` projects quickly.
-- and will likely contain some `AngularJS` modules, too.
+- it will likely contain some `AngularJS` modules, too.
 
 ## List of fabric tasks
+
+
+### Machine installation-related
 
 You can get an up-to-date list with `fab --list`. Some of them have *aliases*, which I didn't display here.
 
@@ -55,7 +58,68 @@ You can get an up-to-date list with `fab --list`. Some of them have *aliases*, w
     sf.update             Refresh all package management tools data (packages lists, receipes…).
     sf.upgrade            Upgrade all outdated packages from all pkg management tools at once.
 
-## How-to
+### Django-related tasks
+
+You **must** create your own `fabfile` in your project, and import the sparks one. You just have to specify `env` configuration, and the sparks `fabfile` will do the rest, providing commonly used targets, named `initial`, `deploy` and so on. Considering the `fabfile`:
+
+    import os
+    from fabric.api import env, task
+    import sparks.django.fabfile as sdf
+    from oneflow import settings as oneflow_settings
+
+    # handy aliases for lazy typing…
+    runable = sdf.runable
+    deploy  = sdf.deploy
+
+    env.project    = '1flow'
+    env.virtualenv = '1flow'
+    env.user       = '1flow'
+    env.settings   = oneflow_settings
+    env.root       = '/home/1flow/www'
+
+    @task
+    def local():
+        env.host_string = 'localhost'
+        env.user        = 'olive'
+        env.environment = 'test'
+        env.root        = os.path.expanduser('~/sources/1flow')
+
+    @task
+    def test():
+        env.host_string = 'obi.1flow.net'
+        env.environment = 'test'
+
+    @task
+    def production():
+        env.host_string = '1flow.net'
+        env.environment = 'production'
+
+
+Here is the resulting tasks list, with aliases removed for clarity:
+
+    local                   >
+    production              > My 3 targets.
+    test                    >
+    deploy                  Pull code, ensure runable, restart services.
+    runable                 Ensure we can run the {web,dev}server: db+req+sync+migrate+static.
+    sdf.collectstatic       Run the Django collectstatic management command.
+    sdf.createdb            Create the PostgreSQL user & database. It's OK if already existing.
+    sdf.migrate             Run the Django migrate management command.
+    sdf.requirements        Install PIP requirements (and dev-requirements).
+    sdf.restart_celery      Restart celery (only if detected as installed).
+    sdf.restart_supervisor  (Re-)upload configuration files and reload gunicorn via supervisor.
+    sdf.syncdb              Run the Django syndb management command.
+
+#### Assumptions & conventions
+
+The Django sparks `fabfile` includes a little conventions-related magic:
+
+- it will include your Django `settings` and use `.DEBUG` and `.DATABASES` values.
+- if your local machine runs OSX, it will assume you are in test mode (I develop on OSX and run production code on Linux servers).
+- when doing remote deployments, you have to set fabric's `env.environment` to either `test` or `production`.
+
+
+## Installation How-to
 
 On OSX, you will have a chicken-and-egg problem because `git` is not installed by default. I personally solves this by installing `Dropbox` first, which contains an up-to-date copy of this `sparks` repository, and the `1nstall.py` scripts takes care of the rest (see below).
 
