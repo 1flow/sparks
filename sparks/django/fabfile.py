@@ -146,7 +146,7 @@ def restart_supervisor():
         # Upload an environment-specific gunicorn configuration file.
         #
 
-        uniconf = os.path.join(env.root, 'config',
+        uniconf = os.path.join(env.settings.BASE_ROOT, 'config',
                                'gunicorn_conf_{0}.py'.format(env.environment))
 
         # os.path.exists(): we are looking for a LOCAL file!
@@ -154,8 +154,12 @@ def restart_supervisor():
             unidefault = os.path.join(os.path.dirname(__file__),
                                       'gunicorn_conf_default.py')
 
+            unidest = os.path.join(env.root, 'config',
+                                   'gunicorn_conf_{0}.py'.format(
+                                   env.environment))
+
             # copy the default configuration to remote::specific.
-            put(unidefault, uniconf)
+            put(unidefault, unidest)
 
         #
         # Reload supervisor, it will restart gunicorn.
