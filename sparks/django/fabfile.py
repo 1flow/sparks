@@ -75,8 +75,9 @@ def is_local_environment():
 
 def git_pull():
 
-    # push everything first.
-    local('git pa')
+    # Push everything first. This is not strictly mandatory.
+    # Don't fail if local user doesn't have my `pa` alias.
+    local('git pa || true')
 
     with cd(env.root):
         if not is_local_environment():
