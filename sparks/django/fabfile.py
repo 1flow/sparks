@@ -127,7 +127,7 @@ def requirements():
                     dev_req = os.path.join(os.path.dirname(__file__),
                                            'dev-requirements.txt')
 
-                run("pip install --requirement {requirements_file}".format(
+                run("pip install -U --requirement {requirements_file}".format(
                     requirements_file=dev_req))
 
             req = os.path.join(env.root, env.requirements_file)
@@ -137,7 +137,7 @@ def requirements():
                 req = os.path.join(os.path.dirname(__file__),
                                    'requirements.txt')
 
-            run("pip install --requirement {requirements_file}".format(
+            run("pip install -U --requirement {requirements_file}".format(
                 requirements_file=req))
 
 
