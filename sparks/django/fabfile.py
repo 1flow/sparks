@@ -108,11 +108,11 @@ def restart_supervisor():
 
     """
 
-    if exists('/etc/init.d/supervisord'):
+    if exists('/etc/supervisor'):
 
         # We need something more unique than project, in case we have
         # many environments on the same remote machine.
-        program_name = '{0}_{0}'.format(env.project, env.environment)
+        program_name = '{0}_{1}'.format(env.project, env.environment)
 
         #
         # Upload an environment-specific supervisor configuration file.
@@ -140,7 +140,7 @@ def restart_supervisor():
             'environment': env.environment,
         }
 
-        upload_template(superconf, destination, context=context)
+        upload_template(superconf, destination, context=context, use_sudo=True)
 
         #
         # Upload an environment-specific gunicorn configuration file.
@@ -151,10 +151,12 @@ def restart_supervisor():
 
         # os.path.exists(): we are looking for a LOCAL file!
         if not os.path.exists(uniconf):
-            uniconf = os.path.join(os.path.dirname(__file__),
-                                   'gunicorn_conf_default.py')
+            unidefault = os.path.join(os.path.dirname(__file__),
+                                      'gunicorn_conf_default.py')
 
-        put(uniconf, '/etc/supervisor/conf.d/', use_sudo=True)
+            # copy the default configuration to remote::specific.
+            put(unidefault, uniconf)
+
         #
         # Reload supervisor, it will restart gunicorn.
         #
