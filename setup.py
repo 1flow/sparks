@@ -1,9 +1,11 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 from setuptools import setup, find_packages
 
 setup(
     name="sparks",
+    version='1.6.2',
     author="Olivier Cortès",
     author_email="contact@oliviercortes.com",
     description="My project/machine bootstrap library",
