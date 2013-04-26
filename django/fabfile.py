@@ -53,6 +53,7 @@ def install_base():
     sudo('apt-get install python-pip supervisor nginx-full')
     sudo('apt-get install postgresql redis-server memcached')
     sudo('apt-get install postgresql-server-dev-9.1 libmemcached-dev')
+    sudo('apt-get install build-essential python-all-dev')
     sudo('pip install virtualenv virtualenvwrapper')
 
     if not exists('/etc/nginx/sites-available/beau-dimanche.com'):
