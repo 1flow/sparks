@@ -1,3 +1,3 @@
 Fabric==1.6.0
 ipython==0.13.2
-#sparks
+-e git+https://github.com/Karmak23/sparks.git#egg=sparks

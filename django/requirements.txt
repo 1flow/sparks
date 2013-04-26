@@ -1,8 +1,4 @@
-Fabric==1.6
 Django==1.5.1
-ipython==0.13.2
-wsgiref==0.1.2
-South==0.7.6
 django-debug-toolbar==0.9.4
 django-grappelli==2.4.4
 psycopg2==2.5
@@ -13,3 +9,5 @@ redis==2.7.3
 django-redisboard==0.2.5
 docutils==0.10
 hiredis==0.1.1
+South==0.7.6
+-e git+https://github.com/Karmak23/sparks.git#egg=sparks
