@@ -21,9 +21,9 @@ except ImportError:
 # Use this in case paramiko seems to go crazy. Trust me, it can do, especially
 # when using the multiprocessing module.
 #
-logging.basicConfig(format=
-                    '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
+# logging.basicConfig(format=
+#                     '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+#                     level=logging.INFO)
 
 LOGGER = logging.getLogger(__name__)
 
