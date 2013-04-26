@@ -92,6 +92,7 @@ def activate_venv():
 
 @task
 def restart_celery():
+    """ Restart celery (only if detected as installed). """
 
     if exists('/etc/init.d/celeryd'):
         sudo("/etc/init.d/celeryd restart")
@@ -99,6 +100,13 @@ def restart_celery():
 
 @task
 def restart_supervisor():
+    """ (Re-)upload configuration files and reload gunicorn via supervisor.
+
+        This will reload only one service, even if supervisor handles more
+        than one on the remote server. Thus it's safe for production to
+        reload test :-)
+
+    """
 
     if exists('/etc/init.d/supervisord'):
 
@@ -158,6 +166,8 @@ def restart_supervisor():
 
 @task
 def requirements():
+    """ Install PIP requirements (and dev-requirements). """
+
     with cd(env.root):
         with activate_venv():
 
@@ -168,6 +178,7 @@ def requirements():
                 if not exists(dev_req):
                     dev_req = os.path.join(os.path.dirname(__file__),
                                            'dev-requirements.txt')
+                    #TODO: "put" it there !!
 
                 run("pip install -U --requirement {requirements_file}".format(
                     requirements_file=dev_req))
@@ -178,6 +189,7 @@ def requirements():
             if not exists(req):
                 req = os.path.join(os.path.dirname(__file__),
                                    'requirements.txt')
+                #TODO: "put" it there !!
 
             run("pip install -U --requirement {requirements_file}".format(
                 requirements_file=req))
@@ -185,6 +197,8 @@ def requirements():
 
 @task
 def collectstatic():
+    """ Run the Django collectstatic management command. """
+
     with cd(env.root):
         with activate_venv():
             run('./manage.py collectstatic --noinput')
@@ -192,6 +206,8 @@ def collectstatic():
 
 @task
 def syncdb():
+    """ Run the Django syndb management command. """
+
     with cd(env.root):
         with activate_venv():
             run('chmod 755 manage.py', quiet=True)
@@ -200,6 +216,8 @@ def syncdb():
 
 @task
 def migrate(*args):
+    """ Run the Django migrate management command. """
+
     with cd(env.root):
         with activate_venv():
             run("./manage.py migrate " + ' '.join(args))
@@ -207,7 +225,7 @@ def migrate(*args):
 
 @task
 def createdb():
-    """ Create the PostgreSQL database. Should do OK if already existing.
+    """ Create the PostgreSQL user & database. It's OK if already existing.
 
     OSX Installation notes:
 
@@ -257,6 +275,7 @@ def createdb():
 
 @task(aliases=('initial', ))
 def runable():
+    """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
 
     createdb()
     requirements()
@@ -267,6 +286,8 @@ def runable():
 
 @task
 def deploy():
+    """ Pull code, ensure runable, restart services. """
+
     git_pull()
     runable()
     restart_celery()
