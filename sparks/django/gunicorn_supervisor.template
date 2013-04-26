@@ -1,7 +1,7 @@
-[program:{program}]
-command={user_home}/.virtualenvs/{virtualenv}/bin/gunicorn_django -c {root}/config/gunicorn_conf_{environment}.py
-directory={root}
-user={user}
+[program:%(program)s]
+command=%(user_home)s/.virtualenvs/%(virtualenv)s/bin/gunicorn_django -c %(root)s/config/gunicorn_conf_%(environment)s.py
+directory=%(root)s
+user=%(user)s
 autostart=true
 autorestart=true
 priority=991
