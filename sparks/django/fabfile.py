@@ -90,11 +90,6 @@ def activate_venv():
 
 
 @task
-def test_uname():
-    run('uname -a')
-
-
-@task
 def restart_celery():
 
     if exists('/etc/init.d/celeryd'):
@@ -186,6 +181,8 @@ def createdb():
                                   "WHERE usename = '%s';" % user)
     create_user = base_cmd.format("CREATE USER %s WITH PASSWORD '%s';"
                                   % (user, password))
+    alter_user  = base_cmd.format("ALTER USER %s WITH ENCRYPTED "
+                                  "PASSWORD '%s';" % (user, password))
     select_db   = base_cmd.format("SELECT datname FROM pg_database "
                                   "WHERE datname = '%s';" % db)
     create_db   = base_cmd.format("CREATE DATABASE %s OWNER %s;"
@@ -195,23 +192,26 @@ def createdb():
         if run(select_user, quiet=True).strip() == '':
             run(create_user)
 
+        run(alter_user)
+
         if run(select_db, quiet=True).strip() == '':
             run(create_db)
+
     else:
         with settings(sudo_user="postgres"):
             if sudo(select_user, quiet=True).strip() == '':
                 sudo(create_user)
 
+            sudo(alter_user)
+
             if sudo(select_db, quiet=True).strip() == '':
                 sudo(create_db)
 
 
-@task(aliases=('runable', ))
-def initial():
+@task(aliases=('initial', ))
+def runable():
 
-    if is_local_environment():
-        createdb()
-
+    createdb()
     requirements()
     syncdb()
     migrate()
@@ -221,9 +221,6 @@ def initial():
 @task
 def deploy():
     git_pull()
-    requirements()
-    syncdb()
-    migrate()
-    collectstatic()
+    runable()
     restart_gunicorn()
     restart_supervisor()
