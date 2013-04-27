@@ -259,11 +259,11 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
 
 
 @task(aliases=('initial', ))
-def runable():
+def runable(upgrade=False):
     """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
 
     createdb()
-    requirements()
+    requirements(upgrade=upgrade)
     syncdb()
     migrate()
     collectstatic()
@@ -274,6 +274,6 @@ def deploy():
     """ Pull code, ensure runable, restart services. """
 
     git_pull()
-    runable()
+    runable(upgrade=True)
     restart_celery()
     restart_supervisor()
