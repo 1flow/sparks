@@ -190,7 +190,7 @@ def test(remote_configuration=None):
     """ Just run `uname -a; uptime` remotely, to test the connection
         or sparks core libs. """
 
-    run('uname -a; uptime')
+    run('uname -a; uptime; cat /etc/lsb-release || true')
 
 
 @task
@@ -546,13 +546,13 @@ def dev(remote_configuration=None):
         py3_pkgs = ('python3', )
 
     else:
-        # We pull in python3 in case python3.3 doesn't exist.
-        # It's the case on Ubuntu 12.04 LTS.
+        # TODO: 'python3-pip',
         py3_pkgs = ('python3', 'python3-dev', 'python3-examples',
-                    'python3-minimal',
-                    'python3.3', 'python3.3-dev', 'python3.3-examples',
-                    'python3.3-minimal',
-                    'python3-pip', )
+                    'python3-minimal', )
+
+        if int(remote_configuration.lsb.RELEASE.split('.', 1)[0]) > 12:
+            py3_pkgs += ('python3.3', 'python3.3-dev', 'python3.3-examples',
+                         'python3.3-minimal', )
 
         pkg.apt_add(('build-essential', 'python-all-dev', ))
 
