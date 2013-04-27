@@ -18,7 +18,7 @@ except ImportError:
     print('>>> FABRIC IS NOT INSTALLED !!!')
     raise
 
-from .django       import is_local_environment
+from ..django      import is_local_environment
 from ..fabric      import with_remote_configuration
 from ..pkg         import apt, brew, pip
 from ..foundations import postgresql as pg
@@ -39,7 +39,7 @@ env.dev_requirements_file = 'config/dev-requirements.txt'
 env.branch                = 'master'
 
 
-@with_remote_configuration()
+@with_remote_configuration
 def install_base(remote_configuration=None):
     """ Install necessary packages to run a full Django stack.
         .. todo:: split me into packages/modules where appropriate. """
