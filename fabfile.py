@@ -3,6 +3,7 @@
 import os
 import sys
 import uuid
+import logging
 
 from fabric.api              import env, run, sudo, local, task
 from fabric.operations       import get, put
@@ -20,6 +21,7 @@ from sparks import pkg, fabric as sf
 
 # ===================================================== Local variables
 
+LOGGER = logging.getLogger(__name__)
 local_osx_apps = '~/Downloads/{Mac,OSX}*/'
 central_osx_apps = 'duncan:oliviercortes.com/sparks/osx'
 
@@ -141,6 +143,8 @@ def install_homebrew(remote_configuration=None):
 
         if confirm('Is the installation OK?'):
             pkg.brew_update()
+
+    LOGGER.warning('You still have to install Xcode and its CLI tools.')
 
 
 @sf.with_remote_configuration
