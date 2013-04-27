@@ -3,6 +3,7 @@
 import os
 import sys
 import uuid
+import logging
 
 from fabric.api              import env, run, sudo, local, task
 from fabric.operations       import get, put
@@ -20,6 +21,7 @@ from sparks import pkg, fabric as sf
 
 # ===================================================== Local variables
 
+LOGGER = logging.getLogger(__name__)
 local_osx_apps = '~/Downloads/{Mac,OSX}*/'
 central_osx_apps = 'duncan:oliviercortes.com/sparks/osx'
 
@@ -141,6 +143,8 @@ def install_homebrew(remote_configuration=None):
 
         if confirm('Is the installation OK?'):
             pkg.brew_update()
+
+    LOGGER.warning('You still have to install Xcode and its CLI tools.')
 
 
 @sf.with_remote_configuration
@@ -545,6 +549,8 @@ def dev(remote_configuration=None):
         py3_pkgs = ('python3.3', 'python3.3-dev', 'python3.3-examples',
                     'python3.3-minimal', 'python3-pip', )
 
+        pkg.apt_add(('build-essential', 'python-all-dev', ))
+
     pkg.pkg_add(py3_pkgs)
 
     pkg.pip2_add(('yolk', 'ipython', 'flake8', ))
@@ -582,10 +588,21 @@ def db_mysql(remote_configuration=None):
 def db_postgres(remote_configuration=None):
     """ PostgreSQL database server. """
 
-    pkg.pkg_add('postgresql'
-                if remote_configuration.is_osx
-                else 'postgresql-9.1')
+    if remote_configuration.is_osx:
+        if pkg.brew_add(('postgresql', )):
+            run('initdb /usr/local/var/postgres -E utf8')
+            run('ln -sfv /usr/local/opt/postgresql/*.plist '
+                '~/Library/LaunchAgents')
+            run('launchctl load ~/Library/LaunchAgents/'
+                'homebrew.*.postgresql.plist')
 
+            # Test connection
+            # psql template1
+    else:
+        pkg.apt_add(('postgresql-9.1', 'postgresql-server-dev-9.1', ))
+        dev()
+
+    LOGGER.warning('You still have to tweak pg_hba.conf yourself.')
 
 # -------------------------------------- Server or console applications
 

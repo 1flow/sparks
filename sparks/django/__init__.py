@@ -5,6 +5,15 @@
 """
 
 import sys
+from fabric.api import env
+
+
+def is_local_environment():
+    is_local = env.environment == 'local' or (
+        env.environment == 'test'
+            and env.host_string == 'localhost')
+
+    return is_local
 
 
 def create_admin_user(email=None, password=None):
@@ -19,9 +28,9 @@ def create_admin_user(email=None, password=None):
 
             admin_id       = 'admin'
             admin_email    = email or 'contact@oliviercortes.com'
-            admin_password = password or ('admin'
+            admin_password = password or ('nimdatoor'
                                           if settings.DEBUG
-                                          else 'SET_ME')
+                                          else '-change_me_now+')
 
             try:
                 User.objects.get(username=admin_id)

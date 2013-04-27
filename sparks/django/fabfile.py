@@ -18,6 +18,11 @@ except ImportError:
     print('>>> FABRIC IS NOT INSTALLED !!!')
     raise
 
+from .django       import is_local_environment
+from ..fabric      import with_remote_configuration
+from ..pkg         import apt, brew, pip
+from ..foundations import postgresql as pg
+
 # Use this in case paramiko seems to go crazy. Trust me, it can do, especially
 # when using the multiprocessing module.
 #
@@ -34,27 +39,31 @@ env.dev_requirements_file = 'config/dev-requirements.txt'
 env.branch                = 'master'
 
 
-def install_base():
-    """
+@with_remote_configuration()
+def install_base(remote_configuration=None):
+    """ Install necessary packages to run a full Django stack.
+        .. todo:: split me into packages/modules where appropriate. """
 
-    brew install redis
-    ln -sfv /usr/local/opt/redis/*.plist ~/Library/LaunchAgents
-    launchctl load ~/Library/LaunchAgents/homebrew.mxcl.redis.plist
+    # OSX == test environment == no nginx/supervisor/etc
+    if remote_configuration.is_osx:
+        brew.brew_add(('redis', 'memcached', 'libmemcached', ))
 
-    brew install memcached libmemcached
-    ln -sfv /usr/local/opt/memcached/*.plist ~/Library/LaunchAgents
-    launchctl load ~/Library/LaunchAgents/homebrew.mxcl.memcached.plist
+        run('ln -sfv /usr/local/opt/redis/*.plist ~/Library/LaunchAgents')
+        run('launchctl load ~/Library/LaunchAgents/homebrew.*.redis.plist')
 
-    """
+        run('ln -sfv /usr/local/opt/memcached/*.plist ~/Library/LaunchAgents')
+        run('launchctl load ~/Library/LaunchAgents/homebrew.*.memcached.plist')
 
-    print('install_base UNTESTED, refusing to run.')
+    else:
+        apt.apt_add(('python-pip', 'supervisor', 'nginx-full',))
+        apt.apt_add(('redis-server', 'memcached', 'libmemcached-dev', ))
+        apt.apt_add(('build-essential', 'python-all-dev', ))
+
+    # This is common
+    pip.pip2_add(('virtualenv', 'virtualenvwrapper', ))
+
+    # Nothing more for now, the remaining is disabled.
     return
-
-    sudo('apt-get install python-pip supervisor nginx-full')
-    sudo('apt-get install postgresql redis-server memcached')
-    sudo('apt-get install postgresql-server-dev-9.1 libmemcached-dev')
-    sudo('apt-get install build-essential python-all-dev')
-    sudo('pip install virtualenv virtualenvwrapper')
 
     if not exists('/etc/nginx/sites-available/beau-dimanche.com'):
         #put('config/nginx-site.conf', '')
@@ -63,14 +72,6 @@ def install_base():
     if not exists('/etc/nginx/sites-enabled/beau-dimanche.com'):
         with cd('/etc/nginx/sites-enabled/'):
             sudo('ln -sf ../sites-available/beau-dimanche.com')
-
-
-def is_local_environment():
-    is_local = env.environment == 'local' or (
-        env.environment == 'test'
-            and env.host_string == 'localhost')
-
-    return is_local
 
 
 def git_pull():
@@ -171,8 +172,13 @@ def restart_supervisor():
 
 
 @task
-def requirements():
+def requirements(upgrade=False):
     """ Install PIP requirements (and dev-requirements). """
+
+    if upgrade:
+        command = 'pip install -U'
+    else:
+        command = 'pip install'
 
     with cd(env.root):
         with activate_venv():
@@ -186,8 +192,8 @@ def requirements():
                                            'dev-requirements.txt')
                     #TODO: "put" it there !!
 
-                run("pip install -U --requirement {requirements_file}".format(
-                    requirements_file=dev_req))
+                run("{command} --requirement {requirements_file}".format(
+                    command=command, requirements_file=dev_req))
 
             req = os.path.join(env.root, env.requirements_file)
 
@@ -195,10 +201,10 @@ def requirements():
             if not exists(req):
                 req = os.path.join(os.path.dirname(__file__),
                                    'requirements.txt')
-                #TODO: "put" it there !!
+                #TODO: "put" it on the remote side !!
 
-            run("pip install -U --requirement {requirements_file}".format(
-                requirements_file=req))
+            run("{command} --requirement {requirements_file}".format(
+                command=command, requirements_file=req))
 
 
 @task
@@ -230,53 +236,26 @@ def migrate(*args):
 
 
 @task
-def createdb():
-    """ Create the PostgreSQL user & database. It's OK if already existing.
+@with_remote_configuration
+def createdb(remote_configuration=None, db=None, user=None, password=None,
+             installation=False):
+    """ Create the PostgreSQL user & database if they don't already exist.
+        Install PostgreSQL on the remote system if asked to. """
 
-    OSX Installation notes:
+    if installation:
+        from .. import fabfile
+        fabfile.db_postgresql()
 
-    brew install postgresql
-    initdb /usr/local/var/postgres -E utf8
-    ln -sfv /usr/local/opt/postgresql/*.plist ~/Library/LaunchAgents
-    launchctl load ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist
-    psql template1
+    db, user, password = pg.temper_db_args(db, user, password)
 
-    """
+    with settings(sudo_user=pg.get_admin_user()):
+        if sudo(pg.SELECT_USER.format(user=user), quiet=True).strip() == '':
+            sudo(pg.CREATE_USER.format(user=user, password=password))
 
-    db       = env.settings.DATABASES['default']['NAME']
-    user     = env.settings.DATABASES['default']['USER']
-    password = env.settings.DATABASES['default']['PASSWORD']
+        sudo(pg.ALTER_USER.format(user=user, password=password))
 
-    base_cmd    = 'psql template1 -tc "{0}"'
-    select_user = base_cmd.format("SELECT usename from pg_user "
-                                  "WHERE usename = '%s';" % user)
-    create_user = base_cmd.format("CREATE USER %s WITH PASSWORD '%s';"
-                                  % (user, password))
-    alter_user  = base_cmd.format("ALTER USER %s WITH ENCRYPTED "
-                                  "PASSWORD '%s';" % (user, password))
-    select_db   = base_cmd.format("SELECT datname FROM pg_database "
-                                  "WHERE datname = '%s';" % db)
-    create_db   = base_cmd.format("CREATE DATABASE %s OWNER %s;"
-                                  % (db, user))
-
-    if is_local_environment():
-        if run(select_user, quiet=True).strip() == '':
-            run(create_user)
-
-        run(alter_user)
-
-        if run(select_db, quiet=True).strip() == '':
-            run(create_db)
-
-    else:
-        with settings(sudo_user="postgres"):
-            if sudo(select_user, quiet=True).strip() == '':
-                sudo(create_user)
-
-            sudo(alter_user)
-
-            if sudo(select_db, quiet=True).strip() == '':
-                sudo(create_db)
+        if sudo(pg.SELECT_DB.format(db=db), quiet=True).strip() == '':
+            sudo(pg.CREATE_DB.format(db=db, user=user))
 
 
 @task(aliases=('initial', ))
