@@ -546,8 +546,13 @@ def dev(remote_configuration=None):
         py3_pkgs = ('python3', )
 
     else:
-        py3_pkgs = ('python3.3', 'python3.3-dev', 'python3.3-examples',
-                    'python3.3-minimal', 'python3-pip', )
+        # We pull in python3 in case python3.3 doesn't exist.
+        # It's the case on Ubuntu 12.04 LTS.
+        py3_pkgs = ('python3', 'python3-dev', 'python3-examples',
+                    'python3-minimal',
+                    'python3.3', 'python3.3-dev', 'python3.3-examples',
+                    'python3.3-minimal',
+                    'python3-pip', )
 
         pkg.apt_add(('build-essential', 'python-all-dev', ))
 
