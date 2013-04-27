@@ -6,6 +6,7 @@ import functools
 import platform
 
 from ..foundations.classes import SimpleObject
+from ..contrib import lsb_release
 
 from . import nofabric
 
@@ -178,13 +179,15 @@ class LocalConfiguration(object):
 
         self.host_string = host_string or 'localhost'
 
-        try:
-            import lsb_release
-            self.lsb    = SimpleObject(
-                from_dict=lsb_release.get_lsb_information())
+        lsb = lsb_release.get_lsb_information()
+
+        if lsb:
+            # FIXME: on anything other than Debian/Ubuntu, this will FAIL!
+            self.lsb = SimpleObject(
+                from_dict=lsb)
             self.is_osx = False
 
-        except ImportError:
+        else:
             self.lsb    = None
             self.is_osx = True
             self.mac    = SimpleObject(from_dict=dict(zip(
