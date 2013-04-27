@@ -52,31 +52,32 @@ def get_admin_user(remote_configuration=None):
 def temper_db_args(db, user, password):
     """ Try to accomodate with DB creation arguments. """
 
-    if hasattr(env, 'settings'):
-        if db is not None or user is not None or password is not None:
-            LOGGER.warning('Arguments are overridden by Django settings!')
-
-        db       = env.settings.DATABASES['default']['NAME']
-        user     = env.settings.DATABASES['default']['USER']
-        password = env.settings.DATABASES['default']['PASSWORD']
-
-    else:
-        if db is None:
-            if user is None:
-                raise ValueError('Parameters db and user '
-                                 'cannot be None together.')
-
-            db = user
+    if db is None and user is None and password is None:
+        if hasattr(env, 'settings'):
+            db       = env.settings.DATABASES['default']['NAME']
+            user     = env.settings.DATABASES['default']['USER']
+            password = env.settings.DATABASES['default']['PASSWORD']
 
         else:
-            if user is None:
-                user = db
+            raise ValueError('No database parameters supplied '
+                             'and no Django settings available!')
 
-        if password is None:
-            if not is_local_environment():
-                raise ValueError('Refusing to set password as username '
-                                 'in a real/production environment.')
+    if db is None:
+        if user is None:
+            raise ValueError('Parameters db and user '
+                             'cannot be None together.')
 
-            password = user
+        db = user
+
+    else:
+        if user is None:
+            user = db
+
+    if password is None:
+        if not is_local_environment():
+            raise ValueError('Refusing to set password as username '
+                             'in a real/production environment.')
+
+        password = user
 
     return db, user, password
