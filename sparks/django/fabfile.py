@@ -259,21 +259,32 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
 
 
 @task(aliases=('initial', ))
-def runable(upgrade=False):
+def runable(fast=False, upgrade=False):
     """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
 
-    createdb()
-    requirements(upgrade=upgrade)
-    syncdb()
-    migrate()
+    if not fast:
+        requirements(upgrade=upgrade)
+        createdb()
+        syncdb()
+        migrate()
+
     collectstatic()
 
 
+@task(aliases=('fast'))
+def fastdeploy():
+    """ Deploy FAST! For templates / static changes only. """
+
+    deploy(fast=True)
+
+
 @task
-def deploy():
+def deploy(fast=False):
     """ Pull code, ensure runable, restart services. """
 
     git_pull()
-    runable(upgrade=True)
-    restart_celery()
-    restart_supervisor()
+    runable(fast=fast, upgrade=not fast)
+
+    if not fast:
+        restart_celery()
+        restart_supervisor()
