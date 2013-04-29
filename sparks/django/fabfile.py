@@ -249,12 +249,12 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
     db, user, password = pg.temper_db_args(db, user, password)
 
     with settings(sudo_user=pg.get_admin_user()):
-        if sudo(pg.SELECT_USER.format(user=user), quiet=True).strip() == '':
+        if sudo(pg.SELECT_USER.format(user=user)).strip() == '':
             sudo(pg.CREATE_USER.format(user=user, password=password))
 
         sudo(pg.ALTER_USER.format(user=user, password=password))
 
-        if sudo(pg.SELECT_DB.format(db=db), quiet=True).strip() == '':
+        if sudo(pg.SELECT_DB.format(db=db)).strip() == '':
             sudo(pg.CREATE_DB.format(db=db, user=user))
 
 
