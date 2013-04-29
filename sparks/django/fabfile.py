@@ -36,7 +36,7 @@ LOGGER = logging.getLogger(__name__)
 # These can be overridden in local projects fabfiles.
 env.requirements_file     = 'config/requirements.txt'
 env.dev_requirements_file = 'config/dev-requirements.txt'
-env.branch                = 'master'
+env.branch                = '<GIT-FLOW-DEPENDANT>'
 
 
 @with_remote_configuration
@@ -80,11 +80,9 @@ def git_pull():
     # Don't fail if local user doesn't have my `pa` alias.
     local('git pa || true')
 
-    if hasattr(env, 'branch'):
-        branch = env.branch
+    branch = env.branch
 
-    else:
-        # NOTE: this rely on the git-flow branching model…
+    if branch == '<GIT-FLOW-DEPENDANT>':
         branch = 'master' if env.environment == 'production' else 'develop'
 
     with cd(env.root):
