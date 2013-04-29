@@ -98,7 +98,7 @@ def activate_venv():
 
 
 @task
-def restart_celery():
+def restart_celery_service():
     """ Restart celery (only if detected as installed). """
 
     if exists('/etc/init.d/celeryd'):
@@ -106,7 +106,7 @@ def restart_celery():
 
 
 @task
-def restart_supervisor():
+def restart_gunicorn_supervisor():
     """ (Re-)upload configuration files and reload gunicorn via supervisor.
 
         This will reload only one service, even if supervisor handles more
@@ -147,6 +147,11 @@ def restart_supervisor():
             'environment': env.environment,
         }
 
+        need_service_add = False
+
+        if not exists(destination):
+            need_service_add = True
+
         upload_template(superconf, destination, context=context, use_sudo=True)
 
         #
@@ -174,7 +179,15 @@ def restart_supervisor():
 
         # cf. http://stackoverflow.com/a/9310434/654755
 
-        sudo("supervisorctl restart {0}".format(program_name))
+        if need_service_add:
+            sudo("supervisorctl add {0} && supervisorctl start {0}".format(
+                 program_name))
+
+            # No need.
+            #sudo("supervisorctl reload")
+
+        else:
+            sudo("supervisorctl restart {0}".format(program_name))
 
 
 @task
