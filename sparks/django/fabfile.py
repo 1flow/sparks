@@ -39,10 +39,16 @@ env.dev_requirements_file = 'config/dev-requirements.txt'
 env.branch                = '<GIT-FLOW-DEPENDANT>'
 
 
+@task(aliases=('base', 'base_components'))
 @with_remote_configuration
-def install_base(remote_configuration=None):
+def install_components(remote_configuration=None):
     """ Install necessary packages to run a full Django stack.
         .. todo:: split me into packages/modules where appropriate. """
+
+    # TODO: use the installation tasks
+    # if installation:
+    #     from .. import fabfile
+    #     fabfile.db_postgresql()
 
     # OSX == test environment == no nginx/supervisor/etc
     if remote_configuration.is_osx:
@@ -54,143 +60,20 @@ def install_base(remote_configuration=None):
         run('ln -sfv /usr/local/opt/memcached/*.plist ~/Library/LaunchAgents')
         run('launchctl load ~/Library/LaunchAgents/homebrew.*.memcached.plist')
 
+        print('NO WEB-SERVER installed, assuming this is a dev machine.')
+
     else:
         apt.apt_add(('python-pip', 'supervisor', 'nginx-full',))
         apt.apt_add(('redis-server', 'memcached', 'libmemcached-dev', ))
         apt.apt_add(('build-essential', 'python-all-dev', ))
 
-    # This is common
+    # This is common to dev/production machines.
     pip.pip2_add(('virtualenv', 'virtualenvwrapper', ))
 
-    # Nothing more for now, the remaining is disabled.
-    return
-
-    if not exists('/etc/nginx/sites-available/beau-dimanche.com'):
-        #put('config/nginx-site.conf', '')
-        pass
-
-    if not exists('/etc/nginx/sites-enabled/beau-dimanche.com'):
-        with cd('/etc/nginx/sites-enabled/'):
-            sudo('ln -sf ../sites-available/beau-dimanche.com')
+# •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Code related
 
 
-def git_pull():
-
-    # Push everything first. This is not strictly mandatory.
-    # Don't fail if local user doesn't have my `pa` alias.
-    local('git pa || true')
-
-    branch = env.branch
-
-    if branch == '<GIT-FLOW-DEPENDANT>':
-        branch = 'master' if env.environment == 'production' else 'develop'
-
-    with cd(env.root):
-        if not is_local_environment():
-            run('git checkout %s' % branch)
-
-        run('git pull')
-
-
-def activate_venv():
-
-    return prefix('workon %s' % env.virtualenv)
-
-
-@task
-def restart_celery_service():
-    """ Restart celery (only if detected as installed). """
-
-    if exists('/etc/init.d/celeryd'):
-        sudo("/etc/init.d/celeryd restart")
-
-
-@task
-def restart_gunicorn_supervisor():
-    """ (Re-)upload configuration files and reload gunicorn via supervisor.
-
-        This will reload only one service, even if supervisor handles more
-        than one on the remote server. Thus it's safe for production to
-        reload test :-)
-
-    """
-
-    if exists('/etc/supervisor'):
-
-        # We need something more unique than project, in case we have
-        # many environments on the same remote machine.
-        program_name = '{0}_{1}'.format(env.project, env.environment)
-
-        #
-        # Upload an environment-specific supervisor configuration file.
-        #
-
-        superconf = os.path.join(env.root, 'config',
-                                 'gunicorn_supervisor_{0}.conf'.format(
-                                 env.environment))
-
-        # os.path.exists(): we are looking for a LOCAL file!
-        if not os.path.exists(superconf):
-            superconf = os.path.join(os.path.dirname(__file__),
-                                     'gunicorn_supervisor.template')
-
-        destination = '/etc/supervisor/conf.d/{0}.conf'.format(program_name)
-
-        context = {
-            'root': env.root,
-            'user': env.user,
-            'branch': env.branch,
-            'project': env.project,
-            'program': program_name,
-            'user_home': env.user_home,
-            'virtualenv': env.virtualenv,
-            'environment': env.environment,
-        }
-
-        need_service_add = False
-
-        if not exists(destination):
-            need_service_add = True
-
-        upload_template(superconf, destination, context=context, use_sudo=True)
-
-        #
-        # Upload an environment-specific gunicorn configuration file.
-        #
-
-        uniconf = os.path.join(env.settings.BASE_ROOT, 'config',
-                               'gunicorn_conf_{0}.py'.format(env.environment))
-
-        # os.path.exists(): we are looking for a LOCAL file!
-        if not os.path.exists(uniconf):
-            unidefault = os.path.join(os.path.dirname(__file__),
-                                      'gunicorn_conf_default.py')
-
-            unidest = os.path.join(env.root, 'config',
-                                   'gunicorn_conf_{0}.py'.format(
-                                   env.environment))
-
-            # copy the default configuration to remote::specific.
-            put(unidefault, unidest)
-
-        #
-        # Reload supervisor, it will restart gunicorn.
-        #
-
-        # cf. http://stackoverflow.com/a/9310434/654755
-
-        if need_service_add:
-            sudo("supervisorctl add {0} && supervisorctl start {0}".format(
-                 program_name))
-
-            # No need.
-            #sudo("supervisorctl reload")
-
-        else:
-            sudo("supervisorctl restart {0}".format(program_name))
-
-
-@task
+@task(alias='req')
 def requirements(upgrade=False):
     """ Install PIP requirements (and dev-requirements). """
 
@@ -226,7 +109,150 @@ def requirements(upgrade=False):
                 command=command, requirements_file=req))
 
 
-@task
+@task(alias='pull')
+def git_pull():
+
+    # Push everything first. This is not strictly mandatory.
+    # Don't fail if local user doesn't have my `pa` alias.
+    local('git pa || true')
+
+    branch = env.branch
+
+    if branch == '<GIT-FLOW-DEPENDANT>':
+        branch = 'master' if env.environment == 'production' else 'develop'
+
+    with cd(env.root):
+        if not is_local_environment():
+            run('git checkout %s' % branch)
+
+        run('git pull')
+
+
+def activate_venv():
+
+    return prefix('workon %s' % env.virtualenv)
+
+
+# •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Services
+
+
+@task(alias='nginx')
+def restart_nginx(fast=False):
+
+    if not exists('/etc/nginx'):
+        return
+
+    # Nothing more for now, the remaining is disabled.
+    return
+
+    if not exists('/etc/nginx/sites-available/beau-dimanche.com'):
+        #put('config/nginx-site.conf', '')
+        pass
+
+    if not exists('/etc/nginx/sites-enabled/beau-dimanche.com'):
+        with cd('/etc/nginx/sites-enabled/'):
+            sudo('ln -sf ../sites-available/beau-dimanche.com')
+
+
+@task(alias='celery')
+def restart_celery_service(fast=False):
+    """ Restart celery (only if detected as installed). """
+
+    if exists('/etc/init.d/celeryd'):
+        sudo("/etc/init.d/celeryd restart")
+
+
+@task(alias='gunicorn')
+def restart_gunicorn_supervisor(fast=False):
+    """ (Re-)upload configuration files and reload gunicorn via supervisor.
+
+        This will reload only one service, even if supervisor handles more
+        than one on the remote server. Thus it's safe for production to
+        reload test :-)
+
+    """
+
+    if exists('/etc/supervisor'):
+
+        # We need something more unique than project, in case we have
+        # many environments on the same remote machine.
+        program_name = '{0}_{1}'.format(env.project, env.environment)
+
+        if not fast:
+
+            #
+            # Upload an environment-specific supervisor configuration file.
+            #
+
+            need_service_add = False
+            superconf = os.path.join(env.root, 'config',
+                                     'gunicorn_supervisor_{0}.conf'.format(
+                                     env.environment))
+
+            # os.path.exists(): we are looking for a LOCAL file!
+            if not os.path.exists(superconf):
+                superconf = os.path.join(os.path.dirname(__file__),
+                                         'gunicorn_supervisor.template')
+
+            destination = '/etc/supervisor/conf.d/{0}.conf'.format(program_name)
+
+            context = {
+                'root': env.root,
+                'user': env.user,
+                'branch': env.branch,
+                'project': env.project,
+                'program': program_name,
+                'user_home': env.user_home,
+                'virtualenv': env.virtualenv,
+                'environment': env.environment,
+            }
+
+            if not exists(destination):
+                need_service_add = True
+
+            upload_template(superconf, destination, context=context,
+                            use_sudo=True)
+
+            #
+            # Upload an environment-specific gunicorn configuration file.
+            #
+
+            uniconf = os.path.join(env.settings.BASE_ROOT, 'config',
+                                   'gunicorn_conf_{0}.py'.format(
+                                   env.environment))
+
+            # os.path.exists(): we are looking for a LOCAL file!
+            if not os.path.exists(uniconf):
+                unidefault = os.path.join(os.path.dirname(__file__),
+                                          'gunicorn_conf_default.py')
+
+                unidest = os.path.join(env.root, 'config',
+                                       'gunicorn_conf_{0}.py'.format(
+                                       env.environment))
+
+                # copy the default configuration to remote::specific.
+                put(unidefault, unidest)
+
+        #
+        # Reload supervisor, it will restart gunicorn.
+        #
+
+        # cf. http://stackoverflow.com/a/9310434/654755
+
+        if need_service_add:
+            sudo("supervisorctl add {0} && supervisorctl start {0}".format(
+                 program_name))
+
+            # No need.
+            #sudo("supervisorctl reload")
+
+        else:
+            sudo("supervisorctl restart {0}".format(program_name))
+
+
+# ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Django specific
+
+@task(alias='static')
 def collectstatic():
     """ Run the Django collectstatic management command. """
 
@@ -277,6 +303,16 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
             sudo(pg.CREATE_DB.format(db=db, user=user))
 
 
+# ••••••••••••••••••••••••••••••••••••••••••••••••••••••• Deployment meta-tasks
+
+
+@task(alias='restart')
+def restart_services(fast=False):
+    restart_nginx(fast=fast)
+    restart_celery_service(fast=fast)
+    restart_gunicorn_supervisor(fast=fast)
+
+
 @task(aliases=('initial', ))
 def runable(fast=False, upgrade=False):
     """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
@@ -301,9 +337,11 @@ def fastdeploy():
 def deploy(fast=False, upgrade=False):
     """ Pull code, ensure runable, restart services. """
 
+    if not fast:
+        install_components(upgrade=upgrade)
+
     git_pull()
+
     runable(fast=fast, upgrade=upgrade)
 
-    if not fast:
-        restart_celery_service()
-        restart_gunicorn_supervisor()
+    restart_services(fast=fast)
