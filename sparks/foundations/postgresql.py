@@ -54,9 +54,14 @@ def temper_db_args(db, user, password):
 
     if db is None and user is None and password is None:
         if hasattr(env, 'settings'):
-            db       = env.settings.DATABASES['default']['NAME']
-            user     = env.settings.DATABASES['default']['USER']
-            password = env.settings.DATABASES['default']['PASSWORD']
+            # if django settings has 'test' or 'production' DB,
+            # get it, else get 'default' because all settings have it.
+            db_settings = env.settings.DATABASES.get(
+                env.environment, env.settings.DATABASES['default'])
+
+            db       = db_settings['NAME']
+            user     = db_settings['USER']
+            password = db_settings['PASSWORD']
 
         else:
             raise ValueError('No database parameters supplied '

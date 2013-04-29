@@ -80,9 +80,17 @@ def git_pull():
     # Don't fail if local user doesn't have my `pa` alias.
     local('git pa || true')
 
+    if hasattr(env, 'branch'):
+        branch = env.branch
+
+    else:
+        # NOTE: this rely on the git-flow branching model…
+        branch = 'master' if env.environment == 'production' else 'develop'
+
     with cd(env.root):
         if not is_local_environment():
-            run('git checkout %s' % env.branch)
+            run('git checkout %s' % branch)
+
         run('git pull')
 
 
