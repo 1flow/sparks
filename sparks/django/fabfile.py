@@ -285,12 +285,12 @@ def fastdeploy():
 
 
 @task
-def deploy(fast=False):
+def deploy(fast=False, upgrade=False):
     """ Pull code, ensure runable, restart services. """
 
     git_pull()
-    runable(fast=fast, upgrade=not fast)
+    runable(fast=fast, upgrade=upgrade)
 
     if not fast:
-        restart_celery()
-        restart_supervisor()
+        restart_celery_service()
+        restart_gunicorn_supervisor()
