@@ -326,8 +326,8 @@ def runable(fast=False, upgrade=False):
     collectstatic()
 
 
-@task(aliases=('fast'))
-def fastdeploy():
+@task(aliases=('fast', 'fastdeploy', ))
+def fast_deploy():
     """ Deploy FAST! For templates / static changes only. """
 
     deploy(fast=True)
