@@ -132,6 +132,8 @@ class RemoteConfiguration(object):
                                   'version', 'machine'),
                                   ast.literal_eval(out))))
 
+        self.hostname = self.uname.nodename
+
         #
         # No need to `deactivate` for the next calls, they are pure shell.
         #
@@ -198,6 +200,8 @@ class LocalConfiguration(object):
                                   ('sysname', 'nodename', 'release',
                                   'version', 'machine'),
                                   os.uname())))
+
+        self.hostname = self.uname.nodename
 
         self.user, self.tilde = nofabric.local('echo "${USER},${HOME}"',
                                                ).output.strip().split(',')
