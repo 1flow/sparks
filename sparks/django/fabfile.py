@@ -197,6 +197,7 @@ def restart_gunicorn_supervisor(fast=False):
             destination = '/etc/supervisor/conf.d/{0}.conf'.format(program_name)
 
             context = {
+                'env': env.environment,
                 'root': env.root,
                 'user': env.user,
                 'branch': env.branch,
@@ -204,7 +205,7 @@ def restart_gunicorn_supervisor(fast=False):
                 'program': program_name,
                 'user_home': env.user_home,
                 'virtualenv': env.virtualenv,
-                'environment': env.environment,
+                'environment': env.environment_vars,
             }
 
             if not exists(destination):
