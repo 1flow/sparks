@@ -81,6 +81,8 @@ def init_environment():
         it they do not exist. """
 
     if not exists(env.root):
+        run('mkdir -p "{0}"'.format(os.path.dirname(env.root)))
+
         prompt(u'Please create the git repository in {0}:{1} and press '
                u'[enter] when done.'.format(env.host_string, env.root))
 
