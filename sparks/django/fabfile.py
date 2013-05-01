@@ -315,16 +315,34 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
         from ..fabric import fabfile
         fabfile.db_postgresql()
 
-    db, user, password = pg.temper_db_args(db, user, password)
+    db, user, password = pg.temper_db_args(db=db, user=user, password=password)
+
+    connect = ''
+
+    if hasattr(remote_configuration, 'django_settings'):
+        db   = remote_configuration.django_settings.DATABASES['default']
+        host = db.get('HOST', '')
+        port = db.get('PORT', '')
+
+        if host != '':
+            host = '--host={0}'.format(host)
+
+        if port != '':
+            port = '--port={0}'.format(port)
+
+        connect = ' '.join(x for x in (host, port) if x != '')
 
     with settings(sudo_user=pg.get_admin_user()):
-        if sudo(pg.SELECT_USER.format(user=user)).strip() == '':
-            sudo(pg.CREATE_USER.format(user=user, password=password))
+        if sudo(pg.SELECT_USER.format(
+                connect=connect, user=user)).strip() == '':
+            sudo(pg.CREATE_USER.format(
+                 connect=connect, user=user, password=password))
 
-        sudo(pg.ALTER_USER.format(user=user, password=password))
+        sudo(pg.ALTER_USER.format(connect=connect,
+             user=user, password=password))
 
-        if sudo(pg.SELECT_DB.format(db=db)).strip() == '':
-            sudo(pg.CREATE_DB.format(db=db, user=user))
+        if sudo(pg.SELECT_DB.format(connect=connect, db=db)).strip() == '':
+            sudo(pg.CREATE_DB.format(connect=connect, db=db, user=user))
 
 
 # ••••••••••••••••••••••••••••••••••••••••••••••••••••••• Deployment meta-tasks

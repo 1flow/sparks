@@ -13,17 +13,24 @@ from ..fabric import with_remote_configuration
 
 LOGGER = logging.getLogger(__name__)
 
-BASE_CMD    = 'psql template1 -tc "{0}"'
+BASE_CMD    = 'psql {connect} template1 -tc "{sqlcmd}"'
 
-SELECT_USER = BASE_CMD.format("SELECT usename from pg_user "
+# {connect} is intentionnaly repeated, it will be filled later.
+# Without repeating it, `.format()` will fail with `KeyError`.
+SELECT_USER = BASE_CMD.format(connect='{connect}',
+                              sqlcmd="SELECT usename from pg_user "
                               "WHERE usename = '{user}';")
-CREATE_USER = BASE_CMD.format("CREATE USER {user} "
+CREATE_USER = BASE_CMD.format(connect='{connect}',
+                              sqlcmd="CREATE USER {user} "
                               "WITH PASSWORD '{password}';")
-ALTER_USER  = BASE_CMD.format("ALTER USER {user} "
+ALTER_USER  = BASE_CMD.format(connect='{connect}',
+                              sqlcmd="ALTER USER {user} "
                               "WITH ENCRYPTED PASSWORD '{password}';")
-SELECT_DB   = BASE_CMD.format("SELECT datname FROM pg_database "
+SELECT_DB   = BASE_CMD.format(connect='{connect}',
+                              sqlcmd="SELECT datname FROM pg_database "
                               "WHERE datname = '{db}';")
-CREATE_DB   = BASE_CMD.format("CREATE DATABASE {db} OWNER {user};")
+CREATE_DB   = BASE_CMD.format(connect='{connect}',
+                              sqlcmd="CREATE DATABASE {db} OWNER {user};")
 
 
 @with_remote_configuration
@@ -49,15 +56,19 @@ def get_admin_user(remote_configuration=None):
         raise NotImplementedError("Which kind of remote sytem is this??")
 
 
-def temper_db_args(db, user, password):
+@with_remote_configuration
+def temper_db_args(remote_configuration=None,
+                   db=None, user=None, password=None):
     """ Try to accomodate with DB creation arguments. """
 
     if db is None and user is None and password is None:
-        if hasattr(env, 'settings'):
+        if hasattr(remote_configuration, 'django_settings'):
+            djsettings = remote_configuration.django_settings
+
             # if django settings has 'test' or 'production' DB,
             # get it, else get 'default' because all settings have it.
-            db_settings = env.settings.DATABASES.get(
-                env.environment, env.settings.DATABASES['default'])
+            db_settings = djsettings.DATABASES.get(
+                env.environment, djsettings.DATABASES['default'])
 
             db       = db_settings['NAME']
             user     = db_settings['USER']
