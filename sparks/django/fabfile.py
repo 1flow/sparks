@@ -84,6 +84,9 @@ def requirements(upgrade=False):
         command = 'pip install'
 
     with cd(env.root):
+        if run('lsvirtualenv | grep {0}'.format(env.virtualenv)).strip() == '':
+            run('mkvirtualenv {0}'.format(env.virtualenv))
+
         with activate_venv():
 
             if is_local_environment():
