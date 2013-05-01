@@ -100,6 +100,10 @@ def requirements(upgrade=False):
     else:
         command = 'pip install'
 
+    from .. import fabfile
+    fabfile.dev()
+    fabfile.dev_postgresql()
+
     with cd(env.root):
         with activate_venv():
 
