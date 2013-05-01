@@ -2,6 +2,7 @@
 
 import os
 import ast
+import logging
 import platform
 import functools
 import cPickle as pickle
@@ -77,7 +78,7 @@ except ImportError:
 
 # Global way to turn all of this module silent.
 quiet = not bool(os.environ.get('SPARKS_VERBOSE', False))
-
+LOGGER = logging.getLogger(__name__)
 remote_configuration = None
 local_configuration  = None
 
@@ -96,6 +97,7 @@ class RemoteConfiguration(object):
 
         self.host_string = host_string
         self.verbose     = verbose
+        LOGGER.info('>> VERBOSE: %s', self.verbose)
 
         # No need to `deactivate` for this calls, it's pure shell.
         self.user, self.tilde = run('echo "${USER},${HOME}"',
