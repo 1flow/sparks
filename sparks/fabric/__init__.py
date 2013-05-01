@@ -4,6 +4,7 @@ import os
 import ast
 import platform
 import functools
+import cPickle as pickle
 
 from ..foundations.classes import SimpleObject
 from ..contrib import lsb_release
@@ -94,12 +95,36 @@ class RemoteConfiguration(object):
     def __init__(self, host_string, verbose=False):
 
         self.host_string = host_string
+        self.verbose     = verbose
 
+        # No need to `deactivate` for this calls, it's pure shell.
+        self.user, self.tilde = run('echo "${USER},${HOME}"',
+                                    quiet=True).strip().split(',')
+
+        self.get_platform()
+        self.get_uname()
+        self.get_django_settings()
+
+        if verbose:
+            print('Remote is {release} {host} {vm}{arch}, '
+                  '{user} in {home}.'.format(
+                  release='Apple OSX {0}'.format(self.mac.release)
+                  if self.is_osx
+                  else self.lsb.DESCRIPTION,
+                  host=cyan(self.uname.nodename),
+                  vm=('VMWare ' if self.is_vmware else 'Parallels ')
+                  if self.is_vm else '',
+                  arch=self.uname.machine,
+                  user=cyan(self.user),
+                  home=self.tilde,
+                  ))
+
+    def get_platform(self):
         # Be sure we don't get stuck in a virtualenv for free.
         with prefix('deactivate >/dev/null 2>&1 || true'):
             out = run("python -c 'import lsb_release; "
                       "print lsb_release.get_lsb_information()'",
-                      quiet=not verbose)
+                      quiet=not self.verbose)
 
         try:
             self.lsb    = SimpleObject(from_dict=ast.literal_eval(out))
@@ -121,12 +146,13 @@ class RemoteConfiguration(object):
                 # something went very wrong,
                 # none of the detection methods worked.
                 raise RuntimeError(
-                    'cannot determine platform of {0}'.format(host_string))
+                    'cannot determine platform of {0}'.format(self.host_string))
 
+    def get_uname(self):
         # Be sure we don't get stuck in a virtualenv for free.
         with prefix('deactivate >/dev/null 2>&1 || true'):
             out = run("python -c 'import os; print os.uname()'",
-                      quiet=not verbose)
+                      quiet=not self.verbose)
 
         self.uname = SimpleObject(from_dict=dict(zip(
                                   ('sysname', 'nodename', 'release',
@@ -135,37 +161,41 @@ class RemoteConfiguration(object):
 
         self.hostname = self.uname.nodename
 
-        #
-        # No need to `deactivate` for the next calls, they are pure shell.
-        #
-
-        self.user, self.tilde = run('echo "${USER},${HOME}"',
-                                    quiet=True).strip().split(',')
-
+    def get_virtual_machine(self):
         # TODO: implement me (and under OSX too).
         self.is_vmware = False
 
         # NOTE: this test could fail in VMs where nothing is mounted from
         # the host. In my own configs, this never occurs, but who knows.
         # TODO: check this works under OSX too, or enhance the test.
-        self.is_parallel = run('mount | grep prl_fs', quiet=not verbose,
+        self.is_parallel = run('mount | grep prl_fs', quiet=not self.verbose,
                                warn_only=True).succeeded
 
         self.is_vm = self.is_parallel or self.is_vmware
 
-        if verbose:
-            print('Remote is {release} {host} {vm}{arch}, '
-                  '{user} in {home}.'.format(
-                  release='Apple OSX {0}'.format(self.mac.release)
-                  if self.is_osx
-                  else self.lsb.DESCRIPTION,
-                  host=cyan(self.uname.nodename),
-                  vm=('VMWare ' if self.is_vmware else 'Parallels ')
-                  if self.is_vm else '',
-                  arch=self.uname.machine,
-                  user=cyan(self.user),
-                  home=self.tilde,
-                  ))
+    def get_django_settings(self):
+
+        env_var1 = ''
+
+        if hasattr(env, 'environment_var'):
+            # transform the supervisor syntax to shell syntax.
+            env_var1 = ' '.join(env.environment_var.split(';'))
+
+        env_var2 = 'DJANGO_SETTINGS_MODULE="{0}.settings"'.format(env.project)
+
+        # Here, we *NEED* to stay in the virtualenv, to get the django code.
+        # NOTE: this code is kind of weak, it will fail if settings include
+        # complex objects, but we hope it's not.
+        out = run(("{0} {1} python -c 'import cPickle as pickle; "
+                  "from django.conf import settings; "
+                  "print pickle.dumps(settings)'").format(
+                  env_var1, env_var2), quiet=not self.verbose)
+
+        try:
+            self.django_settings = pickle.loads(out)
+
+        except:
+            pass
 
 
 class LocalConfiguration(object):
@@ -216,6 +246,20 @@ class LocalConfiguration(object):
         self.is_parallel = nofabric.local('mount | grep prl_fs').succeeded
 
         self.is_vm = self.is_parallel or self.is_vmware
+
+        if hasattr(env, 'environment_var'):
+            name, value = env.environment_var.split('=')
+            os.environ[name] = value
+            os.environ['DJANGO_SETTINGS_MODULE'] = env.project + '.settings'
+
+        try:
+            from django.conf import settings as django_settings
+
+        except:
+            pass
+
+        else:
+            self.django_settings = django_settings
 
 
 def with_remote_configuration(func):
