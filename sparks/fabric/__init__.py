@@ -3,10 +3,10 @@
 import os
 import ast
 import logging
-import StringIO
 import platform
 import functools
 import cPickle as pickle
+import cStringIO as StringIO
 
 from ..foundations.classes import SimpleObject
 from ..contrib import lsb_release
@@ -217,10 +217,13 @@ class RemoteConfiguration(object):
                         quiet=not self.verbose)
 
                     try:
-                        self.django_settings = pickle.load(pickled_settings)
+                        self.django_settings = pickle.loads(
+                            pickled_settings.getvalue())
 
                     except:
                         LOGGER.exception('Cannot load remote django settings!')
+
+                    pickled_settings.close()
 
 
 class LocalConfiguration(object):
