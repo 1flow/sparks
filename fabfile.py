@@ -1,7 +1,6 @@
 # -*- coding: utf8 -*-
 
 import os
-import sys
 import uuid
 import logging
 
@@ -12,12 +11,7 @@ from fabric.contrib.files    import contains, append, exists, sed
 from fabric.context_managers import cd, settings, hide
 from fabric.colors           import yellow, cyan
 
-if __package__ is None:
-    # See #2 comment of http://stackoverflow.com/a/11537218/654755
-    # and http://www.python.org/dev/peps/pep-0366/
-    sys.path.append(os.path.expanduser('~/Dropbox'))
-
-from sparks import pkg, fabric as sf
+from . import pkg, fabric as sf
 
 # ===================================================== Local variables
 
