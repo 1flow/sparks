@@ -99,7 +99,7 @@ def find_settings(settings__file__name):
                        candidates)))
 
 
-def include_snippets(project_root, snippets):
+def include_snippets(project_root, snippets, project_settings_globals):
     """ Given a project root and an iterable of modules names, this function
         will use :func:`execfile` and import their content into the ``global``
         namespace. This way, included files content can be made dependant of
@@ -130,15 +130,21 @@ def include_snippets(project_root, snippets):
             import os
             from sparks.django.settings import include_snippets
 
-            include_snippets(os.path.dirname(__file__), (
-                             '00_dev',
-                             'common',
-                             'email',
-                             # whatever more…
-                             ))
+            include_snippets(
+                os.path.dirname(__file__), (
+                    '00_dev',
+                    'common',
+                    'email',
+                    # whatever more…
+                ),
+                globals()
+            )
+
+        .. note:: the final ``globals()`` argument is important to merge
+            all settings in the current settings module.
     """
 
     snippets_path = join(project_root, 'snippets')
 
     for snippet in snippets:
-        execfile(join(snippets_path, snippet + '.py'), globals())
+        execfile(join(snippets_path, snippet + '.py'), project_settings_globals)
