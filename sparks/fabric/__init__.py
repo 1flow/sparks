@@ -2,8 +2,8 @@
 
 import os
 import ast
-import functools
 import platform
+import functools
 
 from ..foundations.classes import SimpleObject
 from ..contrib import lsb_release
@@ -15,16 +15,17 @@ try:
     from fabric.api              import sudo as fabric_sudo
     from fabric.api              import local as fabric_local
     from fabric.api              import env
-    from fabric.contrib.files    import exists
     from fabric.context_managers import prefix
     from fabric.colors           import cyan
+
+    # imported from utils
+    from fabric.contrib.files    import exists # NOQA
 
     # used in sparks submodules, not directly here. Thus the # NOQA.
     from fabric.api              import task # NOQA
     from fabric.context_managers import cd # NOQA
     from fabric.colors           import green # NOQA
 
-    #from fabric.api              import env
     #if not env.all_hosts:
     #    env.host_string = 'localhost'
 
@@ -72,12 +73,12 @@ except ImportError:
     local = nofabric.local # NOQA
     sudo  = nofabric.sudo # NOQA
 
+
 # Global way to turn all of this module silent.
 quiet = not bool(os.environ.get('SPARKS_VERBOSE', False))
 
 remote_configuration = None
 local_configuration  = None
-
 
 # =================================================== Remote system information
 
@@ -254,74 +255,6 @@ def find_configuration_type(hostname):
 
     else:
         return RemoteConfiguration(hostname, verbose=not quiet)
-
-
-# ======================================================================= Utils
-
-
-def list_or_split(pkgs):
-    try:
-        return (p for p in pkgs.split() if p not in ('', None, ))
-
-    except AttributeError:
-        #if type(pkgs) in (types.TupleType, types.ListType):
-        return pkgs
-
-
-def dsh_to_roledefs():
-    dsh_group = os.path.expanduser('~/.dsh/group')
-    roles     = {}
-
-    if os.path.exists(dsh_group):
-        for entry in os.listdir(dsh_group):
-            if entry.startswith('.'):
-                continue
-
-            fullname = os.path.join(dsh_group, entry)
-
-            if os.path.isfile(fullname):
-                roles[entry] = [line for line
-                                in open(fullname).read().split()
-                                if line != '']
-
-    return roles
-
-
-def symlink(source, destination, overwrite=False, locally=False):
-
-    rm_prefix = ''
-
-    if exists(destination):
-        if overwrite:
-            rm_prefix = 'rm -rf "%s"; ' % destination
-
-        else:
-            return
-
-    command = '%s ln -sf "%s" "%s"' % (rm_prefix, source, destination)
-
-    local(command) if locally else run(command)
-
-
-# ========================================================== User configuration
-
-
-@with_remote_configuration
-def tilde(directory=None, remote_configuration=None):
-    """ Just a handy shortcut. """
-
-    return os.path.join(remote_configuration.tilde, directory or '')
-
-
-def dotfiles(filename):
-    """ Where are my dotfiles? (relative from $HOME).
-
-        .. note:: use with :func:`tilde` to get full path.
-            Eg. ``tilde(dotfiles('dot.bashrc'))`` =>
-            ``/home/olive/Dropbox/dotfiles/dot.bashrc``.
-    """
-
-    return os.path.join('Dropbox/configuration/dotfiles', filename)
 
 
 if local_configuration is None:

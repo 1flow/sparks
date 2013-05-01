@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from ..fabric import sudo, list_or_split, exists, with_remote_configuration
+from ..fabric import sudo, exists, with_remote_configuration
+from ..fabric.utils import list_or_split
 from .common import is_installed, search
 
 

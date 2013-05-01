@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from ..fabric import sudo, list_or_split
+from ..fabric import sudo
+from ..fabric.utils import list_or_split
 from .common import is_installed, search
 
 # ---------------------------------------------- NPM package management

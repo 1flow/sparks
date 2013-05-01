@@ -34,8 +34,8 @@ def find_settings(settings__file__name):
             project/
                 settings/
                     __init__.py
-                    myhostname-domain-ext.py
-                    otherhost-domain-ext.py
+                    myhostname_domain_ext.py
+                    otherhost_domain_ext.py
                     special-config.py
 
         In the file :file:`__init__.py`: just write:
@@ -43,15 +43,16 @@ def find_settings(settings__file__name):
             from sparks.django.settings import find_settings()
             execfile(find_settings(__file__))
 
-        The :file:`myhostname-domain-ext.py` and others are completely
+        The :file:`myhostname_domain_ext.py` and others are completely
         standard settings file. You are free to use them as you like, eg.
         plain Django settings files, or combined in any way that pleases
         you. You could for example create a :file:`common.py`, import it
         in all other, and override only a part of its attributes in them.
 
-        .. note:: hostname related operations are done lower-case. If your
-            hostname is ``Chani.Licorn.local``, `sparks` will search
-            ``chani-licorn-local``, ``chani`` and ``licorn-local``.
+        .. note:: hostname related operations are done lower-case, and dots
+            are replaced with underscores. If your hostname is
+            ``Chani.Licorn.local``, `sparks` will search
+            ``chani_licorn_local``, ``chani`` and ``licorn_local``.
 
         .. note:: if you hostname starts with a digit, there is no problem
             regarding the current function: the setting filename can start
@@ -77,7 +78,7 @@ def find_settings(settings__file__name):
                     u'SPARKS_DJANGO_SETTINGS="{0}".'.format(
                     environ_settings))
 
-    fullnodename = platform.hostname.lower().replace('.', '-')
+    fullnodename = platform.hostname.lower().replace('.', '_')
     candidates.append(settings_path(fullnodename))
 
     try:
@@ -88,7 +89,7 @@ def find_settings(settings__file__name):
         pass
 
     else:
-        candidates.extend(settings_path(x.replace('.', '-'))
+        candidates.extend(settings_path(x.replace('.', '_'))
                           for x in (shortname, domainname))
 
     candidates.append(settings_path('default'))

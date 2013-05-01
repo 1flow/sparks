@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from ..fabric import (task, sudo, list_or_split,
-                      quiet, green, run, cd, )
+import logging
+
+from ..fabric import task, sudo, quiet, green, run, cd
+from ..fabric.utils import list_or_split
 from .common import silent_sudo, is_installed, search
+
+LOGGER = logging.getLogger(__name__)
 
 
 # ---------------------------------------------- PIP package management
@@ -39,20 +43,20 @@ def __pip_find_executable_internal(executable_names=None):
 def __pip_is_installed_internal(pkg, py3=False):
     """ Return ``True`` if a given Python module is installed via PIP. """
 
-    if py3:
-        pip = pip3_find_executable()
-    else:
-        pip = 'pip'
+    pip = pip3_find_executable() if py3 else pip2_find_executable()
+
+    if pip is None:
+        return
 
     return is_installed("%s freeze | grep -i '%s=='" % (pip, pkg))
 
 
 def __pip_add_internal(pkgs, py3=False):
 
-    if py3:
-        pip = pip3_find_executable()
-    else:
-        pip = 'pip'
+    pip = pip3_find_executable() if py3 else pip2_find_executable()
+
+    if pip is None:
+        return
 
     # Go to a neutral location before PIP tries to "mkdir build"
     # WARNING: this could be vulnerable to symlink attack when we
@@ -72,10 +76,10 @@ def __pip_add_internal(pkgs, py3=False):
 
 def __pip_search_internal(pkgs, py3=False):
 
-    if py3:
-        pip = pip3_find_executable()
-    else:
-        pip = 'pip'
+    pip = pip3_find_executable() if py3 else pip2_find_executable()
+
+    if pip is None:
+        return
 
     for pkg in list_or_split(pkgs):
         yield search("%s search %s" % (pip, pkg))

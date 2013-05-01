@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from ..fabric import run, list_or_split, with_remote_configuration
+from ..fabric import run, with_remote_configuration
+from ..fabric.utils import list_or_split
 from .common import is_installed, search
 
 

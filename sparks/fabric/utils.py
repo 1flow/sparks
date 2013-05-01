@@ -1,0 +1,72 @@
+# -*- coing: utf-8 -*-
+
+import os
+
+from . import with_remote_configuration, exists, local, run
+
+# ======================================================================= Utils
+
+
+def list_or_split(pkgs):
+    try:
+        return (p for p in pkgs.split() if p not in ('', None, ))
+
+    except AttributeError:
+        #if type(pkgs) in (types.TupleType, types.ListType):
+        return pkgs
+
+
+def dsh_to_roledefs():
+    dsh_group = os.path.expanduser('~/.dsh/group')
+    roles     = {}
+
+    if os.path.exists(dsh_group):
+        for entry in os.listdir(dsh_group):
+            if entry.startswith('.'):
+                continue
+
+            fullname = os.path.join(dsh_group, entry)
+
+            if os.path.isfile(fullname):
+                roles[entry] = [line for line
+                                in open(fullname).read().split()
+                                if line != '']
+
+    return roles
+
+
+def symlink(source, destination, overwrite=False, locally=False):
+
+    rm_prefix = ''
+
+    if exists(destination):
+        if overwrite:
+            rm_prefix = 'rm -rf "%s"; ' % destination
+
+        else:
+            return
+
+    command = '%s ln -sf "%s" "%s"' % (rm_prefix, source, destination)
+
+    local(command) if locally else run(command)
+
+
+# ========================================================== User configuration
+
+
+@with_remote_configuration
+def tilde(directory=None, remote_configuration=None):
+    """ Just a handy shortcut. """
+
+    return os.path.join(remote_configuration.tilde, directory or '')
+
+
+def dotfiles(filename):
+    """ Where are my dotfiles? (relative from $HOME).
+
+        .. note:: use with :func:`tilde` to get full path.
+            Eg. ``tilde(dotfiles('dot.bashrc'))`` =>
+            ``/home/olive/Dropbox/dotfiles/dot.bashrc``.
+    """
+
+    return os.path.join('Dropbox/configuration/dotfiles', filename)
