@@ -448,6 +448,17 @@ def dev_tildesources(remote_configuration=None):
 
 @task
 @sf.with_remote_configuration
+def dev_sqlite(remote_configuration=None):
+    """ SQLite development environment (for python packages build). """
+
+    if not remote_configuration.is_osx:
+        pkg.pkg_add(('libsqlite3-dev', 'python-all-dev', ))
+
+    pkg.pip2_add(('pysqlite', ))
+
+
+@task
+@sf.with_remote_configuration
 def dev_mysql(remote_configuration=None):
     """ MySQL development environment (for python packages build). """
 
@@ -456,13 +467,13 @@ def dev_mysql(remote_configuration=None):
 
 @task
 @sf.with_remote_configuration
-def dev_sqlite(remote_configuration=None):
-    """ SQLite development environment (for python packages build). """
+def dev_postgresql(remote_configuration=None):
+    """ PostgreSQL development environment (for python packages build). """
 
     if not remote_configuration.is_osx:
-        pkg.pkg_add(('libsqlite3-dev', 'python-all-dev', ))
+        pkg.pkg_add(('postgresql-server-dev-9.1', ))
 
-    pkg.pip2_add(('pysqlite', ))
+    pkg.pip2_add(('psycopg2', ))
 
 
 @task
@@ -588,9 +599,9 @@ def db_mysql(remote_configuration=None):
     pkg.pkg_add('mysql' if remote_configuration.is_osx else 'mysql-server')
 
 
-@task
+@task(aliases=('db_postgres'))
 @sf.with_remote_configuration
-def db_postgres(remote_configuration=None):
+def db_postgresql(remote_configuration=None):
     """ PostgreSQL database server. """
 
     if remote_configuration.is_osx:
@@ -604,8 +615,9 @@ def db_postgres(remote_configuration=None):
             # Test connection
             # psql template1
     else:
-        pkg.apt_add(('postgresql-9.1', 'postgresql-server-dev-9.1', ))
-        dev()
+        pkg.apt_add(('postgresql-9.1', ))
+
+    dev_postgresql()
 
     LOGGER.warning('You still have to tweak pg_hba.conf yourself.')
 
@@ -941,5 +953,4 @@ def lxc_server(remote_configuration=None):
     """ LXC base + server packages (Pg). """
 
     lxc_base()
-    db_postgres()
-    #TODO: pgdev()
+    db_postgresql()
