@@ -97,3 +97,48 @@ def find_settings(settings__file__name):
 
     raise RuntimeError(u'No settings found! Tried {0}'.format(', '.join(
                        candidates)))
+
+
+def include_snippets(project_root, snippets):
+    """ Given a project root and an iterable of modules names, this function
+        will use :func:`execfile` and import their content into the ``global``
+        namespace. This way, included files content can be made dependant of
+        previous inclusions.
+
+        :param settings_root: a path (as string) representing the Django
+            settings directory.
+
+        :param snippets: an iterable of strings which will be included.
+
+        Typical usage::
+
+            myproject/
+                settings/
+                    snippets/
+                        debug.py
+                        common.py
+                        production.py
+                    __init__.py
+                    myhostname.py
+
+        Obviously, ``myhostname`` should be replaced by the hostname of your
+        development machine, or the production machine, etc.
+
+        For :file:`settings/__init__.py` contents, see :func:`find_settings`.
+        Then, in :file:`myhostname.py`, write::
+
+            import os
+            from sparks.django.settings import include_snippets
+
+            include_snippets(os.path.dirname(__file__), (
+                             '00_dev',
+                             'common',
+                             'email',
+                             # whatever more…
+                             ))
+    """
+
+    snippets_path = join(project_root, 'snippets')
+
+    for snippet in snippets:
+        execfile(join(snippets_path, snippet + '.py'), globals(), globals())
