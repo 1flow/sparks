@@ -3,6 +3,7 @@
 import os
 import ast
 import logging
+import StringIO
 import platform
 import functools
 import cPickle as pickle
@@ -17,6 +18,7 @@ try:
     from fabric.api              import sudo as fabric_sudo
     from fabric.api              import local as fabric_local
     from fabric.api              import env
+    from fabric.operations       import get
     from fabric.context_managers import prefix
     from fabric.colors           import cyan
 
@@ -194,18 +196,28 @@ class RemoteConfiguration(object):
         if hasattr(env, 'virtualenv'):
             prefix_cmd = 'workon {0}'.format(env.virtualenv)
 
+        pickled_settings = StringIO.StringIO()
+
         with prefix(prefix_cmd):
             with cd(env.root if hasattr(env, 'root') else ''):
                 out = run(("{0} {1} python -c 'import cPickle as pickle; "
                           "from django.conf import settings; "
-                          "print pickle.dumps(settings)'").format(
-                          env_var1, env_var2), quiet=not self.verbose)
+                          "with open(\'__django_settings__.pickle\') as f: "
+                          "pickle.dump(settings, f, "
+                          "pickle.HIGHEST_PROTOCOL)'").format(
+                          env_var1, env_var2), quiet=not self.verbose,
+                          warn_only=True)
 
-        try:
-            self.django_settings = pickle.loads(''.join(out))
+                if out.succeeded:
+                    get('__django_settings__.pickle',
+                        pickled_settings, quiet=True)
+                    run('rm -f __django_settings__.pickle', quiet=True)
 
-        except:
-            pass
+                    try:
+                        self.django_settings = pickle.load(pickled_settings)
+
+                    except:
+                        pass
 
 
 class LocalConfiguration(object):
