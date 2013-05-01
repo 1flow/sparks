@@ -48,7 +48,7 @@ def install_components(remote_configuration=None):
 
     # TODO: use the installation tasks
     # if installation:
-    #     from ... import fabfile
+    #     from .. import fabfile
     #     fabfile.db_postgresql()
 
     # OSX == test environment == no nginx/supervisor/etc
@@ -100,7 +100,7 @@ def requirements(upgrade=False):
     else:
         command = 'pip install'
 
-    from ... import fabfile
+    from .. import fabfile
     fabfile.dev()
     fabfile.dev_postgresql()
 
@@ -311,7 +311,7 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
         Install PostgreSQL on the remote system if asked to. """
 
     if installation:
-        from ... import fabfile
+        from .. import fabfile
         fabfile.db_postgresql()
 
     db, user, password = pg.temper_db_args(db, user, password)
