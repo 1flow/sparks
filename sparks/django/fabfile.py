@@ -37,6 +37,7 @@ LOGGER = logging.getLogger(__name__)
 env.requirements_file     = 'config/requirements.txt'
 env.dev_requirements_file = 'config/dev-requirements.txt'
 env.branch                = '<GIT-FLOW-DEPENDANT>'
+env.use_ssh_config        = True
 
 
 @task(aliases=('base', 'base_components'))
