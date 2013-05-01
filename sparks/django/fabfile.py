@@ -315,7 +315,7 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
         from ..fabric import fabfile
         fabfile.db_postgresql()
 
-    db, user, password = pg.temper_db_args(db, user, password)
+    db, user, password = pg.temper_db_args(db=db, user=user, password=password)
 
     connect = ''
 
