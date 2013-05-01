@@ -105,6 +105,7 @@ class RemoteConfiguration(object):
 
         self.get_platform()
         self.get_uname()
+        self.get_virtual_machine()
         self.get_django_settings()
 
         if verbose:
