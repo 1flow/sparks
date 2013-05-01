@@ -71,7 +71,20 @@ def install_components(remote_configuration=None):
     # This is common to dev/production machines.
     pip.pip2_add(('virtualenv', 'virtualenvwrapper', ))
 
+
 # •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Code related
+
+
+@task
+def init_environment():
+    """ Create ``env.root`` on the remote side, and the ``env.virtualenv``
+        it they do not exist. """
+
+    if not exists(env.root):
+        run('mkdir -p "{0}"'.format(env.root))
+
+    if run('lsvirtualenv | grep {0}'.format(env.virtualenv)).strip() == '':
+        run('mkvirtualenv {0}'.format(env.virtualenv))
 
 
 @task(alias='req')
@@ -84,9 +97,6 @@ def requirements(upgrade=False):
         command = 'pip install'
 
     with cd(env.root):
-        if run('lsvirtualenv | grep {0}'.format(env.virtualenv)).strip() == '':
-            run('mkvirtualenv {0}'.format(env.virtualenv))
-
         with activate_venv():
 
             if is_local_environment():
@@ -124,9 +134,6 @@ def git_pull():
 
     if branch == '<GIT-FLOW-DEPENDANT>':
         branch = 'master' if env.environment == 'production' else 'develop'
-
-    if not exists(env.root):
-        run('mkdir -p "{0}"'.format(env.root))
 
     with cd(env.root):
         if not is_local_environment():
@@ -325,6 +332,8 @@ def restart_services(fast=False):
 def runable(fast=False, upgrade=False):
     """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
 
+    init_environment()
+
     if not fast:
         requirements(upgrade=upgrade)
         createdb()
@@ -347,6 +356,8 @@ def deploy(fast=False, upgrade=False):
 
     if not fast:
         install_components(upgrade=upgrade)
+
+    init_environment()
 
     git_pull()
 
