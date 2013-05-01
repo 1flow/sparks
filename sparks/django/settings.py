@@ -49,34 +49,17 @@ def find_settings(settings__file__name):
         you. You could for example create a :file:`common.py`, import it
         in all other, and override only a part of its attributes in them.
 
-        .. note:: if you hostname starts with a digit, this **first** (and
-            only the first) digit will be replaced by this name in letters.
-            Eg. ``1flow.net`` will be looked up as ``oneflow-net.py``, and
-            ``21jump.street.com`` will be looked up as
-            ``two1jump-street-com.py``.
+        .. note:: if you hostname starts with a digit, there is no problem
+            regarding the current function: the setting filename can start
+            with a digit, because it will not be imported
+            but :func:`execfile`ed and in this particular case, Python
+            will not complain, like it would have done for a module name.
 
     """
-
-    digits = {
-        '0': 'zero',
-        '1': 'one',
-        '2': 'two',
-        '3': 'three',
-        '4': 'four',
-        '5': 'five',
-        '6': 'six',
-        '7': 'seven',
-        '8': 'eight',
-        '9': 'nine',
-    }
 
     here = dirname(abspath(settings__file__name))
 
     def settings_path(settings_name):
-
-        if settings_name[0].isdigit():
-            # '1flow' becomes 'oneflow'
-            settings_name = digits[settings_name[0]] + settings_name[1:]
 
         return join(here, settings_name + '.py')
 
@@ -114,3 +97,48 @@ def find_settings(settings__file__name):
 
     raise RuntimeError(u'No settings found! Tried {0}'.format(', '.join(
                        candidates)))
+
+
+def include_snippets(project_root, snippets):
+    """ Given a project root and an iterable of modules names, this function
+        will use :func:`execfile` and import their content into the ``global``
+        namespace. This way, included files content can be made dependant of
+        previous inclusions.
+
+        :param settings_root: a path (as string) representing the Django
+            settings directory.
+
+        :param snippets: an iterable of strings which will be included.
+
+        Typical usage::
+
+            myproject/
+                settings/
+                    snippets/
+                        debug.py
+                        common.py
+                        production.py
+                    __init__.py
+                    myhostname.py
+
+        Obviously, ``myhostname`` should be replaced by the hostname of your
+        development machine, or the production machine, etc.
+
+        For :file:`settings/__init__.py` contents, see :func:`find_settings`.
+        Then, in :file:`myhostname.py`, write::
+
+            import os
+            from sparks.django.settings import include_snippets
+
+            include_snippets(os.path.dirname(__file__), (
+                             '00_dev',
+                             'common',
+                             'email',
+                             # whatever more…
+                             ))
+    """
+
+    snippets_path = join(project_root, 'snippets')
+
+    for snippet in snippets:
+        execfile(join(snippets_path, snippet + '.py'), globals(), globals())
