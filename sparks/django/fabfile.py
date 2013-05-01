@@ -10,7 +10,7 @@ import logging
 
 try:
     from fabric.api              import env, run, sudo, task, local
-    from fabric.operations       import put
+    from fabric.operations       import put, prompt
     from fabric.contrib.files    import exists, upload_template
     from fabric.context_managers import cd, prefix, settings
 
@@ -81,7 +81,8 @@ def init_environment():
         it they do not exist. """
 
     if not exists(env.root):
-        run('mkdir -p "{0}"'.format(env.root))
+        prompt(u'Please create the git repository in {0}:{1} and press '
+               u'[enter] when done.'.format(env.host_string, env.root))
 
     if run('lsvirtualenv | grep {0}'.format(env.virtualenv),
            warn_only=True).strip() == '':
