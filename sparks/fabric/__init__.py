@@ -200,12 +200,13 @@ class RemoteConfiguration(object):
 
         with prefix(prefix_cmd):
             with cd(env.root if hasattr(env, 'root') else ''):
+                # NOTE: this doesn't work with “ with open(…) as f: ”, thus
+                # I would have greatly prefered this modern version…
                 out = run(("{0} {1} python -c 'import cPickle as pickle; "
                           "from django.conf import settings; "
-                          "with open(\"__django_settings__.pickle\", "
-                          "\"w\") as f: "
-                          "pickle.dump(settings, f, "
-                          "pickle.HIGHEST_PROTOCOL)'").format(
+                          "f=open(\"__django_settings__.pickle\", "
+                          "\"w\"); pickle.dump(settings, f, "
+                          "pickle.HIGHEST_PROTOCOL); f.close()'").format(
                           env_var1, env_var2), quiet=not self.verbose,
                           warn_only=True)
 
