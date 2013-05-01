@@ -125,6 +125,9 @@ def git_pull():
     if branch == '<GIT-FLOW-DEPENDANT>':
         branch = 'master' if env.environment == 'production' else 'develop'
 
+    if not exists(env.root):
+        run('mkdir -p "{0}"'.format(env.root))
+
     with cd(env.root):
         if not is_local_environment():
             run('git checkout %s' % branch)
