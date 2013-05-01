@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from ..fabric import (task, sudo, list_or_split,
-                      quiet, green, run, cd, )
+from ..fabric import task, sudo, quiet, green, run, cd
+from ..fabric.utils import list_or_split
 from .common import silent_sudo, is_installed, search
 
 
