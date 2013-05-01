@@ -212,8 +212,9 @@ class RemoteConfiguration(object):
 
                 if out.succeeded:
                     get('__django_settings__.pickle',
-                        pickled_settings, quiet=True)
-                    run('rm -f __django_settings__.pickle', quiet=True)
+                        pickled_settings)
+                    run('rm -f __django_settings__.pickle',
+                        quiet=not self.verbose)
 
                     try:
                         self.django_settings = pickle.load(pickled_settings)
