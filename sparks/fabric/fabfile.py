@@ -467,7 +467,7 @@ def dev_postgresql(remote_configuration=None):
     """ PostgreSQL development environment (for python packages build). """
 
     if not remote_configuration.is_osx:
-        pkg.pkg_add(('postgresql-server-dev-9.1', ))
+        pkg.pkg_add(('postgresql-client-9.1', 'postgresql-server-dev-9.1', ))
 
     pkg.pip2_add(('psycopg2', ))
 
