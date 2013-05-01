@@ -83,7 +83,8 @@ def init_environment():
     if not exists(env.root):
         run('mkdir -p "{0}"'.format(env.root))
 
-    if run('lsvirtualenv | grep {0}'.format(env.virtualenv)).strip() == '':
+    if run('lsvirtualenv | grep {0}'.format(env.virtualenv),
+           warn_only=True).strip() == '':
         run('mkvirtualenv {0}'.format(env.virtualenv))
 
 
