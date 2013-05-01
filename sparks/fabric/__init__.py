@@ -220,7 +220,7 @@ class RemoteConfiguration(object):
                         self.django_settings = pickle.load(pickled_settings)
 
                     except:
-                        pass
+                        LOGGER.exception('Cannot load remote django settings!')
 
 
 class LocalConfiguration(object):
