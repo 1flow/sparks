@@ -141,4 +141,4 @@ def include_snippets(project_root, snippets):
     snippets_path = join(project_root, 'snippets')
 
     for snippet in snippets:
-        execfile(join(snippets_path, snippet + '.py'), globals(), globals())
+        execfile(join(snippets_path, snippet + '.py'), globals())
