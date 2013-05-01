@@ -204,8 +204,9 @@ class RemoteConfiguration(object):
                 # I would have greatly prefered this modern version…
                 out = run(("{0} {1} python -c 'import cPickle as pickle; "
                           "from django.conf import settings; "
+                          "settings._setup(); "
                           "f=open(\"__django_settings__.pickle\", "
-                          "\"w\"); pickle.dump(settings, f, "
+                          "\"w\"); pickle.dump(settings._wrapped, f, "
                           "pickle.HIGHEST_PROTOCOL); f.close()'").format(
                           env_var1, env_var2), quiet=not self.verbose,
                           warn_only=True)
