@@ -10,7 +10,7 @@ import logging
 
 try:
     from fabric.api              import env, run, sudo, task, local
-    from fabric.operations       import put
+    from fabric.operations       import put, prompt
     from fabric.contrib.files    import exists, upload_template
     from fabric.context_managers import cd, prefix, settings
 
@@ -71,7 +71,24 @@ def install_components(remote_configuration=None):
     # This is common to dev/production machines.
     pip.pip2_add(('virtualenv', 'virtualenvwrapper', ))
 
+
 # •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Code related
+
+
+@task
+def init_environment():
+    """ Create ``env.root`` on the remote side, and the ``env.virtualenv``
+        it they do not exist. """
+
+    if not exists(env.root):
+        run('mkdir -p "{0}"'.format(os.path.dirname(env.root)))
+
+        prompt(u'Please create the git repository in {0}:{1} and press '
+               u'[enter] when done.'.format(env.host_string, env.root))
+
+    if run('lsvirtualenv | grep {0}'.format(env.virtualenv),
+           warn_only=True).strip() == '':
+        run('mkvirtualenv {0}'.format(env.virtualenv))
 
 
 @task(alias='req')
@@ -319,6 +336,10 @@ def restart_services(fast=False):
 def runable(fast=False, upgrade=False):
     """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
 
+    init_environment()
+
+    git_pull()
+
     if not fast:
         requirements(upgrade=upgrade)
         createdb()
@@ -342,7 +363,7 @@ def deploy(fast=False, upgrade=False):
     if not fast:
         install_components(upgrade=upgrade)
 
-    git_pull()
+    init_environment()
 
     runable(fast=fast, upgrade=upgrade)
 
