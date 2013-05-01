@@ -19,7 +19,7 @@ except ImportError:
     raise
 
 from ..django      import is_local_environment
-from ..fabric      import with_remote_configuration
+from ..fabric      import fabfile, with_remote_configuration
 from ..pkg         import apt, brew, pip
 from ..foundations import postgresql as pg
 
@@ -44,12 +44,11 @@ env.use_ssh_config        = True
 @with_remote_configuration
 def install_components(remote_configuration=None):
     """ Install necessary packages to run a full Django stack.
-        .. todo:: split me into packages/modules where appropriate. """
 
-    # TODO: use the installation tasks
-    # if installation:
-    #     from ..fabric import fabfile
-    #     fabfile.db_postgresql()
+        .. todo:: split me into packages/modules where appropriate.
+
+        .. todo:: split me into server (PG) and clients (PG-dev) packages.
+    """
 
     # OSX == test environment == no nginx/supervisor/etc
     if remote_configuration.is_osx:
@@ -65,8 +64,11 @@ def install_components(remote_configuration=None):
 
     else:
         apt.apt_add(('python-pip', 'supervisor', 'nginx-full',))
-        apt.apt_add(('redis-server', 'memcached', 'libmemcached-dev', ))
-        apt.apt_add(('build-essential', 'python-all-dev', ))
+        apt.apt_add(('redis-server', 'memcached', ))
+
+        # fabfile.dev()
+        # fabfile.dev_django_full()
+        # or fabfile.dev_memcache()
 
     # This is common to dev/production machines.
     pip.pip2_add(('virtualenv', 'virtualenvwrapper', ))
@@ -100,11 +102,8 @@ def requirements(upgrade=False):
     else:
         command = 'pip install'
 
-    # TODO: implement local installation. Just check it works.
-    if not is_local_environment():
-        from ..fabric import fabfile
-        fabfile.dev()
-        fabfile.dev_postgresql()
+    fabfile.dev()
+    fabfile.dev_django_full()
 
     with cd(env.root):
         with activate_venv():
