@@ -100,9 +100,11 @@ def requirements(upgrade=False):
     else:
         command = 'pip install'
 
-    from ..fabric import fabfile
-    fabfile.dev()
-    fabfile.dev_postgresql()
+    # TODO: implement local installation. Just check it works.
+    if not is_local_environment():
+        from ..fabric import fabfile
+        fabfile.dev()
+        fabfile.dev_postgresql()
 
     with cd(env.root):
         with activate_venv():
@@ -340,9 +342,9 @@ def restart_services(fast=False):
 def runable(fast=False, upgrade=False):
     """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
 
-    init_environment()
-
-    git_pull()
+    if not is_local_environment():
+        init_environment()
+        git_pull()
 
     if not fast:
         requirements(upgrade=upgrade)
