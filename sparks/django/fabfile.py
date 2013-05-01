@@ -338,6 +338,8 @@ def runable(fast=False, upgrade=False):
 
     init_environment()
 
+    git_pull()
+
     if not fast:
         requirements(upgrade=upgrade)
         createdb()
@@ -362,8 +364,6 @@ def deploy(fast=False, upgrade=False):
         install_components(upgrade=upgrade)
 
     init_environment()
-
-    git_pull()
 
     runable(fast=fast, upgrade=upgrade)
 
