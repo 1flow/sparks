@@ -11,7 +11,9 @@ from fabric.contrib.files    import contains, append, exists, sed
 from fabric.context_managers import cd, settings, hide
 from fabric.colors           import yellow, cyan
 
-from . import pkg, fabric as sf
+from .. import pkg
+from .utils import (with_remote_configuration, dsh_to_roledefs,
+                    tilde, symlink, dotfiles)
 
 # ===================================================== Local variables
 
@@ -23,7 +25,7 @@ central_osx_apps = 'duncan:oliviercortes.com/sparks/osx'
 # ================================================ Fabric configuration
 
 env.use_ssh_config = True
-env.roledefs       = sf.dsh_to_roledefs()
+env.roledefs       = dsh_to_roledefs()
 
 
 def info(text):
@@ -34,7 +36,7 @@ def info(text):
 # -------------------------------------- Standalone application recipes
 
 
-@sf.with_remote_configuration
+@with_remote_configuration
 def install_chrome(remote_configuration=None):
     """ Install Google Chrome via .DEB packages from Google. """
 
@@ -47,7 +49,7 @@ def install_chrome(remote_configuration=None):
         if exists('/usr/bin/google-chrome'):
             return
 
-        sf.key('https://dl-ssl.google.com/linux/linux_signing_key.pub')
+        pkg.apt.key('https://dl-ssl.google.com/linux/linux_signing_key.pub')
         append('/etc/apt/sources.list.d/google-chrome.list',
                'deb http://dl.google.com/linux/chrome/deb/ stable main',
                use_sudo=True)
@@ -55,7 +57,7 @@ def install_chrome(remote_configuration=None):
         pkg.apt_add('google-chrome-stable')
 
 
-@sf.with_remote_configuration
+@with_remote_configuration
 def install_skype(remote_configuration=None):
     """ Install Skype 32bit via Ubuntu partner repository. """
 
@@ -65,13 +67,13 @@ def install_skype(remote_configuration=None):
             info("Please install %s manually." % yellow('Skype'))
 
     else:
-        sf.ppa_pkg('deb http://archive.canonical.com/ubuntu %s partner'
-                   % remote_configuration.lsb.CODENAME,
-                   'skype', '/usr/bin/skype')
+        pkg.apt.ppa_pkg('deb http://archive.canonical.com/ubuntu %s partner'
+                        % remote_configuration.lsb.CODENAME,
+                        'skype', '/usr/bin/skype')
 
 
-@sf.with_remote_configuration
-def install_sublime(overwrite=False, remote_configuration=None):
+@with_remote_configuration
+def install_sublime(remote_configuration=None, overwrite=False):
     """ Install Sublime Text 2 in /opt via a downloaded .tar.bz2. """
 
     if remote_configuration.is_osx:
@@ -81,7 +83,7 @@ def install_sublime(overwrite=False, remote_configuration=None):
 
     else:
         if overwrite or not exists('/opt/sublime2'):
-            if sf.uname.machine == 'x86_64':
+            if remote_configuration.uname.machine == 'x86_64':
                 url = 'http://c758482.r82.cf2.rackcdn.com/' \
                       + 'Sublime%20Text%202.0.1%20x64.tar.bz2'
 
@@ -95,7 +97,7 @@ def install_sublime(overwrite=False, remote_configuration=None):
                 sudo('tar -xjf /var/tmp/sublime.tar.bz2')
                 sudo('mv "Sublime Text 2" sublime2')
 
-        executable = sf.tilde('bin/sublime')
+        executable = tilde('bin/sublime')
 
         if overwrite or not exists(executable):
             run('echo -e "#!/bin/sh\ncd /opt/sublime2\n./sublime_text\n" > %s'
@@ -110,7 +112,7 @@ def install_sublime(overwrite=False, remote_configuration=None):
                 '/usr/share/applications', use_sudo=True)
 
 
-@sf.with_remote_configuration
+@with_remote_configuration
 def install_homebrew(remote_configuration=None):
     """ Install Homebrew on OSX from http://mxcl.github.com/homebrew/ """
 
@@ -141,7 +143,7 @@ def install_homebrew(remote_configuration=None):
     LOGGER.warning('You still have to install Xcode and its CLI tools.')
 
 
-@sf.with_remote_configuration
+@with_remote_configuration
 def install_1password(remote_configuration=None):
     """ NOT IMPLEMENTED: Install 1Password. """
 
@@ -154,20 +156,20 @@ def install_1password(remote_configuration=None):
         pkg.apt_add('wine')
 
 
-@sf.with_remote_configuration
+@with_remote_configuration
 def install_powerline(remote_configuration=None):
     """ Install the Ubuntu Mono patched font and powerline (runs dev_mini). """
 
     if remote_configuration.is_osx:
-        if not exists(sf.tilde('Library/Fonts/UbuntuMono-B-Powerline.ttf')):
+        if not exists(tilde('Library/Fonts/UbuntuMono-B-Powerline.ttf')):
             git_clone_or_update('ubuntu-mono-powerline-ttf',
                                 'https://github.com/pdf/'
                                 'ubuntu-mono-powerline-ttf.git')
             run('cp ubuntu-mono-powerline-ttf/*.ttf %s'
-                % sf.tilde('Library/Fonts/UbuntuMono-B-Powerline.ttf'))
+                % tilde('Library/Fonts/UbuntuMono-B-Powerline.ttf'))
 
     else:
-        if not exists(sf.tilde('.fonts/ubuntu-mono-powerline-ttf')):
+        if not exists(tilde('.fonts/ubuntu-mono-powerline-ttf')):
             run('git clone https://github.com/pdf/ubuntu-mono-powerline-ttf.git'
                 ' ~/.fonts/ubuntu-mono-powerline-ttf')
             run('fc-cache -vf')
@@ -179,7 +181,7 @@ def install_powerline(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def test(remote_configuration=None):
     """ Just run `uname -a; uptime` remotely, to test the connection
         or sparks core libs. """
@@ -188,14 +190,14 @@ def test(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def sys_easy_sudo(remote_configuration=None):
     """ Allow sudo to run without password for @sudo members. """
 
     if remote_configuration.is_osx:
         # GNU sed is needed for fabric `sed` command to succeed.
         pkg.brew_add('gnu-sed')
-        sf.symlink('/usr/local/bin/gsed', '/usr/local/bin/sed')
+        symlink('/usr/local/bin/gsed', '/usr/local/bin/sed')
 
         sudoers = '/private/etc/sudoers'
         group   = 'admin'
@@ -214,7 +216,7 @@ def sys_easy_sudo(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def sys_unattended(remote_configuration=None):
     """ Install unattended-upgrades and set it up for daily auto-run. """
 
@@ -238,7 +240,7 @@ def sys_unattended(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def sys_del_useless(remote_configuration=None):
     """ Remove useless or annoying packages (LSB only).
 
@@ -257,7 +259,7 @@ def sys_del_useless(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def sys_default_services(remote_configuration=None):
     """ Activate some system services I need / use. """
 
@@ -268,7 +270,7 @@ def sys_default_services(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def sys_admin_pkgs(remote_configuration=None):
     """ Install some sysadmin related applications. """
 
@@ -279,7 +281,7 @@ def sys_admin_pkgs(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def sys_ssh_powerline(remote_configuration=None):
     """ Make remote SSHd accept the POWERLINE_SHELL environment variable. """
 
@@ -302,16 +304,16 @@ def sys_ssh_powerline(remote_configuration=None):
 
 
 @task(aliases=('lperms', ))
-@sf.with_remote_configuration
+@with_remote_configuration
 def local_perms(remote_configuration=None):
     """ Re-apply correct permissions on well-known files (eg .ssh/*) """
 
-    with cd(sf.tilde()):
+    with cd(tilde()):
         local('chmod 700 .ssh; chmod 600 .ssh/*')
 
 
 @task(aliases=('dupe_perms', 'dupe_acls', 'acls', ))
-@sf.with_remote_configuration
+@with_remote_configuration
 def replicate_acls(remote_configuration=None,
                    origin=None, path=None, apply=False):
     """ Replicate locally the ACLs and Unix permissions of a given path.
@@ -361,13 +363,13 @@ def replicate_acls(remote_configuration=None,
 # ------------------------------------------------- Development recipes
 
 
-@sf.with_remote_configuration
+@with_remote_configuration
 def git_clone_or_update(project, github_source, remote_configuration=None):
     """ Clones or update a repository. """
 
     dev_mini()
 
-    with cd(sf.tilde('sources')):
+    with cd(tilde('sources')):
         if exists(project):
             with cd(project):
                 print('Updating GIT repository %s…' % yellow(project))
@@ -378,7 +380,7 @@ def git_clone_or_update(project, github_source, remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def dev_graphviz(remote_configuration=None):
     """ Graphviz and required packages for PYgraphviz. """
 
@@ -390,7 +392,7 @@ def dev_graphviz(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def dev_pil(virtualenv=None, remote_configuration=None):
     """ Required packages to build Python PIL. """
 
@@ -415,9 +417,9 @@ def dev_pil(virtualenv=None, remote_configuration=None):
                 # TODO: check it works (eg. it suffices
                 # to correctly build PIL via PIP).
                 for libname in ('libjpeg', 'libfreetype', 'libz'):
-                    sf.symlink('/usr/lib/%s-linux-gnu/%s.so'
-                               % (remote_configuration.arch, libname),
-                               '%s.so' % libname)
+                    symlink('/usr/lib/%s-linux-gnu/%s.so'
+                            % (remote_configuration.arch, libname),
+                            '%s.so' % libname)
 
             # TODO:     with prefix('workon myvenv'):
             # This must be done in the virtualenv, not system-wide.
@@ -427,21 +429,21 @@ def dev_pil(virtualenv=None, remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def dev_tildesources(remote_configuration=None):
     """ Create ~/sources if not existing. """
 
-    with cd(sf.tilde()):
+    with cd(tilde()):
         if not exists('sources'):
             if remote_configuration.is_vm:
                 if remote_configuration.is_parallel:
-                    sf.symlink('/media/psf/Home/sources', 'sources')
+                    symlink('/media/psf/Home/sources', 'sources')
             else:
                 run('mkdir sources')
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def dev_sqlite(remote_configuration=None):
     """ SQLite development environment (for python packages build). """
 
@@ -452,7 +454,7 @@ def dev_sqlite(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def dev_mysql(remote_configuration=None):
     """ MySQL development environment (for python packages build). """
 
@@ -460,7 +462,7 @@ def dev_mysql(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def dev_postgresql(remote_configuration=None):
     """ PostgreSQL development environment (for python packages build). """
 
@@ -471,7 +473,7 @@ def dev_postgresql(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def dev_mini(remote_configuration=None):
     """ Git and ~/sources/ """
 
@@ -481,7 +483,7 @@ def dev_mini(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def dev_web(remote_configuration=None):
     """ Web development packages (NodeJS, Less, Compass…). """
 
@@ -489,7 +491,7 @@ def dev_web(remote_configuration=None):
 
     if not remote_configuration.is_osx:
         # Because of http://stackoverflow.com/q/7214474/654755
-        sf.ppa('ppa:chris-lea/node.js')
+        pkg.apt.ppa('ppa:chris-lea/node.js')
 
     # NOTE: nodejs` PPA version already includes `npm`,
     # no need to install it via a separate package on Ubuntu.
@@ -499,7 +501,7 @@ def dev_web(remote_configuration=None):
     if remote_configuration.is_osx:
         pkg.pkg_add(('npm', ))
 
-    sf.npm_add(('less', 'yo',
+    pkg.npm_add(('less', 'yo',
 
                 # Not yet ready (package throws exceptions on install)
                 #'yeoman-bootstrap',
@@ -513,7 +515,7 @@ def dev_web(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def dev(remote_configuration=None):
     """ Generic development (dev_mini + git-flow + Python & Ruby utils). """
 
@@ -578,7 +580,7 @@ def dev(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def db_sqlite(remote_configuration=None):
     """ SQLite database library. """
 
@@ -586,7 +588,7 @@ def db_sqlite(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def db_mysql(remote_configuration=None):
     """ MySQL database server. """
 
@@ -594,7 +596,7 @@ def db_mysql(remote_configuration=None):
 
 
 @task(aliases=('db_postgres'))
-@sf.with_remote_configuration
+@with_remote_configuration
 def db_postgresql(remote_configuration=None):
     """ PostgreSQL database server. """
 
@@ -619,7 +621,7 @@ def db_postgresql(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def base(remote_configuration=None):
     """ sys_* + brew (on OSX) + byobu, bash-completion, htop. """
 
@@ -638,7 +640,7 @@ def base(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def deployment(remote_configuration=None):
     """ Install Fabric (via PIP for latest paramiko). """
 
@@ -656,7 +658,7 @@ def deployment(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def lxc(remote_configuration=None):
     """ LXC local runner (guests manager). """
 
@@ -672,7 +674,7 @@ def lxc(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def graphdev(remote_configuration=None):
     """ Graphical applications for the typical development environment.
 
@@ -696,7 +698,7 @@ def graphdev(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def graphdb(remote_configuration=None):
     """ Graphical and client packages for databases. """
 
@@ -708,7 +710,7 @@ def graphdb(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def graph(remote_configuration=None):
     """ Poweruser graphical applications. """
 
@@ -726,21 +728,23 @@ def graph(remote_configuration=None):
 
     if remote_configuration.lsb.RELEASE.startswith('13') \
             or remote_configuration.lsb.RELEASE == '12.10':
-        sf.ppa_pkg('ppa:freyja-dev/unity-tweak-tool-daily',
-                   'unity-tweak-tool', '/usr/bin/unity-tweak-tool')
+        pkg.apt.ppa_pkg('ppa:freyja-dev/unity-tweak-tool-daily',
+                        'unity-tweak-tool', '/usr/bin/unity-tweak-tool')
 
     elif remote_configuration.lsb.RELEASE == '12.04':
-        sf.ppa_pkg('ppa:myunity/ppa', 'myunity', '/usr/bin/myunity')
+        pkg.apt.ppa_pkg('ppa:myunity/ppa', 'myunity', '/usr/bin/myunity')
 
-    sf.ppa_pkg('ppa:tiheum/equinox', ('faience-icon-theme',
-               'faenza-icon-theme'), '/usr/share/icons/Faenza')
-    sf.ppa_pkg('ppa:caffeine-developers/ppa', 'caffeine', '/usr/bin/caffeine')
-    #sf.ppa_pkg('ppa:conscioususer/polly-unstable', 'polly', '/usr/bin/polly')
-    sf.ppa_pkg('ppa:kilian/f.lux', 'fluxgui', '/usr/bin/fluxgui')
+    pkg.apt.ppa_pkg('ppa:tiheum/equinox', ('faience-icon-theme',
+                    'faenza-icon-theme'), '/usr/share/icons/Faenza')
+    pkg.apt.ppa_pkg('ppa:caffeine-developers/ppa',
+                    'caffeine', '/usr/bin/caffeine')
+    #pkg.apt.ppa_pkg('ppa:conscioususer/polly-unstable',
+    #                 'polly', '/usr/bin/polly')
+    pkg.apt.ppa_pkg('ppa:kilian/f.lux', 'fluxgui', '/usr/bin/fluxgui')
 
 
 @task(aliases=('graphkbd', 'kbd', ))
-@sf.with_remote_configuration
+@with_remote_configuration
 def graphshortcuts(remote_configuration=None):
     """ Gconf / Dconf keyboard shortcuts for back-from-resume loose. """
     if remote_configuration.is_osx:
@@ -759,7 +763,7 @@ def graphshortcuts(remote_configuration=None):
 
 
 @task(aliases=('coc', ))
-@sf.with_remote_configuration
+@with_remote_configuration
 def clear_osx_cache(remote_configuration=None):
     """ Clears some OSX cache, to avoid opendirectoryd to hog CPU. """
 
@@ -775,7 +779,7 @@ def clear_osx_cache(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def upload_osx_apps(remote_configuration=None):
     """ Upload local OSX Apps to my central location for easy redistribution
         without harvesting the internet on every new machine.
@@ -790,7 +794,7 @@ def upload_osx_apps(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def myapps(remote_configuration=None):
     """ Skype + Chrome + Sublime + 1Password """
 
@@ -805,7 +809,7 @@ def myapps(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def mydevenv(remote_configuration=None):
     """ Clone my professional / personnal projects with GIT in ~/sources """
 
@@ -821,8 +825,8 @@ def mydevenv(remote_configuration=None):
     #
     # Just symlink it to my sources for centralization/normalization
     # purposes. Or is it just bad-habits? ;-)
-    with cd(sf.tilde('sources')):
-        sf.symlink('../Dropbox/sparks', 'sparks')
+    with cd(tilde('sources')):
+        symlink('../Dropbox/sparks', 'sparks')
 
     git_clone_or_update('pelican-themes',
                         'git@github.com:Karmak23/pelican-themes.git')
@@ -835,21 +839,21 @@ def mydevenv(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def mydotfiles(overwrite=False, locally=False, remote_configuration=None):
     """ Symlink a bunch of things to Dropbox/… """
 
-    with cd(sf.tilde()):
+    with cd(tilde()):
 
-        sf.symlink('Dropbox/bin', 'bin', overwrite=overwrite, locally=locally)
-        sf.symlink('Dropbox/configuration/virtualenvs', '.virtualenvs',
-                   overwrite=overwrite, locally=locally)
+        symlink('Dropbox/bin', 'bin', overwrite=overwrite, locally=locally)
+        symlink('Dropbox/configuration/virtualenvs', '.virtualenvs',
+                overwrite=overwrite, locally=locally)
 
         for filename in ('dsh', 'ssh', 'ackrc', 'bashrc', 'fabricrc',
                          'gitconfig', 'gitignore', 'dupload.conf',
                          'multitailrc'):
-            sf.symlink(sf.dotfiles('dot.%s' % filename),
-                       '.%s' % filename, overwrite=overwrite, locally=locally)
+            symlink(dotfiles('dot.%s' % filename),
+                    '.%s' % filename, overwrite=overwrite, locally=locally)
 
         if not remote_configuration.is_osx:
             if not exists('.config'):
@@ -860,7 +864,7 @@ def mydotfiles(overwrite=False, locally=False, remote_configuration=None):
                 # correctly. We won't symlink their data automatically.
                 symlink_blacklist = ('caffeine', )
 
-                base_path   = sf.tilde(sf.dotfiles('dot.config'))
+                base_path   = tilde(dotfiles('dot.config'))
                 ln_src_path = os.path.join('..', base_path)
 
                 # NOTE: this lists files on the local
@@ -876,12 +880,12 @@ def mydotfiles(overwrite=False, locally=False, remote_configuration=None):
                         continue
 
                     # But this will do the symlink remotely.
-                    sf.symlink(os.path.join(ln_src_path, entry), entry,
-                               overwrite=overwrite, locally=locally)
+                    symlink(os.path.join(ln_src_path, entry), entry,
+                            overwrite=overwrite, locally=locally)
 
 
 @task(aliases=('myenv', ))
-@sf.with_remote_configuration
+@with_remote_configuration
 def myfullenv(remote_configuration=None):
     """ sudo + full + fullgraph + mydev + mypkg + mydot """
 
@@ -905,7 +909,7 @@ def myfullenv(remote_configuration=None):
 
 
 @task(aliases=('mysetup', ))
-@sf.with_remote_configuration
+@with_remote_configuration
 def mybootstrap(remote_configuration=None):
     """ Bootstrap my personal environment on the local machine. """
 
@@ -917,7 +921,7 @@ def mybootstrap(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def lxc_base(remote_configuration=None):
     """ Base packages for an LXC guest (base+LANG+dev). """
 
@@ -942,7 +946,7 @@ def lxc_base(remote_configuration=None):
 
 
 @task
-@sf.with_remote_configuration
+@with_remote_configuration
 def lxc_server(remote_configuration=None):
     """ LXC base + server packages (Pg). """
 
