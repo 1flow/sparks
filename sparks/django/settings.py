@@ -49,6 +49,10 @@ def find_settings(settings__file__name):
         you. You could for example create a :file:`common.py`, import it
         in all other, and override only a part of its attributes in them.
 
+        .. note:: hostname related operations are done lower-case. If your
+            hostname is ``Chani.Licorn.local``, `sparks` will search
+            ``chani-licorn-local``, ``chani`` and ``licorn-local``.
+
         .. note:: if you hostname starts with a digit, there is no problem
             regarding the current function: the setting filename can start
             with a digit, because it will not be imported
@@ -73,11 +77,11 @@ def find_settings(settings__file__name):
                     u'SPARKS_DJANGO_SETTINGS="{0}".'.format(
                     environ_settings))
 
-    fullnodename = platform.hostname.replace('.', '-')
+    fullnodename = platform.hostname.lower().replace('.', '-')
     candidates.append(settings_path(fullnodename))
 
     try:
-        shortname, domainname = platform.hostname.split('.', 1)
+        shortname, domainname = platform.hostname.lower().split('.', 1)
 
     except ValueError:
         # The hostname is a short one, without the domain.
