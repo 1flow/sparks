@@ -56,15 +56,19 @@ def get_admin_user(remote_configuration=None):
         raise NotImplementedError("Which kind of remote sytem is this??")
 
 
-def temper_db_args(db, user, password):
+@with_remote_configuration
+def temper_db_args(remote_configuration=None,
+                   db=None, user=None, password=None):
     """ Try to accomodate with DB creation arguments. """
 
     if db is None and user is None and password is None:
-        if hasattr(env, 'settings'):
+        if hasattr(remote_configuration, 'django_settings'):
+            djsettings = remote_configuration.django_settings
+
             # if django settings has 'test' or 'production' DB,
             # get it, else get 'default' because all settings have it.
-            db_settings = env.settings.DATABASES.get(
-                env.environment, env.settings.DATABASES['default'])
+            db_settings = djsettings.DATABASES.get(
+                env.environment, djsettings.DATABASES['default'])
 
             db       = db_settings['NAME']
             user     = db_settings['USER']

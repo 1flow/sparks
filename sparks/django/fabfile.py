@@ -319,8 +319,8 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
 
     connect = ''
 
-    if hasattr(env, 'settings'):
-        db   = env.settings.DATABASES['default']
+    if hasattr(remote_configuration, 'django_settings'):
+        db   = remote_configuration.django_settings.DATABASES['default']
         host = db.get('HOST', '')
         port = db.get('PORT', '')
 
