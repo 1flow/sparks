@@ -613,7 +613,7 @@ def db_mysql(remote_configuration=None):
     pkg.pkg_add('mysql' if remote_configuration.is_osx else 'mysql-server')
 
 
-@task(aliases=('db_postgres'))
+@task(aliases=('db_postgres', ))
 @with_remote_configuration
 def db_postgresql(remote_configuration=None):
     """ PostgreSQL database server. """
