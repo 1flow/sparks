@@ -194,10 +194,11 @@ class RemoteConfiguration(object):
             prefix_cmd = 'workon {0}'.format(env.virtualenv)
 
         with prefix(prefix_cmd):
-            out = run(("{0} {1} python -c 'import cPickle as pickle; "
-                      "from django.conf import settings; "
-                      "print pickle.dumps(settings)'").format(
-                      env_var1, env_var2), quiet=not self.verbose)
+            with cd(env.root if hasattr(env, 'root') else ''):
+                out = run(("{0} {1} python -c 'import cPickle as pickle; "
+                          "from django.conf import settings; "
+                          "print pickle.dumps(settings)'").format(
+                          env_var1, env_var2), quiet=not self.verbose)
 
         try:
             self.django_settings = pickle.loads(out)
