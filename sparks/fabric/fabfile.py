@@ -484,6 +484,24 @@ def dev_mini(remote_configuration=None):
 
 @task
 @with_remote_configuration
+def dev_django_full(remote_configuration=None):
+    """ Django full stack system packages (for python packages build). """
+
+    dev_postgresql()
+    dev_memcache()
+
+
+@task
+@with_remote_configuration
+def dev_memcache(remote_configuration=None):
+    """ Memcache development environment (for python packages build). """
+
+    if not remote_configuration.is_osx:
+        pkg.pkg_add(('libmemcached-dev', ))
+
+
+@task
+@with_remote_configuration
 def dev_web(remote_configuration=None):
     """ Web development packages (NodeJS, Less, Compass…). """
 
