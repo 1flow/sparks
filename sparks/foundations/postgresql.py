@@ -13,17 +13,24 @@ from ..fabric import with_remote_configuration
 
 LOGGER = logging.getLogger(__name__)
 
-BASE_CMD    = 'psql template1 -tc "{0}"'
+BASE_CMD    = 'psql {connect} template1 -tc "{sqlcmd}"'
 
-SELECT_USER = BASE_CMD.format("SELECT usename from pg_user "
+# {connect} is intentionnaly repeated, it will be filled later.
+# Without repeating it, `.format()` will fail with `KeyError`.
+SELECT_USER = BASE_CMD.format(connect='{connect}',
+                              sqlcmd="SELECT usename from pg_user "
                               "WHERE usename = '{user}';")
-CREATE_USER = BASE_CMD.format("CREATE USER {user} "
+CREATE_USER = BASE_CMD.format(connect='{connect}',
+                              sqlcmd="CREATE USER {user} "
                               "WITH PASSWORD '{password}';")
-ALTER_USER  = BASE_CMD.format("ALTER USER {user} "
+ALTER_USER  = BASE_CMD.format(connect='{connect}',
+                              sqlcmd="ALTER USER {user} "
                               "WITH ENCRYPTED PASSWORD '{password}';")
-SELECT_DB   = BASE_CMD.format("SELECT datname FROM pg_database "
+SELECT_DB   = BASE_CMD.format(connect='{connect}',
+                              sqlcmd="SELECT datname FROM pg_database "
                               "WHERE datname = '{db}';")
-CREATE_DB   = BASE_CMD.format("CREATE DATABASE {db} OWNER {user};")
+CREATE_DB   = BASE_CMD.format(connect='{connect}',
+                              sqlcmd="CREATE DATABASE {db} OWNER {user};")
 
 
 @with_remote_configuration
