@@ -202,7 +202,7 @@ class RemoteConfiguration(object):
             with cd(env.root if hasattr(env, 'root') else ''):
                 out = run(("{0} {1} python -c 'import cPickle as pickle; "
                           "from django.conf import settings; "
-                          "with open(\'__django_settings__.pickle\') as f: "
+                          "with open(\"__django_settings__.pickle\") as f: "
                           "pickle.dump(settings, f, "
                           "pickle.HIGHEST_PROTOCOL)'").format(
                           env_var1, env_var2), quiet=not self.verbose,
