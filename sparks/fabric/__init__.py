@@ -202,7 +202,7 @@ class RemoteConfiguration(object):
                           env_var1, env_var2), quiet=not self.verbose)
 
         try:
-            self.django_settings = pickle.loads(out)
+            self.django_settings = pickle.loads(''.join(out))
 
         except:
             pass
