@@ -33,10 +33,10 @@ SELECT_USER = BASE_CMD.format(pg_env='{pg_env}',
                               sqlcmd="SELECT usename from pg_user "
                               "WHERE usename = '{user}';")
 CREATE_USER = BASE_CMD.format(pg_env='{pg_env}',
-                              sqlcmd="CREATE ROLE {user} "
+                              sqlcmd="CREATE USER {user} "
                               "WITH PASSWORD '{password}';")
 ALTER_USER  = BASE_CMD.format(pg_env='{pg_env}',
-                              sqlcmd="ALTER ROLE {user} "
+                              sqlcmd="ALTER USER {user} "
                               "WITH ENCRYPTED PASSWORD '{password}';")
 SELECT_DB   = BASE_CMD.format(pg_env='{pg_env}',
                               sqlcmd="SELECT datname FROM pg_database "
