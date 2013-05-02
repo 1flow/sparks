@@ -1,6 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-    Fabric common rules for a Django project.
+    PostgreSQL sparks helpers.
+
+    .. notes::
+
+        sudo su - postgres
+        createuser --login --no-inherit --createdb --createrole --superuser <me>
+        psql
+            ALTER USER <me> WITH ENCRYPTED PASSWORD '<passwd>';
+        [exit]
+        psql
+            CREATE ROLE oneflow_admin PASSWORD '<pass>' \
+                NOSUPERUSER CREATEDB CREATEROLE NOINHERIT LOGIN;
+            ALTER USER oneflow_admin WITH ENCRYPTED PASSWORD '<passwd>';
 
 """
 
@@ -13,30 +25,30 @@ from ..fabric import with_remote_configuration
 
 LOGGER = logging.getLogger(__name__)
 
-BASE_CMD    = 'psql {connect} template1 -tc "{sqlcmd}"'
+BASE_CMD    = '{pg_env} psql -tc "{sqlcmd}"'
 
-# {connect} is intentionnaly repeated, it will be filled later.
+# {pg_env} is intentionnaly repeated, it will be filled later.
 # Without repeating it, `.format()` will fail with `KeyError`.
-SELECT_USER = BASE_CMD.format(connect='{connect}',
+SELECT_USER = BASE_CMD.format(pg_env='{pg_env}',
                               sqlcmd="SELECT usename from pg_user "
                               "WHERE usename = '{user}';")
-CREATE_USER = BASE_CMD.format(connect='{connect}',
-                              sqlcmd="CREATE USER {user} "
+CREATE_USER = BASE_CMD.format(pg_env='{pg_env}',
+                              sqlcmd="CREATE ROLE {user} "
                               "WITH PASSWORD '{password}';")
-ALTER_USER  = BASE_CMD.format(connect='{connect}',
-                              sqlcmd="ALTER USER {user} "
+ALTER_USER  = BASE_CMD.format(pg_env='{pg_env}',
+                              sqlcmd="ALTER ROLE {user} "
                               "WITH ENCRYPTED PASSWORD '{password}';")
-SELECT_DB   = BASE_CMD.format(connect='{connect}',
+SELECT_DB   = BASE_CMD.format(pg_env='{pg_env}',
                               sqlcmd="SELECT datname FROM pg_database "
                               "WHERE datname = '{db}';")
-CREATE_DB   = BASE_CMD.format(connect='{connect}',
+CREATE_DB   = BASE_CMD.format(pg_env='{pg_env}',
                               sqlcmd="CREATE DATABASE {db} OWNER {user};")
 
 
 @with_remote_configuration
 def get_admin_user(remote_configuration=None):
 
-    environ_user = os.environ.get('SPARKS_PG_USER', None)
+    environ_user = os.environ.get('SPARKS_PG_SUPERUSER', None)
 
     if environ_user is not None:
         return environ_user

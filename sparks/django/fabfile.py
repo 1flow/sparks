@@ -19,7 +19,8 @@ except ImportError:
     raise
 
 from ..django      import is_local_environment
-from ..fabric      import fabfile, with_remote_configuration
+from ..fabric      import (fabfile, with_remote_configuration,
+                           local_configuration as platform)
 from ..pkg         import apt, brew, pip
 from ..foundations import postgresql as pg
 
@@ -317,7 +318,15 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
 
     db, user, password = pg.temper_db_args(db=db, user=user, password=password)
 
-    connect = ''
+    pg_env = ' PGUSER={0}'.format(env.pg_superuser) \
+        if hasattr(env, 'pg_superuser') else ''
+
+    pg_env += ' PGPASSWORD={0}'.format(env.pg_superpass) \
+        if hasattr(env, 'pg_superpass') else ''
+
+    pg_env += ' PGDATABASE={0}'.format(env.pg_superdb
+                                       if hasattr(env, 'pg_superdb')
+                                       else 'template1')
 
     if hasattr(remote_configuration, 'django_settings'):
         db   = remote_configuration.django_settings.DATABASES['default']
@@ -325,24 +334,22 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
         port = db.get('PORT', '')
 
         if host != '':
-            host = '--host={0}'.format(host)
+            pg_env += ' PGHOST={0}'.format(host)
 
         if port != '':
-            port = '--port={0}'.format(port)
-
-        connect = ' '.join(x for x in (host, port) if x != '')
+            pg_env = ' PGPORT={0}'.format(port)
 
     with settings(sudo_user=pg.get_admin_user()):
         if sudo(pg.SELECT_USER.format(
-                connect=connect, user=user)).strip() == '':
+                pg_env=pg_env, user=user)).strip() == '':
             sudo(pg.CREATE_USER.format(
-                 connect=connect, user=user, password=password))
+                 pg_env=pg_env, user=user, password=password))
+        else:
+            sudo(pg.ALTER_USER.format(pg_env=pg_env,
+                 user=user, password=password))
 
-        sudo(pg.ALTER_USER.format(connect=connect,
-             user=user, password=password))
-
-        if sudo(pg.SELECT_DB.format(connect=connect, db=db)).strip() == '':
-            sudo(pg.CREATE_DB.format(connect=connect, db=db, user=user))
+        if sudo(pg.SELECT_DB.format(pg_env=pg_env, db=db)).strip() == '':
+            sudo(pg.CREATE_DB.format(pg_env=pg_env, db=db, user=user))
 
 
 # ••••••••••••••••••••••••••••••••••••••••••••••••••••••• Deployment meta-tasks
