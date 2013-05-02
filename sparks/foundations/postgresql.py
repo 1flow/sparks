@@ -1,6 +1,35 @@
 # -*- coding: utf-8 -*-
 """
-    Fabric common rules for a Django project.
+    PostgreSQL sparks helpers.
+
+    For the Django developers to be able to create users & databases in
+    complex architectures (eg. when the DB server is not on the Django
+    instance server…) you must first define a PostgreSQL restricted admin
+    user to manage the Django projects and apps databases.
+
+    This user doens't need to be strictly ``SUPERUSER``, though.
+    Having ``CREATEDB`` and ``CREATEUSER`` will suffice (but ``CREATEROLE``
+    won't). For memories, this is how I created mine, on the central
+    PostgreSQL server::
+
+        # OPTIONAL: I first give me some good privileges
+        # to avoid using the `postgres` system user.
+        sudo su - postgres
+        createuser --login --no-inherit \
+            --createdb --createrole --superuser `whoami`
+        psql
+            ALTER USER `whoami` WITH ENCRYPTED PASSWORD 'MAKE_ME_STRONG';
+        [exit]
+
+        # Then, I create the other admin user which will handle all fabric
+        # requests via developer tasks.
+        psql
+            CREATE ROLE oneflow_admin PASSWORD '<passwd>' \
+                NOSUPERUSER CREATEDB CREATEUSER NOINHERIT LOGIN;
+
+        # Already done in previous command,
+        # but keeing it here for memories.
+        #    ALTER USER oneflow_admin WITH ENCRYPTED PASSWORD '<passwd>';
 
 """
 
@@ -13,30 +42,30 @@ from ..fabric import with_remote_configuration
 
 LOGGER = logging.getLogger(__name__)
 
-BASE_CMD    = 'psql {connect} template1 -tc "{sqlcmd}"'
+BASE_CMD    = '{pg_env} psql -tc "{sqlcmd}"'
 
-# {connect} is intentionnaly repeated, it will be filled later.
+# {pg_env} is intentionnaly repeated, it will be filled later.
 # Without repeating it, `.format()` will fail with `KeyError`.
-SELECT_USER = BASE_CMD.format(connect='{connect}',
+SELECT_USER = BASE_CMD.format(pg_env='{pg_env}',
                               sqlcmd="SELECT usename from pg_user "
                               "WHERE usename = '{user}';")
-CREATE_USER = BASE_CMD.format(connect='{connect}',
+CREATE_USER = BASE_CMD.format(pg_env='{pg_env}',
                               sqlcmd="CREATE USER {user} "
                               "WITH PASSWORD '{password}';")
-ALTER_USER  = BASE_CMD.format(connect='{connect}',
+ALTER_USER  = BASE_CMD.format(pg_env='{pg_env}',
                               sqlcmd="ALTER USER {user} "
                               "WITH ENCRYPTED PASSWORD '{password}';")
-SELECT_DB   = BASE_CMD.format(connect='{connect}',
+SELECT_DB   = BASE_CMD.format(pg_env='{pg_env}',
                               sqlcmd="SELECT datname FROM pg_database "
                               "WHERE datname = '{db}';")
-CREATE_DB   = BASE_CMD.format(connect='{connect}',
+CREATE_DB   = BASE_CMD.format(pg_env='{pg_env}',
                               sqlcmd="CREATE DATABASE {db} OWNER {user};")
 
 
 @with_remote_configuration
 def get_admin_user(remote_configuration=None):
 
-    environ_user = os.environ.get('SPARKS_PG_USER', None)
+    environ_user = os.environ.get('SPARKS_PG_SUPERUSER', None)
 
     if environ_user is not None:
         return environ_user
@@ -59,7 +88,12 @@ def get_admin_user(remote_configuration=None):
 @with_remote_configuration
 def temper_db_args(remote_configuration=None,
                    db=None, user=None, password=None):
-    """ Try to accomodate with DB creation arguments. """
+    """ Try to accomodate with DB creation arguments.
+
+        If all of them are ``None``, the function will try to fetch
+        them automatically from the remote server Django settings.
+
+    """
 
     if db is None and user is None and password is None:
         if hasattr(remote_configuration, 'django_settings'):

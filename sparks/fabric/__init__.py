@@ -1,5 +1,6 @@
 # -*- coding: utf8 -*-
 
+import sys
 import os
 import ast
 import logging
@@ -14,10 +15,10 @@ from ..contrib import lsb_release
 from . import nofabric
 
 try:
+    from fabric.api              import env
     from fabric.api              import run as fabric_run
     from fabric.api              import sudo as fabric_sudo
     from fabric.api              import local as fabric_local
-    from fabric.api              import env
     from fabric.operations       import get
     from fabric.context_managers import prefix
     from fabric.colors           import cyan
@@ -180,21 +181,18 @@ class RemoteConfiguration(object):
 
     def get_django_settings(self):
 
-        env_var1 = ''
-
-        if hasattr(env, 'environment_var'):
-            # transform the supervisor syntax to shell syntax.
-            env_var1 = ' '.join(env.environment_var.split(';'))
+        # transform the supervisor syntax to shell syntax.
+        env_var1 = ' '.join(env.environment_vars) \
+            if hasattr(env, 'environment_vars') else ''
 
         env_var2 = 'DJANGO_SETTINGS_MODULE="{0}.settings"'.format(env.project)
 
         # Here, we *NEED* to be in the virtualenv, to get the django code.
         # NOTE: this code is kind of weak, it will fail if settings include
         # complex objects, but we hope it's not.
-        prefix_cmd = ''
 
-        if hasattr(env, 'virtualenv'):
-            prefix_cmd = 'workon {0}'.format(env.virtualenv)
+        prefix_cmd = 'workon {0}'.format(env.virtualenv) \
+            if hasattr(env, 'virtualenv') else ''
 
         pickled_settings = StringIO.StringIO()
 
@@ -276,19 +274,47 @@ class LocalConfiguration(object):
 
         self.is_vm = self.is_parallel or self.is_vmware
 
-        if hasattr(env, 'environment_var'):
-            name, value = env.environment_var.split('=')
-            os.environ[name] = value
-            os.environ['DJANGO_SETTINGS_MODULE'] = env.project + '.settings'
+    def __getattr__(self, key):
+        """ This lazy getter will allow to load the Django settings after
+            Fabric and the project fabfile has initialized `env`. Doing
+            elseway leads to cycle dependancy KeyErrors. """
+
+        if key == 'django_settings':
+            self.get_django_settings()
+            return self.django_settings
+
+    def get_django_settings(self):
+
+        # Set the environment exactly how it should be for runserver.
+        # Supervisor environment can hold the sparks settings,
+        # while Django environment will hold the project settings.
+
+        if hasattr(env, 'environment_vars'):
+            for env_var in env.environment_vars:
+                name, value = env_var.strip().split('=')
+                os.environ[name] = value
+
+        os.environ['DJANGO_SETTINGS_MODULE'] = \
+            '{0}.settings'.format(env.project)
+
+        # Insert the $CWD in sys path, and pray for the user to have called
+        # `fab` from where `manage.py` is. This is the way it should be done
+        # but who knows…
+        current_root = os.getcwd()
+        sys.path.append(current_root)
 
         try:
             from django.conf import settings as django_settings
+            django_settings._setup()
 
-        except:
-            pass
+        except ImportError:
+            raise RuntimeError('Django settings could not be loaded.')
 
         else:
-            self.django_settings = django_settings
+            self.django_settings = django_settings._wrapped
+
+        finally:
+            sys.path.remove(current_root)
 
 
 def with_remote_configuration(func):
