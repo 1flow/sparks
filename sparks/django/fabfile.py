@@ -303,11 +303,14 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
             #
 
             # os.path.exists(): we are looking for a LOCAL file!
-            if not os.path.exists(os.path.join(
-                                  # platform is the local_configuration.
-                                  platform.django_settings.BASE_ROOT,
-                                  'config/gunicorn_conf_{0}.py'.format(
-                                  program_name))):
+            local_config_file = os.path.join(
+                platform.django_settings.BASE_ROOT,
+                'config/gunicorn_conf_{0}.py'.format(
+                program_name))
+
+            LOGGER.warning(local_config_file)
+
+            if not os.path.exists(local_config_file):
                 unidefault = os.path.join(os.path.dirname(__file__),
                                           'gunicorn_conf_default.py')
 
