@@ -276,10 +276,18 @@ class LocalConfiguration(object):
 
         self.is_vm = self.is_parallel or self.is_vmware
 
+        #
+        # Set the environment exactly how it should be for runserver.
+        # Supervisor environment can hold the sparks settings,
+        # while Django environment will hold the project settings.
+        #
+
         if hasattr(env, 'environment_var'):
-            name, value = env.environment_var.split('=')
-            os.environ[name] = value
-            os.environ['DJANGO_SETTINGS_MODULE'] = env.project + '.settings'
+            for supervisor_var in env.environment_var.split(','):
+                name, value = supervisor_var.strip().split('=')
+                os.environ[name] = value
+
+        os.environ['DJANGO_SETTINGS_MODULE'] = env.project + '.settings'
 
         try:
             from django.conf import settings as django_settings
