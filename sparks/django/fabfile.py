@@ -205,7 +205,8 @@ def restart_gunicorn_supervisor(fast=False):
         if not fast:
 
             #
-            # Upload an environment-specific supervisor configuration file.
+            # Upload an environment-specific and auto-generated
+            # supervisor configuration file.
             #
 
             need_service_add = False
@@ -239,21 +240,23 @@ def restart_gunicorn_supervisor(fast=False):
                             use_sudo=True)
 
             #
-            # Upload an environment-specific gunicorn configuration file.
+            # Upload a default gunicorn configuration file
+            # if there is none in the project (else, the one
+            # from the project will be automatically used).
             #
 
-            uniconf = os.path.join(env.settings.BASE_ROOT, 'config',
-                                   'gunicorn_conf_{0}.py'.format(
-                                   env.environment))
-
             # os.path.exists(): we are looking for a LOCAL file!
-            if not os.path.exists(uniconf):
+            if not os.path.exists(os.path.join(
+                                  # platform is the local_configuration.
+                                  platform.django_settings.BASE_ROOT,
+                                  'config/gunicorn_conf_{0}.py'.format(
+                                  program_name))):
                 unidefault = os.path.join(os.path.dirname(__file__),
                                           'gunicorn_conf_default.py')
 
-                unidest = os.path.join(env.root, 'config',
-                                       'gunicorn_conf_{0}.py'.format(
-                                       env.environment))
+                unidest = os.path.join(env.root,
+                                       'config/gunicorn_conf_{0}.py'.format(
+                                       program_name))
 
                 # copy the default configuration to remote::specific.
                 put(unidefault, unidest)
