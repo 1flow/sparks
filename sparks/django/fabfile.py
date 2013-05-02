@@ -435,7 +435,8 @@ def runable(fast=False, upgrade=False):
     """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
 
     if not is_local_environment():
-        init_environment()
+        if not fast:
+            init_environment()
         git_pull()
 
     if not fast:
