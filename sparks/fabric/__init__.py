@@ -297,17 +297,24 @@ class LocalConfiguration(object):
         os.environ['DJANGO_SETTINGS_MODULE'] = \
             '{0}.settings'.format(env.project)
 
-        LOGGER.warning(sys.path)
+        # Insert the $CWD in sys path, and pray for the user to have called
+        # `fab` from where `manage.py` is. This is the way it should be done
+        # but who knows…
+        current_root = os.getcwd()
+        sys.path.append(current_root)
 
         try:
             from django.conf import settings as django_settings
+            django_settings._setup()
 
-        except:
-            raise AttributeError('django_settings could not be loaded.')
+        except ImportError:
+            raise RuntimeError('Django settings could not be loaded.')
 
         else:
-            django_settings._setup()
             self.django_settings = django_settings._wrapped
+
+        finally:
+            sys.path.remove(current_root)
 
 
 def with_remote_configuration(func):
