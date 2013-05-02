@@ -296,6 +296,15 @@ class LocalConfiguration(object):
         os.environ['DJANGO_SETTINGS_MODULE'] = \
             '{0}.settings'.format(env.project)
 
+        if hasattr(env, 'local_root'):
+            old_root = os.getcwd()
+            os.chdir(env.local_root)
+
+        else:
+            raise RuntimeError('the main fabfile must include '
+                               '``env.local_root = os.getcwd()`` '
+                               'before and out of any task.')
+
         try:
             from django.conf import settings as django_settings
 
@@ -305,6 +314,9 @@ class LocalConfiguration(object):
         else:
             django_settings._setup()
             self.django_settings = django_settings._wrapped
+
+        finally:
+            os.chdir(old_root)
 
 
 def with_remote_configuration(func):
