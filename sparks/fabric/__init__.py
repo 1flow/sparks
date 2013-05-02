@@ -273,11 +273,20 @@ class LocalConfiguration(object):
 
         self.is_vm = self.is_parallel or self.is_vmware
 
-        #
+    def __getattr__(self, key):
+        """ This lazy getter will allow to load the Django settings after
+            Fabric and the project fabfile has initialized `env`. Doing
+            elseway leads to cycle dependancy KeyErrors. """
+
+        if key == 'django_settings':
+            self.get_django_settings()
+            return self.django_settings
+
+    def get_django_settings(self):
+
         # Set the environment exactly how it should be for runserver.
         # Supervisor environment can hold the sparks settings,
         # while Django environment will hold the project settings.
-        #
 
         if hasattr(env, 'environment_var'):
             for supervisor_var in env.environment_var.split(','):
@@ -291,7 +300,7 @@ class LocalConfiguration(object):
             from django.conf import settings as django_settings
 
         except:
-            pass
+            raise AttributeError('django_settings could not be loaded.')
 
         else:
             django_settings._setup()
