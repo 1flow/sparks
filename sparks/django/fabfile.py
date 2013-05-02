@@ -255,6 +255,8 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
 
         has_djsettings, program_name = build_supervisor_program_name()
 
+        need_service_add = False
+
         if not fast:
 
             #
@@ -262,7 +264,6 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
             # supervisor configuration file.
             #
 
-            need_service_add = False
             superconf = os.path.join(env.root, 'config',
                                      'gunicorn_supervisor_{0}.conf'.format(
                                      program_name))
@@ -293,7 +294,7 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
                 need_service_add = True
 
             upload_template(superconf, destination, context=context,
-                            use_sudo=True)
+                            use_sudo=True, backup=False)
 
             #
             # Upload a default gunicorn configuration file
@@ -301,12 +302,14 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
             # from the project will be automatically used).
             #
 
-            # os.path.exists(): we are looking for a LOCAL file!
-            if not os.path.exists(os.path.join(
-                                  # platform is the local_configuration.
-                                  platform.django_settings.BASE_ROOT,
-                                  'config/gunicorn_conf_{0}.py'.format(
-                                  program_name))):
+            local_config_file = os.path.join(
+                platform.django_settings.PROJECT_ROOT,
+                'config/gunicorn_conf_{0}.py'.format(
+                program_name))
+
+            # os.path.exists(): we are looking for a LOCAL file, that will
+            # be used remotely if present, once code is synchronized.
+            if not os.path.exists(local_config_file):
                 unidefault = os.path.join(os.path.dirname(__file__),
                                           'gunicorn_conf_default.py')
 
@@ -432,7 +435,8 @@ def runable(fast=False, upgrade=False):
     """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
 
     if not is_local_environment():
-        init_environment()
+        if not fast:
+            init_environment()
         git_pull()
 
     if not fast:
