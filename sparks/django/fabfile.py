@@ -332,15 +332,15 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
                   else 'template1'))
 
     if hasattr(remote_configuration, 'django_settings'):
-        db   = remote_configuration.django_settings.DATABASES['default']
-        host = db.get('HOST', '')
-        port = db.get('PORT', '')
+        db_setting = remote_configuration.django_settings.DATABASES['default']
+        db_host    = db_setting.get('HOST', '')
+        db_port    = db_setting.get('PORT', '')
 
-        if host != '':
-            pg_env.append('PGHOST={0}'.format(host))
+        if db_host != '':
+            pg_env.append('PGHOST={0}'.format(db_host))
 
-        if port != '':
-            pg_env.append('PGPORT={0}'.format(port))
+        if db_port != '':
+            pg_env.append('PGPORT={0}'.format(db_port))
 
     # flatten the list
     pg_env = ' '.join(pg_env)
