@@ -294,7 +294,7 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
                 need_service_add = True
 
             upload_template(superconf, destination, context=context,
-                            use_sudo=True)
+                            use_sudo=True, backup=False)
 
             #
             # Upload a default gunicorn configuration file
