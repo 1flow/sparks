@@ -21,7 +21,7 @@ except ImportError:
 from ..django      import is_local_environment
 from ..fabric      import (fabfile, with_remote_configuration,
                            local_configuration as platform)
-from ..pkg         import apt, brew, pip
+from ..pkg         import brew
 from ..foundations import postgresql as pg
 
 # Use this in case paramiko seems to go crazy. Trust me, it can do, especially
@@ -43,13 +43,15 @@ env.use_ssh_config        = True
 
 @task(aliases=('base', 'base_components'))
 @with_remote_configuration
-def install_components(remote_configuration=None):
+def install_components(remote_configuration=None, upgrade=False):
     """ Install necessary packages to run a full Django stack.
 
         .. todo:: split me into packages/modules where appropriate.
 
         .. todo:: split me into server (PG) and clients (PG-dev) packages.
     """
+
+    fabfile.dev()
 
     # OSX == test environment == no nginx/supervisor/etc
     if remote_configuration.is_osx:
@@ -64,15 +66,15 @@ def install_components(remote_configuration=None):
         print('NO WEB-SERVER installed, assuming this is a dev machine.')
 
     else:
-        apt.apt_add(('python-pip', 'supervisor', 'nginx-full',))
-        apt.apt_add(('redis-server', 'memcached', ))
+        #apt.apt_add(('python-pip', 'supervisor', 'nginx-full',))
+        #apt.apt_add(('redis-server', 'memcached', ))
 
-        # fabfile.dev()
-        # fabfile.dev_django_full()
-        # or fabfile.dev_memcache()
-
-    # This is common to dev/production machines.
-    pip.pip2_add(('virtualenv', 'virtualenvwrapper', ))
+        # fabfile.sys_django(env.sys_components
+        #                    if hasattr(env, 'sys_components')
+        #                    else '')
+        #fabfile.dev_django_full()
+        #fabfile.dev_memcache()
+        pass
 
 
 # •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Code related
