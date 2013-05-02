@@ -558,7 +558,7 @@ def dev(remote_configuration=None):
 
     # Add them from PIP, to have latest
     # version which handles python 3.3 gracefully.
-    pkg.pip2_add(('virtualenv', 'virtualenvwrapper', ))
+    pkg.pip2_add(('virtualenv', 'virtualenvwrapper', 'pip-tools', ))
 
     #TODO: if exists virtualenv and is_lxc(machine):
 
