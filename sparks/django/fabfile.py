@@ -401,8 +401,6 @@ def deploy(fast=False, upgrade=False):
     if not fast:
         install_components(upgrade=upgrade)
 
-    init_environment()
-
     runable(fast=fast, upgrade=upgrade)
 
     restart_services(fast=fast)
