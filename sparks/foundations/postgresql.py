@@ -2,17 +2,34 @@
 """
     PostgreSQL sparks helpers.
 
-    .. notes::
+    For the Django developers to be able to create users & databases in
+    complex architectures (eg. when the DB server is not on the Django
+    instance server…) you must first define a PostgreSQL restricted admin
+    user to manage the Django projects and apps databases.
 
+    This user doens't need to be strictly ``SUPERUSER``, though.
+    Having ``CREATEDB`` and ``CREATEUSER`` will suffice (but ``CREATEROLE``
+    won't). For memories, this is how I created mine, on the central
+    PostgreSQL server::
+
+        # OPTIONAL: I first give me some good privileges
+        # to avoid using the `postgres` system user.
         sudo su - postgres
-        createuser --login --no-inherit --createdb --createrole --superuser <me>
+        createuser --login --no-inherit \
+            --createdb --createrole --superuser `whoami`
         psql
-            ALTER USER <me> WITH ENCRYPTED PASSWORD '<passwd>';
+            ALTER USER `whoami` WITH ENCRYPTED PASSWORD 'MAKE_ME_STRONG';
         [exit]
+
+        # Then, I create the other admin user which will handle all fabric
+        # requests via developer tasks.
         psql
-            CREATE ROLE oneflow_admin PASSWORD '<pass>' \
-                NOSUPERUSER CREATEDB CREATEROLE NOINHERIT LOGIN;
-            ALTER USER oneflow_admin WITH ENCRYPTED PASSWORD '<passwd>';
+            CREATE ROLE oneflow_admin PASSWORD '<passwd>' \
+                NOSUPERUSER CREATEDB CREATEUSER NOINHERIT LOGIN;
+
+        # Already done in previous command,
+        # but keeing it here for memories.
+        #    ALTER USER oneflow_admin WITH ENCRYPTED PASSWORD '<passwd>';
 
 """
 
@@ -71,7 +88,12 @@ def get_admin_user(remote_configuration=None):
 @with_remote_configuration
 def temper_db_args(remote_configuration=None,
                    db=None, user=None, password=None):
-    """ Try to accomodate with DB creation arguments. """
+    """ Try to accomodate with DB creation arguments.
+
+        If all of them are ``None``, the function will try to fetch
+        them automatically from the remote server Django settings.
+
+    """
 
     if db is None and user is None and password is None:
         if hasattr(remote_configuration, 'django_settings'):
