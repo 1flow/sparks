@@ -182,8 +182,8 @@ class RemoteConfiguration(object):
     def get_django_settings(self):
 
         # transform the supervisor syntax to shell syntax.
-        env_var1 = env.environment_var.replace(',', ' ') \
-            if hasattr(env, 'environment_var') else ''
+        env_var1 = ' '.join(env.environment_vars) \
+            if hasattr(env, 'environment_vars') else ''
 
         env_var2 = 'DJANGO_SETTINGS_MODULE="{0}.settings"'.format(env.project)
 
@@ -289,9 +289,9 @@ class LocalConfiguration(object):
         # Supervisor environment can hold the sparks settings,
         # while Django environment will hold the project settings.
 
-        if hasattr(env, 'environment_var'):
-            for supervisor_var in env.environment_var.split(','):
-                name, value = supervisor_var.strip().split('=')
+        if hasattr(env, 'environment_vars'):
+            for env_var in env.environment_vars:
+                name, value = env_var.strip().split('=')
                 os.environ[name] = value
 
         os.environ['DJANGO_SETTINGS_MODULE'] = \

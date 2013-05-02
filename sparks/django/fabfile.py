@@ -188,6 +188,58 @@ def restart_celery_service(fast=False):
         sudo("/etc/init.d/celeryd restart")
 
 
+def build_supervisor_program_name():
+    """ Returns a tuple: a boolean and a program name.
+
+        The boolean indicates if the fabric `env` has
+        the :attr:`sparks_djsettings` attribute, and the program name
+        will be somewhat unique, built from ``env.project``,
+        ``env.sparks_djsettings`` if it exists and ``env.environment``.
+
+    """
+
+    # We need something more unique than project, in case we have
+    # many environments on the same remote machine. And alternative
+    # settings, too, because we will have a supervisor process for them.
+    if hasattr(env, 'sparks_djsettings'):
+        return True, '{0}_{1}_{2}'.format(env.project,
+                                          env.sparks_djsettings,
+                                          env.environment)
+
+    else:
+        return False, '{0}_{1}'.format(env.project, env.environment)
+
+
+def supervisor_add_environment(context, has_djsettings):
+    """ Add (or not) an ``environment`` item to :param:`context`, given
+        the current Fabric ``env``.
+
+        If :param:`has_djsettings` is ``True``, ``SPARK_DJANGO_SETTINGS``
+        will be added.
+
+        If ``env`` has an ``environment_vars`` attributes, they are assumed
+        to be a python list (eg.``[ 'KEY1=value', 'KEY2=value2' ]``) and
+        will be inserted into context too, converted to supervisor
+        configuration file format.
+    """
+
+    env_vars = []
+
+    if has_djsettings:
+        env_vars.append('SPARKS_DJANGO_SETTINGS={0}'.format(
+                        env.sparks_djsettings))
+
+    if hasattr(env, 'environment_vars'):
+            env_vars.extend(env.environment_vars)
+
+    if env_vars:
+        context['environment'] = 'environment={0}'.format(','.join(env_vars))
+
+    else:
+        # The item must exist, else the templating engine will raise an error.
+        context['environment'] = ''
+
+
 @task(alias='gunicorn')
 @with_remote_configuration
 def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
@@ -201,9 +253,7 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
 
     if exists('/etc/supervisor'):
 
-        # We need something more unique than project, in case we have
-        # many environments on the same remote machine.
-        program_name = '{0}_{1}'.format(env.project, env.environment)
+        has_djsettings, program_name = build_supervisor_program_name()
 
         if not fast:
 
@@ -215,9 +265,9 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
             need_service_add = False
             superconf = os.path.join(env.root, 'config',
                                      'gunicorn_supervisor_{0}.conf'.format(
-                                     env.environment))
+                                     program_name))
 
-            # os.path.exists(): we are looking for a LOCAL file!
+            # os.path.exists(): we are looking for a LOCAL file, in sparks.
             if not os.path.exists(superconf):
                 superconf = os.path.join(os.path.dirname(__file__),
                                          'gunicorn_supervisor.template')
@@ -237,11 +287,7 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
                 'virtualenv': env.virtualenv,
             }
 
-            if hasattr(env, 'environment_vars'):
-                context['environment'] = 'environment={0}'.format(
-                    env.environment_vars)
-            else:
-                context['environment'] = ''
+            supervisor_add_environment(context, has_djsettings)
 
             if not exists(destination):
                 need_service_add = True
