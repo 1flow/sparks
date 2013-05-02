@@ -281,11 +281,14 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
             sudo("supervisorctl add {0} && supervisorctl start {0}".format(
                  program_name))
 
-            # No need.
-            #sudo("supervisorctl reload")
-
         else:
-            sudo("supervisorctl restart {0}".format(program_name))
+            # Just in case something went wrong between 2 fabric runs,
+            # we reload. This is not strictly needed in normal conditions
+            # but will allow recovering from bad situations without having
+            # to repair things manually.
+            sudo("supervisorctl reload "
+                 "&& supervisorctl restart {0}".format(
+                 program_name))
 
 
 # ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Django specific
