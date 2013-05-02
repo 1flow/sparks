@@ -235,8 +235,11 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
                     if hasattr(env, 'user_home')
                     else remote_configuration.tilde,
                 'virtualenv': env.virtualenv,
-                'environment': env.environment_vars,
             }
+
+            if hasattr(env, 'environment_vars'):
+                context['environment'] = 'environment={0}'.format(
+                    env.environment_vars)
 
             if not exists(destination):
                 need_service_add = True

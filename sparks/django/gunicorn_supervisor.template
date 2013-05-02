@@ -2,8 +2,8 @@
 command=%(user_home)s/.virtualenvs/%(virtualenv)s/bin/gunicorn_django -c %(root)s/config/gunicorn_conf_%(program)s.py
 directory=%(root)s
 user=%(user)s
-environment=%(environment)s
 autostart=true
 autorestart=true
 priority=991
 stopsignal=KILL
+%(environment)s
