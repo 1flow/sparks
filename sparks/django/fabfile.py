@@ -189,7 +189,8 @@ def restart_celery_service(fast=False):
 
 
 @task(alias='gunicorn')
-def restart_gunicorn_supervisor(fast=False):
+@with_remote_configuration
+def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
     """ (Re-)upload configuration files and reload gunicorn via supervisor.
 
         This will reload only one service, even if supervisor handles more
@@ -230,7 +231,9 @@ def restart_gunicorn_supervisor(fast=False):
                 'branch': env.branch,
                 'project': env.project,
                 'program': program_name,
-                'user_home': env.user_home,
+                'user_home': env.user_home
+                    if hasattr(env, 'user_home')
+                    else remote_configuration.tilde,
                 'virtualenv': env.virtualenv,
                 'environment': env.environment_vars,
             }
