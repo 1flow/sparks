@@ -383,11 +383,15 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
 
     db, user, password = pg.temper_db_args(db=db, user=user, password=password)
 
-    pg_env = ['PGUSER={0}'.format(env.pg_superuser)
-              if hasattr(env, 'pg_superuser') else '']
+    if is_local_environment():
+        pg_env = []
 
-    pg_env.append('PGPASSWORD={0}'.format(env.pg_superpass)
-                  if hasattr(env, 'pg_superpass') else '')
+    else:
+        pg_env = ['PGUSER={0}'.format(env.pg_superuser)
+                  if hasattr(env, 'pg_superuser') else '']
+
+        pg_env.append('PGPASSWORD={0}'.format(env.pg_superpass)
+                      if hasattr(env, 'pg_superpass') else '')
 
     pg_env.append('PGDATABASE={0}'.format(env.pg_superdb
                   if hasattr(env, 'pg_superdb')
