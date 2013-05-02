@@ -109,7 +109,6 @@ class RemoteConfiguration(object):
         self.get_platform()
         self.get_uname()
         self.get_virtual_machine()
-        self.get_django_settings()
 
         if verbose:
             print('Remote is {release} {host} {vm}{arch}, '
@@ -124,6 +123,15 @@ class RemoteConfiguration(object):
                   user=cyan(self.user),
                   home=self.tilde,
                   ))
+
+    def __getattr__(self, key):
+        """ This lazy getter will allow to load the Django settings after
+            Fabric and the project fabfile has initialized `env`. Doing
+            elseway leads to cycle dependancy KeyErrors. """
+
+        if key == 'django_settings':
+            self.get_django_settings()
+            return self.django_settings
 
     def get_platform(self):
         # Be sure we don't get stuck in a virtualenv for free.
@@ -305,6 +313,10 @@ class LocalConfiguration(object):
 
         try:
             from django.conf import settings as django_settings
+            # Avoid Django to (re-)configure our own logging;
+            # the Fabric output becomes a mess without this.
+            django_settings.__class__._configure_logging = lambda x: None
+
             django_settings._setup()
 
         except ImportError:
