@@ -321,15 +321,15 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
 
     db, user, password = pg.temper_db_args(db=db, user=user, password=password)
 
-    pg_env = ' PGUSER={0}'.format(env.pg_superuser) \
-        if hasattr(env, 'pg_superuser') else ''
+    pg_env = ['PGUSER={0}'.format(env.pg_superuser)
+              if hasattr(env, 'pg_superuser') else '']
 
-    pg_env += ' PGPASSWORD={0}'.format(env.pg_superpass) \
-        if hasattr(env, 'pg_superpass') else ''
+    pg_env.append('PGPASSWORD={0}'.format(env.pg_superpass)
+                  if hasattr(env, 'pg_superpass') else '')
 
-    pg_env += ' PGDATABASE={0}'.format(env.pg_superdb
-                                       if hasattr(env, 'pg_superdb')
-                                       else 'template1')
+    pg_env.append('PGDATABASE={0}'.format(env.pg_superdb
+                  if hasattr(env, 'pg_superdb')
+                  else 'template1'))
 
     if hasattr(remote_configuration, 'django_settings'):
         db   = remote_configuration.django_settings.DATABASES['default']
@@ -337,10 +337,13 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
         port = db.get('PORT', '')
 
         if host != '':
-            pg_env += ' PGHOST={0}'.format(host)
+            pg_env.append('PGHOST={0}'.format(host))
 
         if port != '':
-            pg_env = ' PGPORT={0}'.format(port)
+            pg_env.append('PGPORT={0}'.format(port))
+
+    # flatten the list
+    pg_env = ' '.join(pg_env)
 
     with settings(sudo_user=pg.get_admin_user()):
         if sudo(pg.SELECT_USER.format(
