@@ -255,6 +255,8 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
 
         has_djsettings, program_name = build_supervisor_program_name()
 
+        need_service_add = False
+
         if not fast:
 
             #
@@ -262,7 +264,6 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
             # supervisor configuration file.
             #
 
-            need_service_add = False
             superconf = os.path.join(env.root, 'config',
                                      'gunicorn_supervisor_{0}.conf'.format(
                                      program_name))
