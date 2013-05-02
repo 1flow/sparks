@@ -214,7 +214,7 @@ def supervisor_add_environment(context, has_djsettings):
     """ Add (or not) an ``environment`` item to :param:`context`, given
         the current Fabric ``env``.
 
-        If :param:`has_djsettings` is ``True``, ``SPARK_DJANGO_SETTINGS``
+        If :param:`has_djsettings` is ``True``, ``SPARKS_DJANGO_SETTINGS``
         will be added.
 
         If ``env`` has an ``environment_vars`` attributes, they are assumed
@@ -348,7 +348,9 @@ def collectstatic():
 
     with cd(env.root):
         with activate_venv():
-            run('./manage.py collectstatic --noinput')
+            run('{0}./manage.py collectstatic --noinput'.format(
+                'SPARKS_DJANGO_SETTINGS={0} '.format(env.sparks_djsettings)
+                if hasattr(env, 'sparks_djsettings') else ''))
 
 
 @task
@@ -358,7 +360,9 @@ def syncdb():
     with cd(env.root):
         with activate_venv():
             run('chmod 755 manage.py', quiet=True)
-            run("./manage.py syncdb --noinput")
+            run('{0}./manage.py syncdb --noinput'.format(
+                'SPARKS_DJANGO_SETTINGS={0} '.format(env.sparks_djsettings)
+                if hasattr(env, 'sparks_djsettings') else ''))
 
 
 @task
@@ -367,7 +371,9 @@ def migrate(*args):
 
     with cd(env.root):
         with activate_venv():
-            run("./manage.py migrate " + ' '.join(args))
+            run("{0}./manage.py migrate ".format(
+                'SPARKS_DJANGO_SETTINGS={0} '.format(env.sparks_djsettings)
+                if hasattr(env, 'sparks_djsettings') else '') + ' '.join(args))
 
 
 @task
