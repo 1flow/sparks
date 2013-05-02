@@ -315,7 +315,7 @@ class LocalConfiguration(object):
             from django.conf import settings as django_settings
             # Avoid Django to (re-)configure our own logging;
             # the Fabric output becomes a mess without this.
-            django_settings._configure_logging = lambda x: None
+            django_settings.__class__._configure_logging = lambda x: None
 
             django_settings._setup()
 
