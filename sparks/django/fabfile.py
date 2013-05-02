@@ -240,6 +240,8 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
             if hasattr(env, 'environment_vars'):
                 context['environment'] = 'environment={0}'.format(
                     env.environment_vars)
+            else:
+                context['environment'] = ''
 
             if not exists(destination):
                 need_service_add = True
