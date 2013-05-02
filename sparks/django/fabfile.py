@@ -302,14 +302,13 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
             # from the project will be automatically used).
             #
 
-            # os.path.exists(): we are looking for a LOCAL file!
             local_config_file = os.path.join(
-                platform.django_settings.BASE_ROOT,
+                platform.django_settings.PROJECT_ROOT,
                 'config/gunicorn_conf_{0}.py'.format(
                 program_name))
 
-            LOGGER.warning(local_config_file)
-
+            # os.path.exists(): we are looking for a LOCAL file, that will
+            # be used remotely if present, once code is synchronized.
             if not os.path.exists(local_config_file):
                 unidefault = os.path.join(os.path.dirname(__file__),
                                           'gunicorn_conf_default.py')
