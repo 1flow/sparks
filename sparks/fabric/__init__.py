@@ -14,10 +14,10 @@ from ..contrib import lsb_release
 from . import nofabric
 
 try:
+    from fabric.api              import env
     from fabric.api              import run as fabric_run
     from fabric.api              import sudo as fabric_sudo
     from fabric.api              import local as fabric_local
-    from fabric.api              import env
     from fabric.operations       import get
     from fabric.context_managers import prefix
     from fabric.colors           import cyan
@@ -180,21 +180,18 @@ class RemoteConfiguration(object):
 
     def get_django_settings(self):
 
-        env_var1 = ''
-
-        if hasattr(env, 'environment_var'):
-            # transform the supervisor syntax to shell syntax.
-            env_var1 = ' '.join(env.environment_var.split(';'))
+        # transform the supervisor syntax to shell syntax.
+        env_var1 = env.environment_var.replace(',', ' ') \
+            if hasattr(env, 'environment_var') else ''
 
         env_var2 = 'DJANGO_SETTINGS_MODULE="{0}.settings"'.format(env.project)
 
         # Here, we *NEED* to be in the virtualenv, to get the django code.
         # NOTE: this code is kind of weak, it will fail if settings include
         # complex objects, but we hope it's not.
-        prefix_cmd = ''
 
-        if hasattr(env, 'virtualenv'):
-            prefix_cmd = 'workon {0}'.format(env.virtualenv)
+        prefix_cmd = 'workon {0}'.format(env.virtualenv) \
+            if hasattr(env, 'virtualenv') else ''
 
         pickled_settings = StringIO.StringIO()
 
@@ -287,7 +284,8 @@ class LocalConfiguration(object):
                 name, value = supervisor_var.strip().split('=')
                 os.environ[name] = value
 
-        os.environ['DJANGO_SETTINGS_MODULE'] = env.project + '.settings'
+        os.environ['DJANGO_SETTINGS_MODULE'] = \
+            '{0}.settings'.format(env.project)
 
         try:
             from django.conf import settings as django_settings
@@ -296,7 +294,8 @@ class LocalConfiguration(object):
             pass
 
         else:
-            self.django_settings = django_settings
+            django_settings._setup()
+            self.django_settings = django_settings._wrapped
 
 
 def with_remote_configuration(func):
