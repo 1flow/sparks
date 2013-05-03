@@ -364,10 +364,6 @@ def syncdb():
                 'SPARKS_DJANGO_SETTINGS={0} '.format(env.sparks_djsettings)
                 if hasattr(env, 'sparks_djsettings') else ''))
 
-            run('yes | {0}./manage.py sync_transmeta_db'.format(
-                'SPARKS_DJANGO_SETTINGS={0} '.format(env.sparks_djsettings)
-                if hasattr(env, 'sparks_djsettings') else ''), warn_only=True)
-
 
 @task
 def migrate(*args):
@@ -378,6 +374,10 @@ def migrate(*args):
             run("{0}./manage.py migrate ".format(
                 'SPARKS_DJANGO_SETTINGS={0} '.format(env.sparks_djsettings)
                 if hasattr(env, 'sparks_djsettings') else '') + ' '.join(args))
+
+            run('yes | {0}./manage.py sync_transmeta_db'.format(
+                'SPARKS_DJANGO_SETTINGS={0} '.format(env.sparks_djsettings)
+                if hasattr(env, 'sparks_djsettings') else ''), warn_only=True)
 
 
 @task
