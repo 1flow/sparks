@@ -375,6 +375,10 @@ def migrate(*args):
                 'SPARKS_DJANGO_SETTINGS={0} '.format(env.sparks_djsettings)
                 if hasattr(env, 'sparks_djsettings') else '') + ' '.join(args))
 
+            run('yes | {0}./manage.py sync_transmeta_db'.format(
+                'SPARKS_DJANGO_SETTINGS={0} '.format(env.sparks_djsettings)
+                if hasattr(env, 'sparks_djsettings') else ''), warn_only=True)
+
 
 @task
 @with_remote_configuration
