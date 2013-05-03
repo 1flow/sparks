@@ -364,6 +364,10 @@ def syncdb():
                 'SPARKS_DJANGO_SETTINGS={0} '.format(env.sparks_djsettings)
                 if hasattr(env, 'sparks_djsettings') else ''))
 
+            run('{0}./manage.py sync_transmeta_db --noinput'.format(
+                'SPARKS_DJANGO_SETTINGS={0} '.format(env.sparks_djsettings)
+                if hasattr(env, 'sparks_djsettings') else ''), warn_only=True)
+
 
 @task
 def migrate(*args):
