@@ -25,7 +25,7 @@ central_osx_apps = 'duncan:oliviercortes.com/sparks/osx'
 # ================================================ Fabric configuration
 
 env.use_ssh_config = True
-env.roledefs       = dsh_to_roledefs()
+env.roledefs.update(dsh_to_roledefs())
 
 
 def info(text):
