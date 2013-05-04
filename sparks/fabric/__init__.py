@@ -394,5 +394,10 @@ def find_configuration_type(hostname):
         return RemoteConfiguration(hostname, verbose=not quiet)
 
 
+if not quiet:
+    logging.basicConfig(format=
+                        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        level=logging.INFO)
+
 if local_configuration is None:
     local_configuration = LocalConfiguration()
