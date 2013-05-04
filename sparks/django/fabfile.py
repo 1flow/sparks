@@ -407,18 +407,15 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
                   if hasattr(env, 'pg_superdb')
                   else 'template1'))
 
-    if hasattr(remote_configuration, 'django_settings'):
+    try:
+        # We can't rely on 'hasattr(remote_configuration, 'django_settings')'
+        # Because hasattr will fail if settings are not yet lazy loaded.
         db_setting = remote_configuration.django_settings.DATABASES['default']
-        get_from_settings = True
 
-    elif is_local_environment() and hasattr(platform, 'django_settings'):
-        db_setting = platform.django_settings.DATABASES['default']
-        get_from_settings = True
+    except AttributeError:
+        pass
 
     else:
-        get_from_settings = False
-
-    if get_from_settings:
         db_host    = db_setting.get('HOST', '')
         db_port    = db_setting.get('PORT', '')
 
@@ -427,7 +424,6 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
 
         if db_port != '':
             pg_env.append('PGPORT={0}'.format(db_port))
-
 
     # flatten the list
     pg_env = ' '.join(pg_env)
