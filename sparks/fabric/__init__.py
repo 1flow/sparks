@@ -325,7 +325,7 @@ class LocalConfiguration(object):
         # Insert the $CWD in sys path, and pray for the user to have called
         # `fab` from where `manage.py` is. This is the way it should be done
         # but who knows…
-        current_root = os.getcwd()
+        current_root = env.root if hasattr(env, 'root') else os.getcwd()
         sys.path.append(current_root)
 
         try:
@@ -337,7 +337,19 @@ class LocalConfiguration(object):
             django_settings._setup()
 
         except ImportError:
-            raise RuntimeError('Django settings could not be loaded.')
+            LOGGER.warning(('Django settings could not be loaded for '
+                           'project "{0}" (which should be '
+                           'located in "{1}", with env. {2}{3}'
+                           '{4})').format(
+                           env.project,
+                           current_root,
+                           'SPARKS_DJANGO_SETTINGS={0}'.format(
+                           env.sparks_djsettings)
+                           if hasattr(env, 'sparks_djsettings') else '',
+                           'DJANGO_SETTINGS_MODULE={0}'.format(
+                           env.project),
+                           ' '.join(env.environment_vars)
+                           if hasattr(env, 'environment_vars') else ''))
 
         else:
             self.django_settings = django_settings._wrapped
