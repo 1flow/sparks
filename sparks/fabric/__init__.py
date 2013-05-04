@@ -195,14 +195,15 @@ class RemoteConfiguration(object):
     def get_django_settings(self):
 
         # transform the supervisor syntax to shell syntax.
-        env_var1 = ' '.join(env.environment_vars) \
+        env_generic = ' '.join(env.environment_vars) \
             if hasattr(env, 'environment_vars') else ''
 
-        env_var2 = (' SPARKS_DJANGO_SETTINGS={0}'.format(
+        env_sparks = (' SPARKS_DJANGO_SETTINGS={0}'.format(
                     env.sparks_djsettings)) \
             if hasattr(env, 'sparks_djsettings') else ''
 
-        env_var3 = ' DJANGO_SETTINGS_MODULE="{0}.settings"'.format(env.project)
+        env_django_settings = \
+            ' DJANGO_SETTINGS_MODULE="{0}.settings"'.format(env.project)
 
         # Here, we *NEED* to be in the virtualenv, to get the django code.
         # NOTE: this code is kind of weak, it will fail if settings include
@@ -223,7 +224,7 @@ class RemoteConfiguration(object):
                           "f=open(\"__django_settings__.pickle\", "
                           "\"w\"); pickle.dump(settings._wrapped, f, "
                           "pickle.HIGHEST_PROTOCOL); f.close()'").format(
-                          env_var1, env_var2, env_var3),
+                          env_generic, env_sparks, env_django_settings),
                           quiet=not self.verbose,
                           warn_only=True)
 
@@ -246,10 +247,10 @@ class RemoteConfiguration(object):
                     LOGGER.warning(('Could not load remote Django settings '
                                    'for project "{0}" (which should be '
                                    'located in "{1}", with env. {2}{3}'
-                                   '{4})').format(
+                                   ')').format(
                                    env.project,
                                    env.root if hasattr(env, 'root') else '~',
-                                   env_var1, env_var2, env_var3))
+                                   env_generic, env_sparks))
                     raise ImportError
 
 
@@ -351,14 +352,12 @@ class LocalConfiguration(object):
             LOGGER.warning(('Django settings could not be loaded for '
                            'project "{0}" (which should be '
                            'located in "{1}", with env. {2}{3}'
-                           '{4})').format(
+                           ')').format(
                            env.project,
                            current_root,
                            'SPARKS_DJANGO_SETTINGS={0}'.format(
                            env.sparks_djsettings)
                            if hasattr(env, 'sparks_djsettings') else '',
-                           'DJANGO_SETTINGS_MODULE={0}'.format(
-                           env.project),
                            ' '.join(env.environment_vars)
                            if hasattr(env, 'environment_vars') else ''))
             raise
