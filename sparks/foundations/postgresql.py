@@ -37,8 +37,7 @@ import os
 import pwd
 import logging
 from fabric.api import env
-from ..django import is_local_environment
-from ..fabric import with_remote_configuration
+from ..fabric import with_remote_configuration, is_local_environment
 
 LOGGER = logging.getLogger(__name__)
 

@@ -18,9 +18,9 @@ except ImportError:
     print('>>> FABRIC IS NOT INSTALLED !!!')
     raise
 
-from ..django      import is_local_environment
 from ..fabric      import (fabfile, with_remote_configuration,
-                           local_configuration as platform)
+                           local_configuration as platform,
+                           is_local_environment)
 from ..pkg         import brew
 from ..foundations import postgresql as pg
 

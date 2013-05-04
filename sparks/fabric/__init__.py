@@ -93,6 +93,15 @@ def is_localhost(hostname):
                         '127.0.0.1', '127.0.1.1', '::1')
 
 
+def is_local_environment():
+
+    is_local = env.environment == 'local' or (
+        env.environment == 'test'
+            and is_localhost(env.host_string))
+
+    return is_local
+
+
 class RemoteConfiguration(object):
     """ Define an easy to use object with remote machine configuration. """
 
@@ -337,7 +346,8 @@ class LocalConfiguration(object):
         # Insert the $CWD in sys path, and pray for the user to have called
         # `fab` from where `manage.py` is. This is the way it should be done
         # but who knows…
-        current_root = env.root if hasattr(env, 'root') else os.getcwd()
+        current_root = env.root if (hasattr(env, 'root')
+                                    and is_local_environment()) else os.getcwd()
         sys.path.append(current_root)
 
         try:

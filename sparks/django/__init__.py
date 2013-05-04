@@ -5,15 +5,6 @@
 """
 
 import sys
-from fabric.api import env
-
-
-def is_local_environment():
-    is_local = env.environment == 'local' or (
-        env.environment == 'test'
-            and env.host_string == 'localhost')
-
-    return is_local
 
 
 def create_admin_user(email=None, password=None):
