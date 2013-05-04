@@ -130,7 +130,12 @@ class RemoteConfiguration(object):
             elseway leads to cycle dependancy KeyErrors. """
 
         if key == 'django_settings':
-            self.get_django_settings()
+            try:
+                self.get_django_settings()
+            except ImportError:
+                raise AttributeError(
+                    'No remote Django settings could be loaded.')
+
             return self.django_settings
 
     def get_platform(self):
@@ -245,6 +250,7 @@ class RemoteConfiguration(object):
                                    env.project,
                                    env.root if hasattr(env, 'root') else '~',
                                    env_var1, env_var2, env_var3))
+                    raise ImportError
 
 
 class LocalConfiguration(object):
@@ -302,7 +308,12 @@ class LocalConfiguration(object):
             elseway leads to cycle dependancy KeyErrors. """
 
         if key == 'django_settings':
-            self.get_django_settings()
+            try:
+                self.get_django_settings()
+
+            except ImportError:
+                raise AttributeError('No Django settings could be loaded.')
+
             return self.django_settings
 
     def get_django_settings(self):
@@ -350,7 +361,7 @@ class LocalConfiguration(object):
                            env.project),
                            ' '.join(env.environment_vars)
                            if hasattr(env, 'environment_vars') else ''))
-
+            raise
         else:
             self.django_settings = django_settings._wrapped
 
