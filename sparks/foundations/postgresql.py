@@ -99,8 +99,7 @@ def temper_db_args(remote_configuration=None,
         try:
             # Can't rely on 'hasattr(remote_configuration, 'django_settings')'
             # Because hasattr will fail if settings are not yet lazy loaded.
-            djsettings = \
-                remote_configuration.django_settings.DATABASES['default']
+            djsettings = remote_configuration.django_settings
 
         except AttributeError:
             raise ValueError('No database parameters supplied '
@@ -115,7 +114,6 @@ def temper_db_args(remote_configuration=None,
             db       = db_settings['NAME']
             user     = db_settings['USER']
             password = db_settings['PASSWORD']
-
 
     if db is None:
         if user is None:
