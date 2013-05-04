@@ -264,7 +264,8 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
             # supervisor configuration file.
             #
 
-            superconf = os.path.join(env.root, 'config',
+            superconf = os.path.join(platform.django_settings.BASE_ROOT,
+                                     'config',
                                      'gunicorn_supervisor_{0}.conf'.format(
                                      program_name))
 
@@ -303,7 +304,7 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
             #
 
             local_config_file = os.path.join(
-                platform.django_settings.PROJECT_ROOT,
+                platform.django_settings.BASE_ROOT,
                 'config/gunicorn_conf_{0}.py'.format(
                 program_name))
 
