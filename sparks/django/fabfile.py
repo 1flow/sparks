@@ -407,10 +407,17 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
                   if hasattr(env, 'pg_superdb')
                   else 'template1'))
 
-    if hasattr(remote_configuration, 'django_settings'):
+    try:
+        # We can't rely on 'hasattr(remote_configuration, 'django_settings')'
+        # Because hasattr will fail if settings are not yet lazy loaded.
         db_setting = remote_configuration.django_settings.DATABASES['default']
-        db_host    = db_setting.get('HOST', '')
-        db_port    = db_setting.get('PORT', '')
+
+    except AttributeError:
+        pass
+
+    else:
+        db_host = db_setting.get('HOST', '')
+        db_port = db_setting.get('PORT', '')
 
         if db_host != '':
             pg_env.append('PGHOST={0}'.format(db_host))

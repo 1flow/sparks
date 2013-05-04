@@ -130,7 +130,12 @@ class RemoteConfiguration(object):
             elseway leads to cycle dependancy KeyErrors. """
 
         if key == 'django_settings':
-            self.get_django_settings()
+            try:
+                self.get_django_settings()
+            except ImportError:
+                raise AttributeError(
+                    'No remote Django settings could be loaded.')
+
             return self.django_settings
 
     def get_platform(self):
@@ -190,10 +195,15 @@ class RemoteConfiguration(object):
     def get_django_settings(self):
 
         # transform the supervisor syntax to shell syntax.
-        env_var1 = ' '.join(env.environment_vars) \
+        env_generic = ' '.join(env.environment_vars) \
             if hasattr(env, 'environment_vars') else ''
 
-        env_var2 = 'DJANGO_SETTINGS_MODULE="{0}.settings"'.format(env.project)
+        env_sparks = (' SPARKS_DJANGO_SETTINGS={0}'.format(
+                    env.sparks_djsettings)) \
+            if hasattr(env, 'sparks_djsettings') else ''
+
+        env_django_settings = \
+            ' DJANGO_SETTINGS_MODULE="{0}.settings"'.format(env.project)
 
         # Here, we *NEED* to be in the virtualenv, to get the django code.
         # NOTE: this code is kind of weak, it will fail if settings include
@@ -208,13 +218,14 @@ class RemoteConfiguration(object):
             with cd(env.root if hasattr(env, 'root') else ''):
                 # NOTE: this doesn't work with “ with open(…) as f: ”, thus
                 # I would have greatly prefered this modern version…
-                out = run(("{0} {1} python -c 'import cPickle as pickle; "
+                out = run(("{0}{1}{2} python -c 'import cPickle as pickle; "
                           "from django.conf import settings; "
                           "settings._setup(); "
                           "f=open(\"__django_settings__.pickle\", "
                           "\"w\"); pickle.dump(settings._wrapped, f, "
                           "pickle.HIGHEST_PROTOCOL); f.close()'").format(
-                          env_var1, env_var2), quiet=not self.verbose,
+                          env_generic, env_sparks, env_django_settings),
+                          quiet=not self.verbose,
                           warn_only=True)
 
                 if out.succeeded:
@@ -231,6 +242,16 @@ class RemoteConfiguration(object):
                         LOGGER.exception('Cannot load remote django settings!')
 
                     pickled_settings.close()
+
+                else:
+                    LOGGER.warning(('Could not load remote Django settings '
+                                   'for project "{0}" (which should be '
+                                   'located in "{1}", with env. {2}{3}'
+                                   ')').format(
+                                   env.project,
+                                   env.root if hasattr(env, 'root') else '~',
+                                   env_generic, env_sparks))
+                    raise ImportError
 
 
 class LocalConfiguration(object):
@@ -288,7 +309,12 @@ class LocalConfiguration(object):
             elseway leads to cycle dependancy KeyErrors. """
 
         if key == 'django_settings':
-            self.get_django_settings()
+            try:
+                self.get_django_settings()
+
+            except ImportError:
+                raise AttributeError('No Django settings could be loaded.')
+
             return self.django_settings
 
     def get_django_settings(self):
@@ -302,13 +328,16 @@ class LocalConfiguration(object):
                 name, value = env_var.strip().split('=')
                 os.environ[name] = value
 
+        if hasattr(env, 'sparks_djsettings'):
+            os.environ['SPARKS_DJANGO_SETTINGS'] = env.sparks_djsettings
+
         os.environ['DJANGO_SETTINGS_MODULE'] = \
             '{0}.settings'.format(env.project)
 
         # Insert the $CWD in sys path, and pray for the user to have called
         # `fab` from where `manage.py` is. This is the way it should be done
         # but who knows…
-        current_root = os.getcwd()
+        current_root = env.root if hasattr(env, 'root') else os.getcwd()
         sys.path.append(current_root)
 
         try:
@@ -320,13 +349,32 @@ class LocalConfiguration(object):
             django_settings._setup()
 
         except ImportError:
-            raise RuntimeError('Django settings could not be loaded.')
-
+            LOGGER.warning(('Django settings could not be loaded for '
+                           'project "{0}" (which should be '
+                           'located in "{1}", with env. {2}{3}'
+                           ')').format(
+                           env.project,
+                           current_root,
+                           'SPARKS_DJANGO_SETTINGS={0}'.format(
+                           env.sparks_djsettings)
+                           if hasattr(env, 'sparks_djsettings') else '',
+                           ' '.join(env.environment_vars)
+                           if hasattr(env, 'environment_vars') else ''))
+            raise
         else:
             self.django_settings = django_settings._wrapped
 
         finally:
             sys.path.remove(current_root)
+
+            del os.environ['DJANGO_SETTINGS_MODULE']
+
+            if hasattr(env, 'sparks_djsettings'):
+                del os.environ['SPARKS_DJANGO_SETTINGS']
+
+            if hasattr(env, 'environment_vars'):
+                for env_var in env.environment_vars:
+                    del os.environ[name]
 
 
 def with_remote_configuration(func):
@@ -367,6 +415,11 @@ def find_configuration_type(hostname):
     else:
         return RemoteConfiguration(hostname, verbose=not quiet)
 
+
+if not quiet:
+    logging.basicConfig(format=
+                        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        level=logging.INFO)
 
 if local_configuration is None:
     local_configuration = LocalConfiguration()
