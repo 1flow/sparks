@@ -264,7 +264,8 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
             # supervisor configuration file.
             #
 
-            superconf = os.path.join(env.root, 'config',
+            superconf = os.path.join(platform.django_settings.BASE_ROOT,
+                                     'config',
                                      'gunicorn_supervisor_{0}.conf'.format(
                                      program_name))
 
@@ -303,7 +304,7 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
             #
 
             local_config_file = os.path.join(
-                platform.django_settings.PROJECT_ROOT,
+                platform.django_settings.BASE_ROOT,
                 'config/gunicorn_conf_{0}.py'.format(
                 program_name))
 
@@ -398,26 +399,20 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
 
     else:
         pg_env = ['PGUSER={0}'.format(env.pg_superuser)
-                  if hasattr(env, 'pg_superuser') else '']
-
-        pg_env.append('PGPASSWORD={0}'.format(env.pg_superpass)
-                      if hasattr(env, 'pg_superpass') else '')
+                  if hasattr(env, 'pg_superuser') else '',
+                  'PGPASSWORD={0}'.format(env.pg_superpass)
+                  if hasattr(env, 'pg_superpass') else '']
 
     pg_env.append('PGDATABASE={0}'.format(env.pg_superdb
                   if hasattr(env, 'pg_superdb')
                   else 'template1'))
 
-    try:
-        # We can't rely on 'hasattr(remote_configuration, 'django_settings')'
-        # Because hasattr will fail if settings are not yet lazy loaded.
-        db_setting = remote_configuration.django_settings.DATABASES['default']
+    djsettings = getattr(remote_configuration, 'django_settings', None)
 
-    except AttributeError:
-        pass
-
-    else:
-        db_host = db_setting.get('HOST', '')
-        db_port = db_setting.get('PORT', '')
+    if djsettings is not None:
+        db_setting = djsettings.DATABASES['default']
+        db_host    = db_setting.get('HOST', '')
+        db_port    = db_setting.get('PORT', '')
 
         if db_host != '':
             pg_env.append('PGHOST={0}'.format(db_host))
