@@ -416,8 +416,8 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
         pass
 
     else:
-        db_host    = db_setting.get('HOST', '')
-        db_port    = db_setting.get('PORT', '')
+        db_host = db_setting.get('HOST', '')
+        db_port = db_setting.get('PORT', '')
 
         if db_host != '':
             pg_env.append('PGHOST={0}'.format(db_host))

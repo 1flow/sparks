@@ -96,9 +96,17 @@ def temper_db_args(remote_configuration=None,
     """
 
     if db is None and user is None and password is None:
-        if hasattr(remote_configuration, 'django_settings'):
-            djsettings = remote_configuration.django_settings
+        try:
+            # Can't rely on 'hasattr(remote_configuration, 'django_settings')'
+            # Because hasattr will fail if settings are not yet lazy loaded.
+            djsettings = \
+                remote_configuration.django_settings.DATABASES['default']
 
+        except AttributeError:
+            raise ValueError('No database parameters supplied '
+                             'and no Django settings available!')
+
+        else:
             # if django settings has 'test' or 'production' DB,
             # get it, else get 'default' because all settings have it.
             db_settings = djsettings.DATABASES.get(
@@ -108,9 +116,6 @@ def temper_db_args(remote_configuration=None,
             user     = db_settings['USER']
             password = db_settings['PASSWORD']
 
-        else:
-            raise ValueError('No database parameters supplied '
-                             'and no Django settings available!')
 
     if db is None:
         if user is None:
