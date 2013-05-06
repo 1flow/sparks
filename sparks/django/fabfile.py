@@ -367,18 +367,18 @@ def handlemessages(remote_configuration=None, mode=None):
         raise RuntimeError(
             '"mode" argument must be either "make" or "compile".')
 
-    languages = (code for code, name
-                 in remote_configuration.django_settings.LANGUAGES
-                 if code != remote_configuration.django_settings.LANGUAGE_CODE)
-
-    project_apps = (app.split('.', 1)[1] for app
-                    in remote_configuration.django_settings.INSTALLED_APPS
-                    if app.startswith('{0}.'.format(env.project)))
-
     def compile_internal(run_from):
         for language in languages:
             run('{0}{1}./manage.py {2}messages --locale {3}'.format(
                 sparks_djsettings_env_var(), run_from, mode, language))
+
+    languages = [code for code, name
+                 in remote_configuration.django_settings.LANGUAGES
+                 if code != remote_configuration.django_settings.LANGUAGE_CODE]
+
+    project_apps = [app.split('.', 1)[1] for app
+                    in remote_configuration.django_settings.INSTALLED_APPS
+                    if app.startswith('{0}.'.format(env.project))]
 
     with activate_venv():
         with cd(env.root):
