@@ -20,7 +20,7 @@ except ImportError:
 
 from ..fabric      import (fabfile, with_remote_configuration,
                            local_configuration as platform,
-                           is_local_environment)
+                           is_local_environment, is_development_environment)
 from ..pkg         import brew
 from ..foundations import postgresql as pg
 
@@ -111,7 +111,7 @@ def requirements(upgrade=False):
     with cd(env.root):
         with activate_venv():
 
-            if is_local_environment():
+            if is_development_environment():
                 dev_req = os.path.join(env.root, env.dev_requirements_file)
 
                 # exists(): we are looking for a remote file!

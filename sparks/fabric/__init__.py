@@ -102,6 +102,14 @@ def is_local_environment():
     return is_local
 
 
+def is_development_environment():
+
+    is_development = (is_local_environment()
+                      or env.environment in ('test', 'development', 'preview'))
+
+    return is_development
+
+
 class RemoteConfiguration(object):
     """ Define an easy to use object with remote machine configuration. """
 
