@@ -159,6 +159,10 @@ def activate_venv():
     return prefix('workon %s' % env.virtualenv)
 
 
+def sparks_djsettings_env_var():
+    return 'SPARKS_DJANGO_SETTINGS={0} '.format(
+        env.sparks_djsettings) if hasattr(env, 'sparks_djsettings') else ''
+
 # •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Services
 
 
@@ -362,8 +366,7 @@ def syncdb():
         with activate_venv():
             run('chmod 755 manage.py', quiet=True)
             run('{0}./manage.py syncdb --noinput'.format(
-                'SPARKS_DJANGO_SETTINGS={0} '.format(env.sparks_djsettings)
-                if hasattr(env, 'sparks_djsettings') else ''))
+                sparks_djsettings_env_var()))
 
 
 @task
@@ -373,12 +376,10 @@ def migrate(*args):
     with cd(env.root):
         with activate_venv():
             run("{0}./manage.py migrate ".format(
-                'SPARKS_DJANGO_SETTINGS={0} '.format(env.sparks_djsettings)
-                if hasattr(env, 'sparks_djsettings') else '') + ' '.join(args))
+                sparks_djsettings_env_var()) + ' '.join(args))
 
             run('yes | {0}./manage.py sync_transmeta_db'.format(
-                'SPARKS_DJANGO_SETTINGS={0} '.format(env.sparks_djsettings)
-                if hasattr(env, 'sparks_djsettings') else ''), warn_only=True)
+                sparks_djsettings_env_var()), warn_only=True)
 
 
 @task
