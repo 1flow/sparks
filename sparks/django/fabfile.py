@@ -7,6 +7,7 @@
 
 import os
 import logging
+import datetime
 
 try:
     from fabric.api              import env, run, sudo, task, local
@@ -76,6 +77,32 @@ def install_components(remote_configuration=None, upgrade=False):
         #fabfile.dev_memcache()
         pass
 
+# ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Helpers
+
+
+def get_git_branch():
+    """ Return either ``env.branch`` if defined, else ``master`` if environment
+        is ``production``, or ``develop`` if anything else than ``production``
+        (we use the :program:`git-flow` branching model). """
+
+    branch = env.branch
+
+    if branch == '<GIT-FLOW-DEPENDANT>':
+        branch = 'master' if env.environment == 'production' else 'develop'
+
+    return branch
+
+
+def activate_venv():
+
+    return prefix('workon %s' % env.virtualenv)
+
+
+def sparks_djsettings_env_var():
+
+    return 'SPARKS_DJANGO_SETTINGS={0} '.format(
+        env.sparks_djsettings) if hasattr(env, 'sparks_djsettings') else ''
+
 
 # •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Code related
 
@@ -135,32 +162,50 @@ def requirements(upgrade=False):
 
 
 @task(alias='pull')
-def git_pull():
+def git_update():
+
+    # TODO: git up?
 
     # Push everything first. This is not strictly mandatory.
     # Don't fail if local user doesn't have my `pa` alias.
     local('git pa || true')
 
-    branch = env.branch
-
-    if branch == '<GIT-FLOW-DEPENDANT>':
-        branch = 'master' if env.environment == 'production' else 'develop'
-
     with cd(env.root):
         if not is_local_environment():
-            run('git checkout %s' % branch)
+            run('git checkout %s' % get_git_branch())
 
+
+@task(alias='pull')
+def git_pull():
+
+    with cd(env.root):
         run('git pull')
 
 
-def activate_venv():
+@task(alias='getlangs')
+@with_remote_configuration
+def push_translations(remote_configuration=None):
 
-    return prefix('workon %s' % env.virtualenv)
+    if not remote_configuration.django_settings.DEBUG:
+        # remote translations are fetched only on development / test
+        # environments. Production are not meant to host i18n work.
+        return
 
+    with cd(env.root):
+        if run("git status | grep -E 'modified:.*locale.*django.po'") != '':
+            run(('git add -u \*locale\*po '
+                '&& git commit -m "{0}" '
+                # If there are pending commits in the central, `git push` will
+                # fail if we don't pull them prior to pushing local changes.
+                '&& git pull && git push').format(
+                'Automated l10n translations from {0} on {1}.').format(
+                env.host_string, datetime.datetime.now().isoformat()))
 
-def sparks_djsettings_env_var():
-    return 'SPARKS_DJANGO_SETTINGS={0} '.format(
-        env.sparks_djsettings) if hasattr(env, 'sparks_djsettings') else ''
+            # Get the translations changes back locally.
+            # Don't fail if the local user doesn't have git-up,
+            # and try to pull the standard way.
+            local('git up || git pull')
+
 
 # •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Services
 
@@ -372,7 +417,10 @@ def handlemessages(remote_configuration=None, mode=None):
             run('{0}{1}./manage.py {2}messages --locale {3}'.format(
                 sparks_djsettings_env_var(), run_from, mode, language))
 
-    languages = [code for code, name
+    # Transform language codes (eg. 'fr-fr') to locale names (eg. 'fr_FR'),
+    # keeping extensions (eg. '.utf-8'), but don't touch short codes (eg. 'en').
+    languages = [('{0}_{1}{2}'.format(code[:2], code[3:5].upper(), code[5:])
+                 if len(code) > 2 else code) for code, name
                  in remote_configuration.django_settings.LANGUAGES
                  if code != remote_configuration.django_settings.LANGUAGE_CODE]
 
@@ -498,6 +546,11 @@ def runable(fast=False, upgrade=False):
     if not is_local_environment():
         if not fast:
             init_environment()
+
+        git_update()
+
+        push_translations()
+
         git_pull()
 
     if not fast:
