@@ -192,7 +192,8 @@ def push_translations(remote_configuration=None):
         return
 
     with cd(env.root):
-        if run("git status | grep -E 'modified:.*locale.*django.po'") != '':
+        if run("git status | grep -E 'modified:.*locale.*django.po' "
+               "|| true") != '':
             run(('git add -u \*locale\*po '
                 '&& git commit -m "{0}" '
                 # If there are pending commits in the central, `git push` will
