@@ -346,8 +346,8 @@ class LocalConfiguration(object):
         # Insert the $CWD in sys path, and pray for the user to have called
         # `fab` from where `manage.py` is. This is the way it should be done
         # but who knows…
-        current_root = env.root if (hasattr(env, 'root')
-                                    and is_local_environment()) else os.getcwd()
+        current_root = env.root if hasattr(env, 'root') else os.getcwd()
+
         sys.path.append(current_root)
 
         try:
