@@ -110,7 +110,6 @@ def requirements(upgrade=False):
 
     with cd(env.root):
         with activate_venv():
-
             if is_development_environment():
                 dev_req = os.path.join(env.root, env.dev_requirements_file)
 
@@ -351,8 +350,8 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
 def collectstatic():
     """ Run the Django collectstatic management command. """
 
-    with cd(env.root):
-        with activate_venv():
+    with activate_venv():
+        with cd(env.root):
             run('{0}./manage.py collectstatic --noinput'.format(
                 sparks_djsettings_env_var()))
 
@@ -381,8 +380,8 @@ def handlemessages(remote_configuration=None, mode=None):
             run('{0}{1}./manage.py {2}messages --locale {3}'.format(
                 sparks_djsettings_env_var(), run_from, mode, language))
 
-    with cd(env.root):
-        with activate_venv():
+    with activate_venv():
+        with cd(env.root):
             with cd(env.project):
                 if exists('locale'):
                     compile_internal(run_from='../')
@@ -407,8 +406,8 @@ def compilemessages():
 def syncdb():
     """ Run the Django syndb management command. """
 
-    with cd(env.root):
-        with activate_venv():
+    with activate_venv():
+        with cd(env.root):
             run('chmod 755 manage.py', quiet=True)
             run('{0}./manage.py syncdb --noinput'.format(
                 sparks_djsettings_env_var()))
@@ -418,8 +417,8 @@ def syncdb():
 def migrate(*args):
     """ Run the Django migrate management command. """
 
-    with cd(env.root):
-        with activate_venv():
+    with activate_venv():
+        with cd(env.root):
             run("{0}./manage.py migrate ".format(
                 sparks_djsettings_env_var()) + ' '.join(args))
 
