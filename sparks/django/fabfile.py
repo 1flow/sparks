@@ -76,6 +76,16 @@ def install_components(remote_configuration=None, upgrade=False):
         #fabfile.dev_memcache()
         pass
 
+def activate_venv():
+
+    return prefix('workon %s' % env.virtualenv)
+
+
+def sparks_djsettings_env_var():
+
+    return 'SPARKS_DJANGO_SETTINGS={0} '.format(
+        env.sparks_djsettings) if hasattr(env, 'sparks_djsettings') else ''
+
 
 # •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Code related
 
@@ -153,14 +163,9 @@ def git_pull():
         run('git pull')
 
 
-def activate_venv():
-
-    return prefix('workon %s' % env.virtualenv)
 
 
-def sparks_djsettings_env_var():
-    return 'SPARKS_DJANGO_SETTINGS={0} '.format(
-        env.sparks_djsettings) if hasattr(env, 'sparks_djsettings') else ''
+
 
 # •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Services
 
