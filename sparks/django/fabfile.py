@@ -357,6 +357,52 @@ def collectstatic():
                 sparks_djsettings_env_var()))
 
 
+@with_remote_configuration
+def handlemessages(remote_configuration=None, mode=None):
+    """ Run the Django compilemessages management command. """
+
+    if mode is None:
+        mode = 'make'
+
+    elif mode not in ('make', 'compile'):
+        raise RuntimeError(
+            '"mode" argument must be either "make" or "compile".')
+
+    languages = (code for code, name
+                 in remote_configuration.django_settings.LANGUAGES
+                 if code != remote_configuration.django_settings.LANGUAGE_CODE)
+
+    project_apps = (app.split('.', 1)[1] for app
+                    in remote_configuration.django_settings.INSTALLED_APPS
+                    if app.startswith('{0}.'.format(env.project)))
+
+    def compile_internal(run_from):
+        for language in languages:
+            run('{0}{1}./manage.py {2}messages --locale {3}'.format(
+                sparks_djsettings_env_var(), run_from, mode, language))
+
+    with cd(env.root):
+        with activate_venv():
+            with cd(env.project):
+                if exists('locale'):
+                    compile_internal(run_from='../')
+
+                else:
+                    for short_app_name in project_apps:
+                        with cd(short_app_name):
+                            compile_internal(run_from='../../')
+
+
+@task(alias='messages')
+def makemessages():
+    handlemessages(mode='make')
+
+
+@task(alias='compile')
+def compilemessages():
+    handlemessages(mode='compile')
+
+
 @task
 def syncdb():
     """ Run the Django syndb management command. """
@@ -460,6 +506,8 @@ def runable(fast=False, upgrade=False):
         createdb()
         syncdb()
         migrate()
+
+    compilemessages()
 
     collectstatic()
 
