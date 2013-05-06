@@ -143,7 +143,7 @@ class RemoteConfiguration(object):
                 self.get_django_settings()
             except ImportError:
                 raise AttributeError(
-                    'No remote Django settings could be loaded.')
+                    'Remote Django settings could not be loaded.')
 
             return self.django_settings
 
@@ -322,7 +322,8 @@ class LocalConfiguration(object):
                 self.get_django_settings()
 
             except ImportError:
-                raise AttributeError('No Django settings could be loaded.')
+                raise AttributeError(
+                    'Local Django settings could not be loaded.')
 
             return self.django_settings
 
@@ -346,8 +347,8 @@ class LocalConfiguration(object):
         # Insert the $CWD in sys path, and pray for the user to have called
         # `fab` from where `manage.py` is. This is the way it should be done
         # but who knows…
-        current_root = env.root if (hasattr(env, 'root')
-                                    and is_local_environment()) else os.getcwd()
+        current_root = env.root if hasattr(env, 'root') else os.getcwd()
+
         sys.path.append(current_root)
 
         try:
