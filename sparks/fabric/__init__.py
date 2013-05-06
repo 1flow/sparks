@@ -143,7 +143,7 @@ class RemoteConfiguration(object):
                 self.get_django_settings()
             except ImportError:
                 raise AttributeError(
-                    'No remote Django settings could be loaded.')
+                    'Remote Django settings could not be loaded.')
 
             return self.django_settings
 
@@ -322,7 +322,8 @@ class LocalConfiguration(object):
                 self.get_django_settings()
 
             except ImportError:
-                raise AttributeError('No Django settings could be loaded.')
+                raise AttributeError(
+                    'Local Django settings could not be loaded.')
 
             return self.django_settings
 
