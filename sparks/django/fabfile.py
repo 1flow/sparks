@@ -354,8 +354,7 @@ def collectstatic():
     with cd(env.root):
         with activate_venv():
             run('{0}./manage.py collectstatic --noinput'.format(
-                'SPARKS_DJANGO_SETTINGS={0} '.format(env.sparks_djsettings)
-                if hasattr(env, 'sparks_djsettings') else ''))
+                sparks_djsettings_env_var()))
 
 
 @task
