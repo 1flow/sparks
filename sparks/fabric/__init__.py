@@ -117,7 +117,7 @@ class RemoteConfiguration(object):
 
         self.host_string = host_string
         self.verbose     = verbose
-        LOGGER.info('>> VERBOSE: %s', self.verbose)
+        LOGGER.info('SPARKS_VERBOSE is %s!', self.verbose)
 
         # No need to `deactivate` for this calls, it's pure shell.
         self.user, self.tilde = run('echo "${USER},${HOME}"',
