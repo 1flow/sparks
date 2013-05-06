@@ -372,7 +372,10 @@ def handlemessages(remote_configuration=None, mode=None):
             run('{0}{1}./manage.py {2}messages --locale {3}'.format(
                 sparks_djsettings_env_var(), run_from, mode, language))
 
-    languages = [code for code, name
+    # Transform language codes (eg. 'fr-fr') to locale names (eg. 'fr_FR'),
+    # keeping extensions (eg. '.utf-8'), but don't touch short codes (eg. 'en').
+    languages = [('{0}_{1}{2}'.format(code[:2], code[3:5].upper(), code[5:])
+                 if len(code) > 2 else code) for code, name
                  in remote_configuration.django_settings.LANGUAGES
                  if code != remote_configuration.django_settings.LANGUAGE_CODE]
 
