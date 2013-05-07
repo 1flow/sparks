@@ -198,7 +198,7 @@ def push_translations(remote_configuration=None):
                 '&& git commit -m "{0}" '
                 # If there are pending commits in the central, `git push` will
                 # fail if we don't pull them prior to pushing local changes.
-                '&& git pull && git push').format(
+                '&& (git up || git pull) && git push').format(
                 'Automated l10n translations from {0} on {1}.').format(
                 env.host_string, datetime.datetime.now().isoformat()))
 
