@@ -176,10 +176,15 @@ def git_update():
 
 
 @task(alias='pull')
-def git_pull():
+@with_remote_configuration
+def git_pull(remote_configuration=None):
 
     with cd(env.root):
-        run('git pull')
+        if run('git pull') != 'Already up-to-date.':
+            # reload the configuration to refresh Django settings.
+            # TODO: examine commits HERE and in push_translations()
+            # to reload() only if settings/* changed.
+            remote_configuration.reload()
 
 
 @task(alias='getlangs')
@@ -198,7 +203,7 @@ def push_translations(remote_configuration=None):
                 '&& git commit -m "{0}" '
                 # If there are pending commits in the central, `git push` will
                 # fail if we don't pull them prior to pushing local changes.
-                '&& git pull && git push').format(
+                '&& (git up || git pull) && git push').format(
                 'Automated l10n translations from {0} on {1}.').format(
                 env.host_string, datetime.datetime.now().isoformat()))
 

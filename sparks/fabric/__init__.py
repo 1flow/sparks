@@ -155,6 +155,12 @@ class RemoteConfiguration(object):
 
             return self.django_settings
 
+    def reload(self):
+        """ This methods just reloads the remote Django settings, because
+            anything else is very unlikely to have changed. """
+
+        self.get_django_settings()
+
     def get_platform(self):
         # Be sure we don't get stuck in a virtualenv for free.
         with prefix('deactivate >/dev/null 2>&1 || true'):
@@ -216,7 +222,7 @@ class RemoteConfiguration(object):
             if hasattr(env, 'environment_vars') else ''
 
         env_sparks = (' SPARKS_DJANGO_SETTINGS={0}'.format(
-                    env.sparks_djsettings)) \
+                      env.sparks_djsettings)) \
             if hasattr(env, 'sparks_djsettings') else ''
 
         env_django_settings = \
@@ -233,8 +239,8 @@ class RemoteConfiguration(object):
 
         with prefix(prefix_cmd):
             with cd(env.root if hasattr(env, 'root') else ''):
-                # NOTE: this doesn't work with “ with open(…) as f: ”, thus
-                # I would have greatly prefered this modern version…
+                # NOTE: this doesn't work with “ with open(…) as f: ”, even
+                # though I would have greatly prefered this modern version…
                 out = run(("{0}{1}{2} python -c 'import cPickle as pickle; "
                           "from django.conf import settings; "
                           "settings._setup(); "
