@@ -176,10 +176,15 @@ def git_update():
 
 
 @task(alias='pull')
-def git_pull():
+@with_remote_configuration
+def git_pull(remote_configuration=None):
 
     with cd(env.root):
-        run('git pull')
+        if run('git pull') != 'Already up-to-date.':
+            # reload the configuration to refresh Django settings.
+            # TODO: examine commits HERE and in push_translations()
+            # to reload() only if settings/* changed.
+            remote_configuration.reload()
 
 
 @task(alias='getlangs')
