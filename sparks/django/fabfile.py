@@ -19,11 +19,12 @@ except ImportError:
     print('>>> FABRIC IS NOT INSTALLED !!!')
     raise
 
-from ..fabric      import (fabfile, with_remote_configuration,
-                           local_configuration as platform,
-                           is_local_environment, is_development_environment)
-from ..pkg         import brew
+from ..fabric import (fabfile, with_remote_configuration,
+                      local_configuration as platform,
+                      is_local_environment, is_development_environment)
+from ..pkg import brew
 from ..foundations import postgresql as pg
+from ..foundations.classes import SimpleObject
 
 # Use this in case paramiko seems to go crazy. Trust me, it can do, especially
 # when using the multiprocessing module.
@@ -276,8 +277,8 @@ def build_supervisor_program_name():
 
 
 def supervisor_add_environment(context, has_djsettings):
-    """ Add (or not) an ``environment`` item to :param:`context`, given
-        the current Fabric ``env``.
+    """ Helper function: add (or not) an ``environment`` item
+        to :param:`context`, given the current Fabric ``env``.
 
         If :param:`has_djsettings` is ``True``, ``SPARKS_DJANGO_SETTINGS``
         will be added.
@@ -305,6 +306,112 @@ def supervisor_add_environment(context, has_djsettings):
         context['environment'] = ''
 
 
+def handle_supervisor_config(supervisor, remote_configuration):
+    """ Helper function: Upload an environment-specific and auto-generated
+        supervisor configuration file. Update/restart supervisor
+        only if one of the files changed.
+    """
+
+    superconf = os.path.join(platform.django_settings.BASE_ROOT,
+                             'config',
+                             'gunicorn_supervisor_{0}.conf'.format(
+                             supervisor.program_name))
+
+    # os.path.exists(): we are looking for a LOCAL file,
+    # in the current Django project. Devops can prepare a
+    # fully custom supervisor configuration file for the
+    # Django web worker.
+    if not os.path.exists(superconf):
+        # If full-custom isn't present,
+        # create a sparks-crafted template.
+        superconf = os.path.join(os.path.dirname(__file__),
+                                 'gunicorn_supervisor.template')
+
+    destination = '/etc/supervisor/conf.d/{0}.conf'.format(
+        supervisor.program_name)
+
+    context = {
+        'env': env.environment,
+        'root': env.root,
+        'user': env.user,
+        'branch': env.branch,
+        'project': env.project,
+        'program': supervisor.program_name,
+        'user_home': env.user_home
+            if hasattr(env, 'user_home')
+            else remote_configuration.tilde,
+        'virtualenv': env.virtualenv,
+    }
+
+    supervisor_add_environment(context, supervisor.has_djsettings)
+
+    if exists(destination):
+        upload_template(superconf, destination + '.new',
+                        context=context, use_sudo=True, backup=False)
+
+        if sudo('diff {0} {0}.new'.format(destination)) == '':
+            sudo('rm -f {0}.new'.format(destination))
+
+        else:
+            sudo('mv {0}.new {0}'.format(destination))
+            supervisor.update  = True
+            supervisor.restart = True
+
+    else:
+        upload_template(superconf, destination, context=context,
+                        use_sudo=True, backup=False)
+        # No need to restart, the update will
+        # add the new program and start it
+        # automatically, thanks to supervisor.
+        supervisor.update = True
+
+
+def handle_gunicorn_config(supervisor):
+    """ Helper function: upload a default gunicorn configuration file
+        if there is none in the project (else, the one
+        from the project will be automatically used).
+    """
+
+    guniconf = os.path.join(
+        platform.django_settings.BASE_ROOT,
+        'config/gunicorn_conf_{0}.py'.format(
+        supervisor.program_name))
+
+    # os.path.exists(): we are looking for a LOCAL file in the
+    # Django project, that will be used remotely if present,
+    # once code is synchronized.
+    if not os.path.exists(guniconf):
+        guniconf = os.path.join(os.path.dirname(__file__),
+                                'gunicorn_conf_default.py')
+
+    gunidest = os.path.join(env.root,
+                            'config/gunicorn_conf_{0}.py'.format(
+                            supervisor.program_name))
+
+    if exists(gunidest):
+        put(guniconf, gunidest + '.new')
+
+        if sudo('diff {0} {0}.new'.format(gunidest)) == '':
+            sudo('rm -f {0}.new'.format(gunidest))
+
+        else:
+            sudo('mv {0}.new {0}'.format(gunidest))
+            supervisor.update  = True
+            supervisor.restart = True
+
+    else:
+        # copy the default configuration to remote.
+        # WARNING/NOTE: it will be put in the remote git working
+        # directory. This *will* trigger a conflict if a specific
+        # configuration file is added afterwards by the developers,
+        # and they'll need to delete it manually before restarting
+        # the whole deploy operation. I know this isn't cool.
+        put(guniconf, gunidest)
+
+        if not supervisor.update:
+            supervisor.restart = True
+
+
 @task(alias='gunicorn')
 @with_remote_configuration
 def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
@@ -320,90 +427,30 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
 
         has_djsettings, program_name = build_supervisor_program_name()
 
-        need_service_add = False
+        supervisor = SimpleObject(from_dict={
+                                  'update': False,
+                                  'restart': False,
+                                  'has_djsettings': has_djsettings,
+                                  'program_name': program_name
+                                  })
 
         if not fast:
-
-            #
-            # Upload an environment-specific and auto-generated
-            # supervisor configuration file.
-            #
-
-            superconf = os.path.join(platform.django_settings.BASE_ROOT,
-                                     'config',
-                                     'gunicorn_supervisor_{0}.conf'.format(
-                                     program_name))
-
-            # os.path.exists(): we are looking for a LOCAL file, in sparks.
-            if not os.path.exists(superconf):
-                superconf = os.path.join(os.path.dirname(__file__),
-                                         'gunicorn_supervisor.template')
-
-            destination = '/etc/supervisor/conf.d/{0}.conf'.format(program_name)
-
-            context = {
-                'env': env.environment,
-                'root': env.root,
-                'user': env.user,
-                'branch': env.branch,
-                'project': env.project,
-                'program': program_name,
-                'user_home': env.user_home
-                    if hasattr(env, 'user_home')
-                    else remote_configuration.tilde,
-                'virtualenv': env.virtualenv,
-            }
-
-            supervisor_add_environment(context, has_djsettings)
-
-            if not exists(destination):
-                need_service_add = True
-
-            upload_template(superconf, destination, context=context,
-                            use_sudo=True, backup=False)
-
-            #
-            # Upload a default gunicorn configuration file
-            # if there is none in the project (else, the one
-            # from the project will be automatically used).
-            #
-
-            local_config_file = os.path.join(
-                platform.django_settings.BASE_ROOT,
-                'config/gunicorn_conf_{0}.py'.format(
-                program_name))
-
-            # os.path.exists(): we are looking for a LOCAL file, that will
-            # be used remotely if present, once code is synchronized.
-            if not os.path.exists(local_config_file):
-                unidefault = os.path.join(os.path.dirname(__file__),
-                                          'gunicorn_conf_default.py')
-
-                unidest = os.path.join(env.root,
-                                       'config/gunicorn_conf_{0}.py'.format(
-                                       program_name))
-
-                # copy the default configuration to remote::specific.
-                put(unidefault, unidest)
-
-        #
-        # Reload supervisor, it will restart gunicorn.
-        #
+            handle_supervisor_config(supervisor, remote_configuration)
+            handle_gunicorn_config(supervisor)
 
         # cf. http://stackoverflow.com/a/9310434/654755
 
-        if need_service_add:
-            sudo("supervisorctl add {0} && supervisorctl start {0}".format(
-                 program_name))
+        if supervisor.update:
+            # This will start /
+            sudo("supervisorctl update")
+
+            if supervisor.restart:
+                sudo("supervisorctl restart {0}".format(program_name))
 
         else:
-            # Just in case something went wrong between 2 fabric runs,
-            # we reload. This is not strictly needed in normal conditions
-            # but will allow recovering from bad situations without having
-            # to repair things manually.
-            sudo("supervisorctl reload "
-                 "&& supervisorctl restart {0}".format(
-                 program_name))
+            # In any case, we restart the process during a {fast}deploy,
+            # to reload the Django code even if configuration hasn't changed.
+            sudo("supervisorctl restart {0}".format(program_name))
 
 
 # ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Django specific
