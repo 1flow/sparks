@@ -180,7 +180,7 @@ def git_update():
 def git_pull():
 
     with cd(env.root):
-        if run('git pull') != 'Already up-to-date.':
+        if not run('git pull').strip().endswith('Already up-to-date.'):
             # reload the configuration to refresh Django settings.
             # TODO: examine commits HERE and in push_translations()
             # to reload() only if settings/* changed.
