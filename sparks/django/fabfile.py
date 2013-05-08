@@ -176,15 +176,26 @@ def git_update():
 
 
 @task(alias='pull')
-@with_remote_configuration
-def git_pull(remote_configuration=None):
+def git_pull():
 
     with cd(env.root):
         if run('git pull') != 'Already up-to-date.':
             # reload the configuration to refresh Django settings.
             # TODO: examine commits HERE and in push_translations()
             # to reload() only if settings/* changed.
-            remote_configuration.reload()
+            #
+            # We import it manually here, to avoid using the
+            # @with_remote_configuration decorator, which would imply
+            # implicit fetching of Django settings. On first install/deploy,
+            # this would fail because requirements are not yet installed.
+            try:
+                from ..fabric import remote_configuration
+                remote_configuration.reload()
+
+            except:
+                LOGGER.exception('Cannot reload remote_settings! '
+                                 '(you can safely ignore this warning on '
+                                 'first deploy)')
 
 
 @task(alias='getlangs')
