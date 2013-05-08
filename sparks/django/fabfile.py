@@ -567,7 +567,10 @@ def runable(fast=False, upgrade=False):
 
     compilemessages()
 
-    collectstatic()
+    if not is_local_environment():
+        # In debug mode, Django handles the static contents via a dedicated
+        # view. We don't need to create/refresh/maintain the global static/ dir.
+        collectstatic()
 
 
 @task(aliases=('fast', 'fastdeploy', ))
