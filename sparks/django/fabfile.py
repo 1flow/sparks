@@ -633,7 +633,7 @@ def syncdb():
 
 @task(task_class=DjangoTask)
 @with_remote_configuration
-def migrate(remote_configuration=None, *args):
+def migrate(remote_configuration=None, args=None):
     """ Run the Django migrate management command, and the Transmeta one
         if ``django-transmeta`` is installed.
 
@@ -644,7 +644,7 @@ def migrate(remote_configuration=None, *args):
             didn't stop.
     """
 
-    django_manage('migrate ' + ' '.join(args))
+    django_manage('migrate ' + (args or ''))
 
     if 'transmeta' in remote_configuration.django_settings.INSTALLED_APPS:
         django_manage('sync_transmeta_db', prefix='yes | ')
