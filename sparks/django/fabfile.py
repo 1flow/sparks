@@ -101,9 +101,71 @@ def activate_venv():
 
 def sparks_djsettings_env_var():
 
+    # The trailing space is intentional. Callers expect us to have inserted
+    # it if we setup the shell environment variable.
     return 'SPARKS_DJANGO_SETTINGS={0} '.format(
         env.sparks_djsettings) if hasattr(env, 'sparks_djsettings') else ''
 
+
+def get_all_fixtures(order_by=None):
+    """ Find all fixtures files in the current project, eg. files whose name
+        ends with ``.json`` and which are located in any `fixtures/` directory.
+
+        :param order_by: a string. Currently only ``'date'`` is supported.
+
+        .. note:: the action takes place on the current machine, eg. it uses
+            ``Fabric's`` :func:`local` function.
+
+        .. versionadded:: 1.16
+    """
+
+    # OMG: http://stackoverflow.com/a/11456468/654755 ILOVESO!
+
+    if order_by is None:
+        return local("find . -name '*.json' -path '*/fixtures/*'",
+                     capture=True).splitlines()
+
+    elif order_by == 'date':
+        return local("find . -name '*.json' -path '*/fixtures/*' -print0 "
+                     "| xargs -0 ls -1t", capture=True).splitlines()
+
+    else:
+        raise RuntimeError('Bad order_by value "{0}"'.format(order_by))
+
+
+def new_fixture_filename(app_model):
+    """
+
+        .. versionadded:: 1.16
+    """
+
+    def fixture_name(base, counter):
+        return '{0}_{1:04d}.json'.format(base, counter)
+
+    try:
+        app, model = app_model.split('.', 1)
+
+    except ValueError:
+        app   = app_model
+        model = None
+
+    fixtures_dir = os.path.join(app, 'fixtures')
+
+    if not os.path.exists(fixtures_dir):
+        os.makedirs(fixtures_dir)
+
+    new_fixture_base = os.path.join(fixtures_dir, '{0}{1}.{2}'.format(app,
+                                    '' if model is None else ('.' + model),
+                                    datetime.date.today().isoformat()))
+
+    fix_counter = 1
+    new_fixture_name = fixture_name(new_fixture_base, fix_counter)
+
+    while os.path.exists(new_fixture_name):
+        fix_counter += 1
+        new_fixture_name = fixture_name(new_fixture_base, fix_counter)
+
+    return new_fixture_name
 
 # •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Code related
 
@@ -455,14 +517,39 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
 
 # ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Django specific
 
-@task(alias='static')
-def collectstatic():
-    """ Run the Django collectstatic management command. """
+@task(alias='manage')
+def django_manage(command, prefix=None, **kwargs):
+    """ Calls a remote :program:`./manage.py`. Obviously, it will setup all
+        the needed shell environment for the call to succeed.
+
+        Not meant for complex calls (eg. makemessages in different directories
+        than the project root). If you need more flexibility, call the command
+        yourself, like ``sparks`` does in the :func:`handlemessages` function.
+
+        :param command: the django manage command as a simple string,
+            eg. ``'syncdb --noinput'``. Default: ``None``, but you must
+            provide one, else manage will print its help (at best).
+
+        :param prefix: a string that will be inserted at the start of the
+            final command. For a badly implemented command which doesn't
+            accept the ``--noinput`` argument, you can use ``prefix='yes | '``.
+            Don't forget spaces if you want readability, the prefix will be
+            inserted verbatim. Default: ``''``.
+
+        :param kwargs: the remaining arguments are passed to
+            fabric's :func:`run` method via the ``**kwargs`` mechanism.
+
+        .. versionadded:: 1.16.
+
+    """
+
+    if prefix is None:
+        prefix = ''
 
     with activate_venv():
         with cd(env.root):
-            run('{0}./manage.py collectstatic --noinput'.format(
-                sparks_djsettings_env_var()))
+            return run('{0}{1}./manage.py {2}'.format(
+                       prefix, sparks_djsettings_env_var(), command), **kwargs)
 
 
 @with_remote_configuration
@@ -520,22 +607,83 @@ def syncdb():
 
     with activate_venv():
         with cd(env.root):
+            # TODO: this should be managed by git and the developers, not here.
             run('chmod 755 manage.py', quiet=True)
-            run('{0}./manage.py syncdb --noinput'.format(
-                sparks_djsettings_env_var()))
+
+    django_manage('syncdb --noinput')
 
 
 @task
-def migrate(*args):
-    """ Run the Django migrate management command. """
+@with_remote_configuration
+def migrate(remote_configuration=None, *args):
+    """ Run the Django migrate management command, and the Transmeta one
+        if ``django-transmeta`` is installed.
 
-    with activate_venv():
-        with cd(env.root):
-            run("{0}./manage.py migrate ".format(
-                sparks_djsettings_env_var()) + ' '.join(args))
+        .. versionchanged:: in 1.16 the function checks if ``transmeta`` is
+            installed remotely and runs the command properly. before, it just
+            ran the command inconditionnaly with ``warn_only=True``, which
+            was less than ideal in case of a problem because the fab procedure
+            didn't stop.
+    """
 
-            run('yes | {0}./manage.py sync_transmeta_db'.format(
-                sparks_djsettings_env_var()), warn_only=True)
+    django_manage('migrate ' + ' '.join(args))
+
+    if 'transmeta' in remote_configuration.django_settings.INSTALLED_APPS:
+        django_manage('sync_transmeta_db', prefix='yes | ')
+
+
+@task(alias='static')
+def collectstatic():
+    """ Run the Django collectstatic management command. """
+
+    django_manage('collectstatic --noinput')
+
+
+@task
+def putdata(filename=None, confirm=True):
+    """ Put a local fixture on the remote end with via transient filename
+        and load it via Django's ``loaddata`` command.
+
+        :param
+    """
+
+    if filename is None:
+        filename = get_all_fixtures(order_by='date')[0]
+
+        if confirm:
+            prompt('OK to load {0} ([enter] or Control-C)?'.format(filename))
+
+    remote_file = list(put(filename))[0]
+
+    django_manage('loaddata {0}'.format(remote_file))
+
+
+@task
+def getdata(app_model, filename=None):
+    """ Get a dump or remote data in a local fixture, via
+        Django's ``dumpdata`` management command.
+
+        Examples::
+
+            # more or less abstract examples
+            fab test getdata:myapp.MyModel
+            fab production custom_settings getdata:myapp.MyModel
+
+            # The 1flowapp.com landing page.
+            fab test oneflowapp getdata:landing.LandingContent
+
+        .. versionadded:: 1.16
+    """
+
+    if filename is None:
+        filename = new_fixture_filename(app_model)
+        print('Dump data will be stored in {0}.'.format(filename))
+
+    with open(filename, 'w') as f:
+        f.write(django_manage('dumpdata {0} --indent 4 '
+                '--format json --natural'.format(app_model), quiet=True))
+
+# ••••••••••••••••••••••••••••••••••••••••••••••••••••••• Deployment meta-tasks
 
 
 @task
@@ -591,9 +739,6 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
 
         if sudo(pg.SELECT_DB.format(pg_env=pg_env, db=db)).strip() == '':
             sudo(pg.CREATE_DB.format(pg_env=pg_env, db=db, user=user))
-
-
-# ••••••••••••••••••••••••••••••••••••••••••••••••••••••• Deployment meta-tasks
 
 
 @task(alias='restart')
