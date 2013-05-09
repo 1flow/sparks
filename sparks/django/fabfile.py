@@ -11,6 +11,7 @@ import datetime
 
 try:
     from fabric.api              import env, run, sudo, task, local
+    from fabric.tasks            import Task
     from fabric.operations       import put, prompt
     from fabric.contrib.files    import exists, upload_template
     from fabric.context_managers import cd, prefix, settings
@@ -41,6 +42,23 @@ env.requirements_file     = 'config/requirements.txt'
 env.dev_requirements_file = 'config/dev-requirements.txt'
 env.branch                = '<GIT-FLOW-DEPENDANT>'
 env.use_ssh_config        = True
+
+
+# ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Django task
+class DjangoTask(Task):
+    def __init__(self, func, *args, **kwargs):
+        super(DjangoTask, self).__init__(*args, **kwargs)
+        self.func = func
+
+    def __call__(self, *args, **kwargs):
+        if not os.path.exists('./manage.py'):
+            raise RuntimeError('You must run this task from where manage.py '
+                               'is located, and this must be exactly in ../ '
+                               'from your django project.')
+        return self.func(*args, **kwargs)
+
+    def run(self, *args, **kwargs):
+        return self(*args, **kwargs)
 
 
 @task(aliases=('base', 'base_components'))
@@ -149,7 +167,7 @@ def new_fixture_filename(app_model):
         app   = app_model
         model = None
 
-    fixtures_dir = os.path.join(app, 'fixtures')
+    fixtures_dir = os.path.join(env.project, app, 'fixtures')
 
     if not os.path.exists(fixtures_dir):
         os.makedirs(fixtures_dir)
@@ -474,7 +492,7 @@ def handle_gunicorn_config(supervisor):
             supervisor.restart = True
 
 
-@task(alias='gunicorn')
+@task(task_class=DjangoTask, alias='gunicorn')
 @with_remote_configuration
 def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
     """ (Re-)upload configuration files and reload gunicorn via supervisor.
@@ -517,7 +535,7 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
 
 # ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Django specific
 
-@task(alias='manage')
+@task(task_class=DjangoTask, alias='manage')
 def django_manage(command, prefix=None, **kwargs):
     """ Calls a remote :program:`./manage.py`. Obviously, it will setup all
         the needed shell environment for the call to succeed.
@@ -591,17 +609,17 @@ def handlemessages(remote_configuration=None, mode=None):
                             compile_internal(run_from='../../')
 
 
-@task(alias='messages')
+@task(task_class=DjangoTask, alias='messages')
 def makemessages():
     handlemessages(mode='make')
 
 
-@task(alias='compile')
+@task(task_class=DjangoTask, alias='compile')
 def compilemessages():
     handlemessages(mode='compile')
 
 
-@task
+@task(task_class=DjangoTask)
 def syncdb():
     """ Run the Django syndb management command. """
 
@@ -613,9 +631,9 @@ def syncdb():
     django_manage('syncdb --noinput')
 
 
-@task
+@task(task_class=DjangoTask)
 @with_remote_configuration
-def migrate(remote_configuration=None, *args):
+def migrate(remote_configuration=None, args=None):
     """ Run the Django migrate management command, and the Transmeta one
         if ``django-transmeta`` is installed.
 
@@ -626,20 +644,20 @@ def migrate(remote_configuration=None, *args):
             didn't stop.
     """
 
-    django_manage('migrate ' + ' '.join(args))
+    django_manage('migrate ' + (args or ''))
 
     if 'transmeta' in remote_configuration.django_settings.INSTALLED_APPS:
         django_manage('sync_transmeta_db', prefix='yes | ')
 
 
-@task(alias='static')
+@task(task_class=DjangoTask, alias='static')
 def collectstatic():
     """ Run the Django collectstatic management command. """
 
     django_manage('collectstatic --noinput')
 
 
-@task
+@task(task_class=DjangoTask)
 def putdata(filename=None, confirm=True):
     """ Put a local fixture on the remote end with via transient filename
         and load it via Django's ``loaddata`` command.
@@ -658,7 +676,7 @@ def putdata(filename=None, confirm=True):
     django_manage('loaddata {0}'.format(remote_file))
 
 
-@task
+@task(task_class=DjangoTask)
 def getdata(app_model, filename=None):
     """ Get a dump or remote data in a local fixture, via
         Django's ``dumpdata`` management command.
@@ -686,7 +704,7 @@ def getdata(app_model, filename=None):
 # ••••••••••••••••••••••••••••••••••••••••••••••••••••••• Deployment meta-tasks
 
 
-@task
+@task(task_class=DjangoTask)
 @with_remote_configuration
 def createdb(remote_configuration=None, db=None, user=None, password=None,
              installation=False):
@@ -783,7 +801,7 @@ def fast_deploy():
     deploy(fast=True)
 
 
-@task
+@task(default=True)
 def deploy(fast=False, upgrade=False):
     """ Pull code, ensure runable, restart services. """
 

@@ -414,7 +414,15 @@ def with_remote_configuration(func):
             # host changed: fabric is running the same task on another host.
             remote_configuration = find_configuration_type(env.host_string)
 
-        return func(*args, remote_configuration=remote_configuration, **kwargs)
+        # Insert remote_configuration directly in kwargs.
+        # This avoids the following error:
+        #    TypeError: XXX() got multiple values
+        #    for keyword argument 'remote_configuration'
+        # at the price of some overwriting. We just hope that no-one
+        # will have the bad idea of naming his KWargs the same.
+        kwargs['remote_configuration'] = remote_configuration
+
+        return func(*args, **kwargs)
 
     return wrapped
 
