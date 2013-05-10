@@ -811,6 +811,11 @@ def deploy(fast=False, upgrade=False):
     if not fast:
         install_components(upgrade=upgrade)
 
+    if fast and is_production_environment():
+        print('Refusing to fast deploy production. '
+              'Running a standard deploy instead.')
+        fast = False
+
     runable(fast=fast, upgrade=upgrade)
 
     restart_services(fast=fast)
