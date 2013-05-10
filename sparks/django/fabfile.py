@@ -22,7 +22,9 @@ except ImportError:
 
 from ..fabric import (fabfile, with_remote_configuration,
                       local_configuration as platform,
-                      is_local_environment, is_development_environment)
+                      is_local_environment,
+                      is_development_environment,
+                      is_production_environment)
 from ..pkg import brew
 from ..foundations import postgresql as pg
 from ..foundations.classes import SimpleObject
@@ -776,7 +778,8 @@ def runable(fast=False, upgrade=False):
 
         git_update()
 
-        push_translations()
+        if not is_production_environment():
+            push_translations()
 
         git_pull()
 

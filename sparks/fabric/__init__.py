@@ -110,6 +110,14 @@ def is_development_environment():
     return is_development
 
 
+def is_production_environment():
+
+    is_production = (not is_development_environment()
+                     and env.environment in ('production', 'real'))
+
+    return is_production
+
+
 class RemoteConfiguration(object):
     """ Define an easy to use object with remote machine configuration. """
 
