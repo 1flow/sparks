@@ -25,6 +25,8 @@ central_osx_apps = 'duncan:oliviercortes.com/sparks/osx'
 # ================================================ Fabric configuration
 
 env.use_ssh_config = True
+env.skip_bad_hosts = True
+env.pool_size      = 10
 env.roledefs.update(dsh_to_roledefs())
 
 
