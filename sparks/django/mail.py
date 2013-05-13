@@ -100,8 +100,12 @@ def mail_admins(*args, **kwargs):
 
 def image_match_tag(tag):
     """ BeautifulSoup4 helper. """
-    return (tag.name == u'img' or
-            tag.name == u'table' and 'background' in tag)
+
+    #LOGGER.debug('name: %s, bg: %s, tag: %s', tag.name,
+    #             u'background' in tag.attrs, tag if tag.name in (u'table', u'td') else u'—')
+
+    return (tag.name == u'img'
+            or tag.name in (u'table', u'td') and u'background' in tag.attrs)
 
 
 def handle_embedded_images(msg, html_part):
@@ -130,9 +134,9 @@ def handle_embedded_images(msg, html_part):
 
     for index, tag in enumerate(soup.findAll(image_match_tag)):
         if tag.name == u'img':
-            attribute = 'src'
+            attribute = u'src'
         else:
-            attribute = 'background'
+            attribute = u'background'
 
         # If the image was already added, skip it.
         if tag[attribute] in added_images:
@@ -162,14 +166,14 @@ def handle_external_images(msg, html_part):
 
     for index, tag in enumerate(soup.findAll(image_match_tag)):
         if tag.name == u'img':
-            attribute = 'src'
+            attribute = u'src'
         else:
-            attribute = 'background'
+            attribute = u'background'
 
         url = tag[attribute]
 
         if not url.startswith("http://"):
-            url = urlparse.urljoin("http://" + settings.DOMAIN, url)
+            url = urlparse.urljoin("http://" + settings.SITE_DOMAIN, url)
             tag[attribute] = url
 
     html_part = str(soup)
@@ -188,7 +192,8 @@ def send_mail_html_from_template(template, subject, recipients,
 
     :param template: the name of the template. Both HTML (.html) and plain
         text (.txt) versions of the template must exist. You can specify
-        either the .txt, the .html, or no extension at all, the function
+        either the .txt, the .html, or no extension at all, the function will
+        deal with it smoothly.
 
     :param context: should be a dictionary. It is applied on the email
         templates and the subject.
@@ -233,7 +238,16 @@ def send_mail_html_from_template(template, subject, recipients,
         'STATIC_URL': settings.STATIC_URL
     })
 
-    prefix = getattr(settings, "EMAIL_SUBJECT_PREFIX", None)
+    for extension, size in (('.html', 5), ('.txt', 4)):
+        if template.endswith(extension):
+            template = template[:-size]
+
+    prefix = getattr(settings, 'EMAIL_SUBJECT_PREFIX', None)
+
+    # We are sending "public" mails to users here,
+    # Don't be so technical, don't expose gory details.
+    if prefix == u'[Django] ':
+        prefix = None
 
     if prefix is not None:
         subject = u'[{0}] {1}'.format(prefix, subject)
