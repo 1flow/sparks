@@ -219,6 +219,9 @@ def send_mail_html_from_template(template, subject, recipients,
 
         return handler(msg, html_part)
 
+    if context is None:
+        context = {}
+
     if sender is None:
         sender = settings.DEFAULT_FROM_EMAIL
 
