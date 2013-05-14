@@ -13,6 +13,7 @@
 """
 
 import os
+import re
 import urlparse
 import logging
 
@@ -102,10 +103,13 @@ def image_match_tag(tag):
     """ BeautifulSoup4 helper. """
 
     #LOGGER.debug('name: %s, bg: %s, tag: %s', tag.name,
-    #             u'background' in tag.attrs, tag if tag.name in (u'table', u'td') else u'—')
+    #             u'background' in tag.attrs, tag if tag.name
+    #               in (u'table', u'td') else u'—')
 
     return (tag.name == u'img'
-            or tag.name in (u'table', u'td') and u'background' in tag.attrs)
+            or (tag.name in (u'table', u'td') and u'background' in tag.attrs)
+            or (tag.name in (u'body', u'div') and u'style' in tag.attrs
+            and u'url' in tag['style']))
 
 
 def handle_embedded_images(msg, html_part):
@@ -164,17 +168,33 @@ def handle_external_images(msg, html_part):
 
     soup = BeautifulSoup(html_part, 'html.parser')
 
-    for index, tag in enumerate(soup.findAll(image_match_tag)):
-        if tag.name == u'img':
-            attribute = u'src'
-        else:
-            attribute = u'background'
+    # Don't do the work twice if our STATIC_ROOT is already CDN'ed.
+    if not settings.STATIC_ROOT.startswith('http'):
+        for index, tag in enumerate(soup.findAll(image_match_tag)):
+            if tag.name == u'img':
+                attribute = u'src'
 
-        url = tag[attribute]
+            elif tag.name in (u'table', u'td', ):
+                attribute = u'background'
 
-        if not url.startswith("http://"):
-            url = urlparse.urljoin("http://" + settings.SITE_DOMAIN, url)
-            tag[attribute] = url
+            else:
+                attribute = u'style'
+
+            if attribute == u'style':
+                # WARNING: this part is quite weak…
+                tag[attribute] = re.sub('url\({0}'.format(settings.STATIC_URL),
+                                        'url(http://{0}{1}'.format(
+                                            settings.SITE_DOMAIN,
+                                            settings.STATIC_URL),
+                                        tag[attribute])
+
+            else:
+                url = tag[attribute]
+
+                if not url.startswith("http://"):
+                    url = urlparse.urljoin("http://"
+                                           + settings.SITE_DOMAIN, url)
+                    tag[attribute] = url
 
     html_part = str(soup)
     msg.attach_alternative(html_part, "text/html")
