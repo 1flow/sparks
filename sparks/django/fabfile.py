@@ -174,7 +174,10 @@ def new_fixture_filename(app_model):
     if not os.path.exists(fixtures_dir):
         os.makedirs(fixtures_dir)
 
-    new_fixture_base = os.path.join(fixtures_dir, '{0}{1}.{2}'.format(app,
+    # WARNING: no dot '.' in fixtures names, else Django fails to install it.
+    # 20130514: CommandError: Problem installing fixture 'landing':
+    # 2013-05-14_0001 is not a known serialization format.
+    new_fixture_base = os.path.join(fixtures_dir, '{0}{1}_{2}'.format(app,
                                     '' if model is None else ('.' + model),
                                     datetime.date.today().isoformat()))
 
