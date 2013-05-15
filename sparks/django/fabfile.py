@@ -776,22 +776,26 @@ def runable(fast=False, upgrade=False):
     """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
 
     if not is_local_environment():
+
         if not fast:
             init_environment()
 
         git_update()
 
         if not is_production_environment():
+            # fast or not, we must catch this one to
+            # avoid source repository desynchronization.
             push_translations()
 
         git_pull()
 
-    if not fast:
-        requirements(upgrade=upgrade)
-        createdb()
-        syncdb()
-        migrate()
+    requirements(upgrade=upgrade)
 
+    if not fast:
+        createdb()
+
+    syncdb()
+    migrate()
     compilemessages()
 
     if not is_local_environment():
@@ -807,17 +811,12 @@ def fast_deploy():
     deploy(fast=True)
 
 
-@task(default=True)
+@task(default=True, aliases=('fulldeploy', 'full_deploy', ))
 def deploy(fast=False, upgrade=False):
     """ Pull code, ensure runable, restart services. """
 
     if not fast:
         install_components(upgrade=upgrade)
-
-    if fast and is_production_environment():
-        print('Refusing to fast deploy production. '
-              'Running a standard deploy instead.')
-        fast = False
 
     runable(fast=fast, upgrade=upgrade)
 
