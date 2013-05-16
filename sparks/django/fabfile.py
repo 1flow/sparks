@@ -74,6 +74,7 @@ def install_components(remote_configuration=None, upgrade=False):
     """
 
     fabfile.dev()
+    fabfile.dev_django_full()
 
     # OSX == test environment == no nginx/supervisor/etc
     if remote_configuration.is_osx:
@@ -210,16 +211,17 @@ def init_environment():
 
 
 @task(alias='req')
-def requirements(upgrade=False):
-    """ Install PIP requirements (and dev-requirements). """
+def requirements(fast=False, upgrade=False):
+    """ Install PIP requirements (and dev-requirements).
+
+        .. note:: :param:`fast` is not used yet, but exists for consistency
+            with other fab tasks which handle it.
+    """
 
     if upgrade:
         command = 'pip install -U'
     else:
         command = 'pip install'
-
-    fabfile.dev()
-    fabfile.dev_django_full()
 
     with cd(env.root):
         with activate_venv():
@@ -789,7 +791,7 @@ def runable(fast=False, upgrade=False):
 
         git_pull()
 
-    requirements(upgrade=upgrade)
+    requirements(fast=fast, upgrade=upgrade)
 
     if not fast:
         createdb()
