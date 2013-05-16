@@ -210,8 +210,12 @@ def init_environment():
 
 
 @task(alias='req')
-def requirements(upgrade=False):
-    """ Install PIP requirements (and dev-requirements). """
+def requirements(fast=False, upgrade=False):
+    """ Install PIP requirements (and dev-requirements).
+
+        .. note:: :param:`fast` is not used yet, but exists for consistency
+            with other fab tasks which handle it.
+    """
 
     if upgrade:
         command = 'pip install -U'
@@ -789,7 +793,7 @@ def runable(fast=False, upgrade=False):
 
         git_pull()
 
-    requirements(upgrade=upgrade)
+    requirements(fast=fast, upgrade=upgrade)
 
     if not fast:
         createdb()
