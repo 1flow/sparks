@@ -74,6 +74,7 @@ def install_components(remote_configuration=None, upgrade=False):
     """
 
     fabfile.dev()
+    fabfile.dev_django_full()
 
     # OSX == test environment == no nginx/supervisor/etc
     if remote_configuration.is_osx:
@@ -221,9 +222,6 @@ def requirements(fast=False, upgrade=False):
         command = 'pip install -U'
     else:
         command = 'pip install'
-
-    fabfile.dev()
-    fabfile.dev_django_full()
 
     with cd(env.root):
         with activate_venv():
