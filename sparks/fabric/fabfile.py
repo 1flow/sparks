@@ -305,6 +305,28 @@ def sys_ssh_powerline(remote_configuration=None):
             sudo(reload_ssh)
 
 
+@task
+@with_remote_configuration
+def sys_mongodb(remote_configuration=None):
+    """ Install the MongoDB APT repository if on Ubuntu and 12.04. """
+
+    if remote_configuration.lsb.ID.lower() == 'ubuntu':
+        if remote_configuration.lsb.RELEASE == '12.04':
+            if not exists('/etc/apt/sources.list.d/10gen.list'):
+                sudo('apt-key adv --keyserver keyserver.ubuntu.com '
+                     '--recv 7F0CEB10')
+                append('/etc/apt/sources.list.d/10gen.list',
+                       'deb http://downloads-distro.mongodb.org/'
+                       'repo/ubuntu-upstart dist 10gen', use_sudo=True)
+                pkg.apt_update()
+        else:
+            print('MongoDB install not implemented on anything else than '
+                  '12.04. Please submit a patch.')
+    else:
+        print('MongoDB install not implemented on anything else than '
+              'Ubuntu. Please submit a patch.')
+
+
 @task(aliases=('lperms', ))
 @with_remote_configuration
 def local_perms(remote_configuration=None):
@@ -476,6 +498,19 @@ def dev_postgresql(remote_configuration=None):
 
 @task
 @with_remote_configuration
+def dev_mongodb(remote_configuration=None):
+    """ MongoDB development environment (for python packages build). """
+
+    if not remote_configuration.is_osx:
+        sys_mongodb()
+        #pkg.pkg_add(('mongodb-10gen-dev', ))
+
+    # pkg.pip2_add(('psycopg2', ))
+    pass
+
+
+@task
+@with_remote_configuration
 def dev_mini(remote_configuration=None):
     """ Git and ~/sources/ """
 
@@ -521,15 +556,20 @@ def dev_web(remote_configuration=None):
     if remote_configuration.is_osx:
         pkg.pkg_add(('npm', ))
 
-    pkg.npm_add(('less', 'yo',
+    pkg.npm_add(('coffee-script',       # used everywhere ;-)
+                 'yuglify',             # used in Django-pipeline
+                 #'less',
+                 #'yo',
 
-                # Not yet ready (package throws exceptions on install)
-                #'yeoman-bootstrap',
+                 'bower', 'grunt-cli',
 
-                'bower', 'grunt-cli',
-                'generator-angular',
-                'coffeescript-compiler', 'coffeescript-concat',
-                'coffeescript_compiler_tools'))
+                 # Not yet ready (package throws exceptions on install)
+                 #'yeoman-bootstrap',
+
+                 #'coffeescript-compiler',
+                 #'coffeescript-concat',
+                 #'coffeescript_compiler_tools',
+                 ))
 
     pkg.gem_add(('compass', ))
 
@@ -636,6 +676,28 @@ def db_postgresql(remote_configuration=None):
     dev_postgresql()
 
     LOGGER.warning('You still have to tweak pg_hba.conf yourself.')
+
+
+@task(aliases=('db_mongo', ))
+@with_remote_configuration
+def db_mongodb(remote_configuration=None):
+    """ MongoDB database server. """
+
+    if remote_configuration.is_osx:
+        if pkg.brew_add(('mongodb', )):
+            run('ln -sfv /usr/local/opt/mongodb/*.plist ~/Library/LaunchAgents')
+            run('launchctl load '
+                '~/Library/LaunchAgents/homebrew.*.mongodb.plist')
+
+    else:
+        sys_mongodb()
+        pkg.apt_add('mongodb-10gen')
+
+    dev_mongodb()
+
+    LOGGER.warning('You still have to tweak mongodb.conf yourself '
+                   '(eg. `bind_ip=…`).')
+
 
 # -------------------------------------- Server or console applications
 

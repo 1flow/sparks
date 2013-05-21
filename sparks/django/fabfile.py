@@ -128,6 +128,14 @@ def sparks_djsettings_env_var():
         env.sparks_djsettings) if hasattr(env, 'sparks_djsettings') else ''
 
 
+def django_settings_env_var():
+
+    # The trailing space is intentional. Callers expect us to have inserted
+    # it if we setup the shell environment variable.
+    return 'DJANGO_SETTINGS_MODULE={0}.settings '.format(
+        env.project) if hasattr(env, 'project') else ''
+
+
 def get_all_fixtures(order_by=None):
     """ Find all fixtures files in the current project, eg. files whose name
         ends with ``.json`` and which are located in any `fixtures/` directory.
@@ -234,7 +242,10 @@ def requirements(fast=False, upgrade=False):
                                            'dev-requirements.txt')
                     #TODO: "put" it there !!
 
-                run("{command} --requirement {requirements_file}".format(
+                run("{sparks_env}{django_env}{command} "
+                    "--requirement {requirements_file}".format(
+                    sparks_env=sparks_djsettings_env_var(),
+                    django_env=django_settings_env_var(),
                     command=command, requirements_file=dev_req))
 
             req = os.path.join(env.root, env.requirements_file)
@@ -245,7 +256,10 @@ def requirements(fast=False, upgrade=False):
                                    'requirements.txt')
                 #TODO: "put" it on the remote side !!
 
-            run("{command} --requirement {requirements_file}".format(
+            run("{sparks_env}{django_env}{command} "
+                "--requirement {requirements_file}".format(
+                sparks_env=sparks_djsettings_env_var(),
+                django_env=django_settings_env_var(),
                 command=command, requirements_file=req))
 
 
@@ -379,8 +393,7 @@ def supervisor_add_environment(context, has_djsettings):
     env_vars = []
 
     if has_djsettings:
-        env_vars.append('SPARKS_DJANGO_SETTINGS={0}'.format(
-                        env.sparks_djsettings))
+        env_vars.append(sparks_djsettings_env_var().strip())
 
     if hasattr(env, 'environment_vars'):
             env_vars.extend(env.environment_vars)
