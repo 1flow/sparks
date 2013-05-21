@@ -521,15 +521,20 @@ def dev_web(remote_configuration=None):
     if remote_configuration.is_osx:
         pkg.pkg_add(('npm', ))
 
-    pkg.npm_add(('less', 'yo',
+    pkg.npm_add(('coffee-script',       # used everywhere ;-)
+                 'yuglify',             # used in Django-pipeline
+                 #'less',
+                 #'yo',
 
-                # Not yet ready (package throws exceptions on install)
-                #'yeoman-bootstrap',
+                 'bower', 'grunt-cli',
 
-                'bower', 'grunt-cli',
-                'generator-angular',
-                'coffeescript-compiler', 'coffeescript-concat',
-                'coffeescript_compiler_tools'))
+                 # Not yet ready (package throws exceptions on install)
+                 #'yeoman-bootstrap',
+
+                 #'coffeescript-compiler',
+                 #'coffeescript-concat',
+                 #'coffeescript_compiler_tools',
+                 ))
 
     pkg.gem_add(('compass', ))
 
