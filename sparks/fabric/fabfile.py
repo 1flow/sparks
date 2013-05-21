@@ -503,7 +503,7 @@ def dev_mongodb(remote_configuration=None):
 
     if not remote_configuration.is_osx:
         sys_mongodb()
-        pkg.pkg_add(('mongodb-10gen-dev', ))
+        #pkg.pkg_add(('mongodb-10gen-dev', ))
 
     # pkg.pip2_add(('psycopg2', ))
     pass
@@ -695,7 +695,8 @@ def db_mongodb(remote_configuration=None):
 
     dev_mongodb()
 
-    LOGGER.warning('You still have to tweak configuration yourself.')
+    LOGGER.warning('You still have to tweak mongodb.conf yourself '
+                   '(eg. `bind_ip=…`).')
 
 
 # -------------------------------------- Server or console applications
