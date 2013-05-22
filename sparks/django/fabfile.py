@@ -754,13 +754,13 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
 
     if djsettings is not None:
         db_setting = djsettings.DATABASES['default']
-        db_host    = db_setting.get('HOST', '')
-        db_port    = db_setting.get('PORT', '')
+        db_host    = db_setting.get('HOST', None)
+        db_port    = db_setting.get('PORT', None)
 
-        if db_host != '':
+        if db_host is not None:
             pg_env.append('PGHOST={0}'.format(db_host))
 
-        if db_port != '':
+        if db_port is not None:
             pg_env.append('PGPORT={0}'.format(db_port))
 
     # flatten the list
