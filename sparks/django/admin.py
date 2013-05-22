@@ -2,11 +2,20 @@
 """
     Sparks helpers, functions and classes for the Django admin.
 
+    .. note:: this module will need to import django settings.
+        Make sure it is available and set before importing.
+
     .. versionadded:: 1.17
 """
 
+from django.conf import settings
+
 
 DEFAULT_TRUNCATE_LENGTH = 50
+
+languages = settings.TRANSMETA_LANGUAGES \
+        if hasattr(settings, 'TRANSMETA_LANGUAGES') \
+        else settings.LANGUAGES
 
 
 def truncate_field(cls, field_name, truncate_length=None):
