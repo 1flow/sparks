@@ -47,6 +47,10 @@ def apt_del(pkgs):
 
 
 def ppa(src):
+
+    # This package contains `add-apt-repository`…
+    apt_add(('python-software-properties', ))
+
     sudo('add-apt-repository -y "%s"' % src)
     apt_update()
 
