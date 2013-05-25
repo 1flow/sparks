@@ -587,7 +587,7 @@ def django_manage(command, prefix=None, **kwargs):
 
     with activate_venv():
         with cd(env.root):
-            return run('{0}{1}./manage.py {2} --verbosity 2 --traceback'.format(
+            return run('{0}{1}./manage.py {2} --verbosity 1 --traceback'.format(
                        prefix, sparks_djsettings_env_var(), command), **kwargs)
 
 
