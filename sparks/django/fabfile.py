@@ -587,7 +587,7 @@ def django_manage(command, prefix=None, **kwargs):
 
     with activate_venv():
         with cd(env.root):
-            return run('{0}{1}./manage.py {2} --verbosity 2 --traceback'.format(
+            return run('{0}{1}./manage.py {2} --verbosity 1 --traceback'.format(
                        prefix, sparks_djsettings_env_var(), command), **kwargs)
 
 
@@ -672,8 +672,15 @@ def migrate(remote_configuration=None, args=None):
 
 
 @task(task_class=DjangoTask, alias='static')
-def collectstatic():
-    """ Run the Django collectstatic management command. """
+@with_remote_configuration
+def collectstatic(remote_configuration=None, fast=True):
+    """ Run the Django collectstatic management command. If :param:`fast`
+        is ``False``, the ``STATIC_ROOT`` will be erased first. """
+
+    if not fast:
+        with cd(env.root):
+            run('rm -rf "{0}"'.format(
+                remote_configuration.django_settings.STATIC_ROOT))
 
     django_manage('collectstatic --noinput')
 
@@ -837,7 +844,7 @@ def runable(fast=False, upgrade=False):
     if not is_local_environment():
         # In debug mode, Django handles the static contents via a dedicated
         # view. We don't need to create/refresh/maintain the global static/ dir.
-        collectstatic()
+        collectstatic(fast=fast)
 
 
 @task(aliases=('fast', 'fastdeploy', ))
