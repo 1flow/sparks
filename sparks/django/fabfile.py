@@ -725,6 +725,26 @@ def getdata(app_model, filename=None):
 # ••••••••••••••••••••••••••••••••••••••••••••••••••••••• Deployment meta-tasks
 
 
+@task(aliases=('maintenance', 'maint', ))
+def maintenance_mode(fast=True):
+    """ Trigger maintenance mode (and restart services). """
+
+    with cd(env.root):
+        run('touch MAINTENANCE_MODE')
+
+    restart_services(fast=fast)
+
+
+@task(aliases=('operational', 'op', 'normal', 'resume', 'run', ))
+def operational_mode(fast=True):
+    """ Get out of maintenance mode (and restart services). """
+
+    with cd(env.root):
+        run('rm -f MAINTENANCE_MODE')
+
+    restart_services(fast=fast)
+
+
 @task(task_class=DjangoTask)
 @with_remote_configuration
 def createdb(remote_configuration=None, db=None, user=None, password=None,
