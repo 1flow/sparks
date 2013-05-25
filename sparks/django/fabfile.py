@@ -726,28 +726,20 @@ def getdata(app_model, filename=None):
 
 
 @task(aliases=('maintenance', 'maint', ))
-@with_remote_configuration
-def maintenance_mode(remote_configuration=None, fast=True):
+def maintenance_mode(fast=True):
     """ Trigger maintenance mode (and restart services). """
 
-    djsettings = getattr(remote_configuration, 'django_settings', None)
-
-    print ('>> %s' % djsettings.BASE_ROOT)
-
-    with cd(djsettings.BASE_ROOT):
+    with cd(env.root):
         run('touch MAINTENANCE_MODE')
 
     restart_services(fast=fast)
 
 
 @task(aliases=('operational', 'op', 'normal', 'resume', 'run', ))
-@with_remote_configuration
-def operational_mode(remote_configuration=None, fast=True):
+def operational_mode(fast=True):
     """ Get out of maintenance mode (and restart services). """
 
-    djsettings = getattr(remote_configuration, 'django_settings', None)
-
-    with cd(djsettings.BASE_ROOT):
+    with cd(env.root):
         run('rm -f MAINTENANCE_MODE')
 
     restart_services(fast=fast)
