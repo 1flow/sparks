@@ -732,6 +732,8 @@ def maintenance_mode(remote_configuration=None, fast=True):
 
     djsettings = getattr(remote_configuration, 'django_settings', None)
 
+    print ('>> %s' % djsettings.BASE_ROOT)
+
     with cd(djsettings.BASE_ROOT):
         run('touch MAINTENANCE_MODE')
 
