@@ -5,6 +5,9 @@
 """
 
 import sys
+import logging
+
+LOGGER = logging.getLogger(__name__)
 
 
 def create_admin_user(email=None, password=None):
@@ -13,9 +16,10 @@ def create_admin_user(email=None, password=None):
     # cf. http://stackoverflow.com/a/13466241/654755
     for arg in sys.argv:
         if arg.lower() == 'syncdb':
-            print 'syncdb post process…'
-            from django.contrib.auth.models import User
+            LOGGER.info('sparks syncdb post process…')
+            from django.contrib.auth import get_user_model
             from django.conf import settings
+            from django.db import IntegrityError
 
             admin_id       = 'admin'
             admin_email    = email or 'contact@oliviercortes.com'
@@ -23,10 +27,17 @@ def create_admin_user(email=None, password=None):
                                           if settings.DEBUG
                                           else '-change_me_now+')
 
-            try:
-                User.objects.get(username=admin_id)
+            User = get_user_model()
 
-            except:
-                User.objects.create_superuser(admin_id,
-                                              admin_email,
-                                              admin_password)
+            try:
+                user = User.objects.create_superuser(username=admin_id,
+                                                     email=admin_email,
+                                                     password=admin_password)
+                LOGGER.info('Created superuser %s.', user)
+
+            except IntegrityError, e:
+                # NOTE: do not use e.message:
+                # DeprecationWarning: BaseException.message
+                # has been deprecated as of Python 2.6
+                if not 'duplicate key' in e.args[0]:
+                    raise
