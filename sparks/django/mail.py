@@ -205,7 +205,7 @@ def handle_external_images(msg, html_part):
 def send_mail_html_from_template(template, subject, recipients,
                                  sender=None, context=None,
                                  fail_silently=False, force_lang=None,
-                                 parallel=True):
+                                 parallel=True, **kwargs):
     """
     This function will send a multi-part e-mail with both HTML and
     Text parts.
@@ -291,7 +291,7 @@ def send_mail_html_from_template(template, subject, recipients,
     attach_html_and_images(msg, html_part)
 
     if parallel:
-        BatcherThread(target=msg.send, args=(fail_silently, )).start()
+        BatcherThread(target=msg.send, args=(fail_silently, ), **kwargs).start()
         retval = True
 
     else:
