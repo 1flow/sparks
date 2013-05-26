@@ -79,13 +79,16 @@ def install_components(remote_configuration=None, upgrade=False):
 
     # OSX == test environment == no nginx/supervisor/etc
     if remote_configuration.is_osx:
-        brew.brew_add(('redis', 'memcached', 'libmemcached', ))
+        brew.brew_add(('redis', 'memcached', 'libmemcached', 'rabbitmq', ))
 
         run('ln -sfv /usr/local/opt/redis/*.plist ~/Library/LaunchAgents')
         run('launchctl load ~/Library/LaunchAgents/homebrew.*.redis.plist')
 
         run('ln -sfv /usr/local/opt/memcached/*.plist ~/Library/LaunchAgents')
         run('launchctl load ~/Library/LaunchAgents/homebrew.*.memcached.plist')
+
+        run('ln -sfv /usr/local/opt/rabbitmq/*.plist ~/Library/LaunchAgents')
+        run('launchctl load ~/Library/LaunchAgents/homebrew.*.rabbitmq.plist')
 
         print('NO WEB-SERVER installed, assuming this is a dev machine.')
 
@@ -818,6 +821,9 @@ def restart_services(fast=False):
 def runable(fast=False, upgrade=False):
     """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
 
+    if not fast:
+        install_components(upgrade=upgrade)
+
     if not is_local_environment():
 
         if not fast:
@@ -857,9 +863,6 @@ def fast_deploy():
 @task(default=True, aliases=('fulldeploy', 'full_deploy', ))
 def deploy(fast=False, upgrade=False):
     """ Pull code, ensure runable, restart services. """
-
-    if not fast:
-        install_components(upgrade=upgrade)
 
     runable(fast=fast, upgrade=upgrade)
 
