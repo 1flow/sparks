@@ -54,7 +54,7 @@ def send_mail_html(*a, **kw):
 
     """
 
-    parallel         = kw.pop('parallel', True)
+    parallel         = kw.pop('parallel', False)
     attachments      = kw.pop('attachments', ())
     file_attachments = kw.pop('file_attachments', ())
 
@@ -69,7 +69,11 @@ def send_mail_html(*a, **kw):
     for file_attachment in file_attachments:
         mesg.attach_file(*file_attachment)
 
-    BatcherThread(mesg.send, parallel=parallel).start()
+    if parallel:
+        BatcherThread(mesg.send, parallel=True).start()
+
+    else:
+        mesg.send()
 
 
 def send_mail(*args, **kwargs):
@@ -79,9 +83,14 @@ def send_mail(*args, **kwargs):
         .. versionadded:: 1.17
     """
 
-    parallel = kwargs.pop('parallel', True)
-    BatcherThread(django_send_mail, args=args, kwargs=kwargs,
-                  parallel=parallel).start()
+    parallel = kwargs.pop('parallel', False)
+
+    if parallel:
+        BatcherThread(django_send_mail, args=args, kwargs=kwargs,
+                      parallel=True).start()
+
+    else:
+        django_send_mail(*args, **kwargs)
 
 
 def mail_admins(*args, **kwargs):
@@ -91,11 +100,14 @@ def mail_admins(*args, **kwargs):
         .. versionadded:: 1.17
     """
 
-    parallel = kwargs.pop('parallel', True)
-    BatcherThread(django_mail_admins, args=args, kwargs=kwargs,
-                  parallel=parallel).start()
+    parallel = kwargs.pop('parallel', False)
 
+    if parallel:
+        BatcherThread(django_mail_admins, args=args, kwargs=kwargs,
+                      parallel=True).start()
 
+    else:
+        django_mail_admins(*args, **kwargs)
 # •••••••••••••••••••••••••••••••••••••••••••••••••••• HTML Mail with templates
 
 
@@ -205,7 +217,7 @@ def handle_external_images(msg, html_part):
 def send_mail_html_from_template(template, subject, recipients,
                                  sender=None, context=None,
                                  fail_silently=False, force_lang=None,
-                                 parallel=True):
+                                 parallel=False, **kwargs):
     """
     This function will send a multi-part e-mail with both HTML and
     Text parts.
@@ -226,12 +238,15 @@ def send_mail_html_from_template(template, subject, recipients,
     :param sender: unicode string (eg. 'Name <email>') or ``None``. In this
         case Django's ``DEFAULT_FROM_EMAIL`` setting will be used.
 
-    :param parallel: Defaults to ``True``, in which case the sending will
+    :param parallel: Defaults to ``False``. If ``True``, the sending will
         be done in a parallel thread. In this situation, the return value
         will always be ``True`` because we have no way to known if the
         sending really succeeded or not. If not parallel, this function
         will return the real return value from the ``msg.send()`` method,
         but the operation can block in some situations.
+
+    .. note:: you should use parallel when you do not use a task system
+        like celery or RQ.
 
     """
 
@@ -291,7 +306,7 @@ def send_mail_html_from_template(template, subject, recipients,
     attach_html_and_images(msg, html_part)
 
     if parallel:
-        BatcherThread(target=msg.send, args=(fail_silently, )).start()
+        BatcherThread(target=msg.send, args=(fail_silently, ), **kwargs).start()
         retval = True
 
     else:

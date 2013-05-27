@@ -1,7 +1,7 @@
 # -*- coding: utf8 -*-
 
 import logging
-from threading import Thread
+from threading import Thread, Timer
 
 LOGGER = logging.getLogger(__name__)
 
@@ -53,6 +53,7 @@ class BatcherThread(Thread):
 
     def __init__(self, target, *a, **kw):
         self.parallel = kw.pop('parallel', False)
+        self.delay = kw.pop('delay', None)
         super(BatcherThread, self).__init__(target=target, *a, **kw)
         self.__class__.threads.append(self)
 
@@ -61,5 +62,13 @@ class BatcherThread(Thread):
             eg. writing ``t = BatcherThread(target…).start()`` is sufficient.
         """
 
-        super(BatcherThread, self).start()
+        mysuper_start = super(BatcherThread, self).start
+
+        if self.delay is None:
+            mysuper_start()
+
+        else:
+            t = Timer(self.delay, mysuper_start)
+            t.start()
+
         return self
