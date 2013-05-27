@@ -85,7 +85,21 @@ LOGGER = logging.getLogger(__name__)
 remote_configuration = None
 local_configuration  = None
 
+
 # =================================================== Remote system information
+
+
+def get_current_role():
+    """ Thanks http://stackoverflow.com/a/9673778/654755 """
+
+    host  = env.host_string
+    roles = env.roledefs
+
+    for role in roles:
+        if host in roles[role]:
+            return role
+
+    return None
 
 
 def is_localhost(hostname):
