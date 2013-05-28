@@ -609,7 +609,7 @@ def dev(remote_configuration=None):
 
     dev_mini()
 
-    LOGGER.info('Checking dev() targets…')
+    LOGGER.info('Checking dev():base targets…')
 
     if remote_configuration.is_osx:
         # On OSX:
@@ -627,6 +627,8 @@ def dev(remote_configuration=None):
 
         # Remove eventually DEB installed old packages (see just after).
         pkg.apt_del(('python-virtualenv', 'virtualenvwrapper', ))
+
+    LOGGER.info('Checking dev():python targets…')
 
     # Add them from PIP, to have latest
     # version which handles python 3.3 gracefully.
