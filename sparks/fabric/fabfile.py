@@ -7,6 +7,7 @@ import logging
 from fabric.api              import env, run, sudo, local, task
 from fabric.operations       import get, put
 from fabric.contrib.console  import confirm
+from fabric.decorators       import runs_once
 from fabric.contrib.files    import contains, append, exists, sed
 from fabric.context_managers import cd, settings, hide
 from fabric.colors           import yellow, cyan
@@ -160,7 +161,7 @@ def install_1password(remote_configuration=None):
 
 @with_remote_configuration
 def install_powerline(remote_configuration=None):
-    """ Install the Ubuntu Mono patched font and powerline (runs dev_mini). """
+    """ Install the Ubuntu Mono patched font and powerline. """
 
     if remote_configuration.is_osx:
         if not exists(tilde('Library/Fonts/UbuntuMono-B-Powerline.ttf')):
@@ -195,6 +196,8 @@ def test(remote_configuration=None):
 @with_remote_configuration
 def sys_easy_sudo(remote_configuration=None):
     """ Allow sudo to run without password for @sudo members. """
+
+    LOGGER.info('Checking sys_easy_sudo() components…')
 
     if remote_configuration.is_osx:
         # GNU sed is needed for fabric `sed` command to succeed.
@@ -252,6 +255,8 @@ def sys_del_useless(remote_configuration=None):
 
     if remote_configuration.is_osx:
         return
+
+    LOGGER.info('Checking sys_del_useless() components…')
 
     pkg.apt_del(('apport', 'python-apport',
                 'landscape-client-ui-install', 'gnome-orca',
@@ -340,16 +345,18 @@ def local_perms(remote_configuration=None):
 @with_remote_configuration
 def replicate_acls(remote_configuration=None,
                    origin=None, path=None, apply=False):
-    """ Replicate locally the ACLs and Unix permissions of a given path.
+    """ Replicate locally the ACLs and Unix permissions of a given path on
+        a remote machine. When everything is borked locally, and you have
+        a remote clone in a good health, this is handy.
 
         This helps correcting strange permissions errors from a well-known
         good machine.
 
         Usage:
 
-            fabl acls:origin=10.0.3.37,path=/bin
+            fab … acls:origin=10.0.3.37,path=/bin
             # Then:
-            fabl acls:origin=10.0.3.37,path=/bin,apply=True
+            fab … acls:origin=10.0.3.37,path=/bin,apply=True
     """
 
     if origin is None or path is None:
@@ -490,6 +497,8 @@ def dev_mysql(remote_configuration=None):
 def dev_postgresql(remote_configuration=None):
     """ PostgreSQL development environment (for python packages build). """
 
+    LOGGER.info('Checking dev_postgresql() components…')
+
     if not remote_configuration.is_osx:
         pkg.pkg_add(('postgresql-client-9.1', 'postgresql-server-dev-9.1', ))
 
@@ -501,6 +510,8 @@ def dev_postgresql(remote_configuration=None):
 def dev_mongodb(remote_configuration=None):
     """ MongoDB development environment (for python packages build). """
 
+    LOGGER.info('Checking dev_mongodb() components…')
+
     if not remote_configuration.is_osx:
         sys_mongodb()
         #pkg.pkg_add(('mongodb-10gen-dev', ))
@@ -510,9 +521,16 @@ def dev_mongodb(remote_configuration=None):
 
 
 @task
+@runs_once
 @with_remote_configuration
 def dev_mini(remote_configuration=None):
-    """ Git and ~/sources/ """
+    """ Git and ~/sources/
+
+        .. todo:: use the ``@runs_once`` decorator
+            when it works with parallel execution.
+    """
+
+    LOGGER.info('Checking dev_mini() components…')
 
     pkg.pkg_add(('git' if remote_configuration.is_osx else 'git-core'))
 
@@ -524,6 +542,8 @@ def dev_mini(remote_configuration=None):
 def dev_django_full(remote_configuration=None):
     """ Django full stack system packages (for python packages build). """
 
+    LOGGER.info('Checking dev_django_full() components…')
+
     dev_postgresql()
     dev_memcache()
 
@@ -532,6 +552,8 @@ def dev_django_full(remote_configuration=None):
 @with_remote_configuration
 def dev_memcache(remote_configuration=None):
     """ Memcache development environment (for python packages build). """
+
+    LOGGER.info('Checking dev_memcache() components…')
 
     if not remote_configuration.is_osx:
         pkg.pkg_add(('libmemcached-dev', ))
@@ -544,15 +566,20 @@ def dev_web(remote_configuration=None):
 
     dev_mini()
 
+    LOGGER.info('Checking dev_web() components…')
+
     if not remote_configuration.is_osx:
-        # Because of http://stackoverflow.com/q/7214474/654755
-        pkg.apt.ppa('ppa:chris-lea/node.js')
+        if remote_configuration.lsb.RELEASE == '12.04':
+            if not exists('/etc/apt/sources.list.d/'
+                          'chris-lea-node_js-precise.list'):
+                # Because of http://stackoverflow.com/q/7214474/654755
+                pkg.apt.ppa('ppa:chris-lea/node.js')
 
     # NOTE: nodejs` PPA version already includes `npm`,
     # no need to install it via a separate package on Ubuntu.
     pkg.pkg_add(('nodejs', ))
 
-    # But on others, we need.
+    # But on OSX, we need NPM too.
     if remote_configuration.is_osx:
         pkg.pkg_add(('npm', ))
 
@@ -585,6 +612,8 @@ def dev(remote_configuration=None):
 
     dev_mini()
 
+    LOGGER.info('Checking dev():base components…')
+
     if remote_configuration.is_osx:
         # On OSX:
         #    - ruby & gem are already installed.
@@ -601,6 +630,8 @@ def dev(remote_configuration=None):
 
         # Remove eventually DEB installed old packages (see just after).
         pkg.apt_del(('python-virtualenv', 'virtualenvwrapper', ))
+
+    LOGGER.info('Checking dev():python components…')
 
     # Add them from PIP, to have latest
     # version which handles python 3.3 gracefully.
@@ -711,9 +742,13 @@ def db_mongodb(remote_configuration=None):
 def base(remote_configuration=None):
     """ sys_* + brew (on OSX) + byobu, bash-completion, htop. """
 
+    LOGGER.info('Checking base() components…')
+
     sys_easy_sudo()
 
     install_homebrew()
+
+    pkg.pkg_update()
 
     sys_unattended()
     sys_del_useless()
@@ -731,11 +766,9 @@ def deployment(remote_configuration=None):
     """ Install Fabric (via PIP for latest paramiko). """
 
     # We remove the system packages in case they were previously
-    # installed, because PIP's versions are more recent.
+    # installed, because PIP's versions are nearly always more recent.
     # Paramiko <1.8 doesn't handle SSH agent correctly and we need it.
     pkg.pkg_del(('fabric', 'python-paramiko', ))
-
-    pkg.pkg_add(('dsh', ))
 
     if not remote_configuration.is_osx:
         pkg.pkg_add(('python-all-dev', ))
@@ -1016,8 +1049,6 @@ def lxc_base(remote_configuration=None):
         return
 
     base()
-
-    pkg.apt_update()
 
     # install the locale before everything, else DPKG borks.
     pkg.apt_add(('language-pack-fr', 'language-pack-en', ))

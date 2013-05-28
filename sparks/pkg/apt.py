@@ -25,7 +25,7 @@ def apt_is_installed(pkg):
 def apt_update():
     """ Update APT packages list. """
 
-    sudo('apt-get update -q')
+    sudo('apt-get -qq update')
 
 
 def apt_upgrade():

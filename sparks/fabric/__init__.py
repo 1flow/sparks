@@ -85,7 +85,81 @@ LOGGER = logging.getLogger(__name__)
 remote_configuration = None
 local_configuration  = None
 
+
 # =================================================== Remote system information
+
+
+def get_current_role():
+    """ Thanks http://stackoverflow.com/a/9673778/654755 """
+
+    host  = env.host_string
+    roles = env.roledefs
+
+    for role in roles:
+        if host in roles[role]:
+            return role
+
+    return None
+
+
+def merge_roles_hosts():
+    """ Get an axhaustive list of all machines listed
+        in the current ``env.roledefs``. """
+
+    merged = []
+
+    for role in env.roledefs:
+        merged.extend(env.roledefs[role])
+
+    return merged
+
+
+def set_roledefs_and_hosts(roledefs, parallel=False):
+    """ Just a shortcut to avoid doing the repetitive:
+
+        env.roledefs = { … }
+        env.hosts = merge_roles_hosts()
+
+        In every project fabfile.
+
+        Feel free to set :param:`parallel` to True, or any integer >= 1
+        to enable the parallel mode. If set to ``True``, the function will
+        count merged hosts and set parallel to this number. It defaults
+        to ``False`` (no parallel execution).
+
+        .. note:: the pool size is always clamped to 10 hosts to avoid making
+            your machine and network suffer. If you ever would like to raise
+            this maximum value, just set your shell environment
+            variable ``SPARKS_PARALLEL_MAX`` to any integer value you want,
+            and don't ever rant.
+    """
+
+    maximum = int(os.environ.get('SPARKS_PARALLEL_MAX', 10))
+
+    if maximum < 2:
+        maximum = 10
+
+    env.roledefs = roledefs
+
+    if not env.hosts:
+        env.hosts = merge_roles_hosts()
+
+    if parallel is True:
+        env.parallel = True
+        nbhosts = len(set(env.hosts))
+        env.pool_size = maximum if nbhosts > maximum else nbhosts
+
+    else:
+        try:
+            parallel = int(parallel)
+
+        except:
+            pass
+
+        else:
+            if parallel > 1:
+                env.parallel = True
+                env.pool_size = maximum if parallel > maximum else parallel
 
 
 def is_localhost(hostname):
@@ -459,8 +533,12 @@ def find_configuration_type(hostname):
 
 if not quiet:
     logging.basicConfig(format=
-                        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        '%(asctime)s %(name)s[%(levelname)s] %(message)s',
                         level=logging.INFO)
+
+    if not os.environ.get('SPARKS_PARAMIKO_VERBOSE', False):
+        # but please, no paramiko, it's just flooding my terminal.
+        logging.getLogger('paramiko').setLevel(logging.WARNING)
 
 if local_configuration is None:
     local_configuration = LocalConfiguration()

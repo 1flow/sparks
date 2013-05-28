@@ -1,0 +1,9 @@
+[program:%(program)s]
+command=%(user_home)s/.virtualenvs/%(virtualenv)s/bin/gunicorn_django -c %(root)s/config/gunicorn/%(program)s.conf --settings "%(project)s.settings" --pythonpath %(root)s
+directory=%(root)s
+user=%(user)s
+autostart=true
+autorestart=true
+priority=991
+stopsignal=KILL
+%(environment)s
