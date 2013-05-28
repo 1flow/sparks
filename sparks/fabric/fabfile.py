@@ -197,7 +197,7 @@ def test(remote_configuration=None):
 def sys_easy_sudo(remote_configuration=None):
     """ Allow sudo to run without password for @sudo members. """
 
-    LOGGER.info('Checking sys_easy_sudo() targets…')
+    LOGGER.info('Checking sys_easy_sudo() components…')
 
     if remote_configuration.is_osx:
         # GNU sed is needed for fabric `sed` command to succeed.
@@ -256,7 +256,7 @@ def sys_del_useless(remote_configuration=None):
     if remote_configuration.is_osx:
         return
 
-    LOGGER.info('Checking sys_del_useless() targets…')
+    LOGGER.info('Checking sys_del_useless() components…')
 
     pkg.apt_del(('apport', 'python-apport',
                 'landscape-client-ui-install', 'gnome-orca',
@@ -497,7 +497,7 @@ def dev_mysql(remote_configuration=None):
 def dev_postgresql(remote_configuration=None):
     """ PostgreSQL development environment (for python packages build). """
 
-    LOGGER.info('Checking dev_postgresql() targets…')
+    LOGGER.info('Checking dev_postgresql() components…')
 
     if not remote_configuration.is_osx:
         pkg.pkg_add(('postgresql-client-9.1', 'postgresql-server-dev-9.1', ))
@@ -510,7 +510,7 @@ def dev_postgresql(remote_configuration=None):
 def dev_mongodb(remote_configuration=None):
     """ MongoDB development environment (for python packages build). """
 
-    LOGGER.info('Checking dev_mongodb() targets…')
+    LOGGER.info('Checking dev_mongodb() components…')
 
     if not remote_configuration.is_osx:
         sys_mongodb()
@@ -530,7 +530,7 @@ def dev_mini(remote_configuration=None):
             when it works with parallel execution.
     """
 
-    LOGGER.info('Checking dev_mini() targets…')
+    LOGGER.info('Checking dev_mini() components…')
 
     pkg.pkg_add(('git' if remote_configuration.is_osx else 'git-core'))
 
@@ -542,7 +542,7 @@ def dev_mini(remote_configuration=None):
 def dev_django_full(remote_configuration=None):
     """ Django full stack system packages (for python packages build). """
 
-    LOGGER.info('Checking dev_django_full() targets…')
+    LOGGER.info('Checking dev_django_full() components…')
 
     dev_postgresql()
     dev_memcache()
@@ -553,7 +553,7 @@ def dev_django_full(remote_configuration=None):
 def dev_memcache(remote_configuration=None):
     """ Memcache development environment (for python packages build). """
 
-    LOGGER.info('Checking dev_memcache() targets…')
+    LOGGER.info('Checking dev_memcache() components…')
 
     if not remote_configuration.is_osx:
         pkg.pkg_add(('libmemcached-dev', ))
@@ -566,7 +566,7 @@ def dev_web(remote_configuration=None):
 
     dev_mini()
 
-    LOGGER.info('Checking dev_web() targets…')
+    LOGGER.info('Checking dev_web() components…')
 
     if not remote_configuration.is_osx:
         # Because of http://stackoverflow.com/q/7214474/654755
@@ -609,7 +609,7 @@ def dev(remote_configuration=None):
 
     dev_mini()
 
-    LOGGER.info('Checking dev():base targets…')
+    LOGGER.info('Checking dev():base components…')
 
     if remote_configuration.is_osx:
         # On OSX:
@@ -628,7 +628,7 @@ def dev(remote_configuration=None):
         # Remove eventually DEB installed old packages (see just after).
         pkg.apt_del(('python-virtualenv', 'virtualenvwrapper', ))
 
-    LOGGER.info('Checking dev():python targets…')
+    LOGGER.info('Checking dev():python components…')
 
     # Add them from PIP, to have latest
     # version which handles python 3.3 gracefully.
@@ -739,7 +739,7 @@ def db_mongodb(remote_configuration=None):
 def base(remote_configuration=None):
     """ sys_* + brew (on OSX) + byobu, bash-completion, htop. """
 
-    LOGGER.info('Checking base() targets…')
+    LOGGER.info('Checking base() components…')
 
     sys_easy_sudo()
 

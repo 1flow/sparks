@@ -410,6 +410,8 @@ def install_components(remote_configuration=None, upgrade=False):
               be loved by your sysadmin skills.
     """
 
+    LOGGER.info('Checking installed components…')
+
     fabfile.dev()
     fabfile.dev_web()
     fabfile.dev_django_full()
@@ -548,6 +550,8 @@ def init_environment():
     """ Create ``env.root`` on the remote side, and the ``env.virtualenv``
         it they do not exist. """
 
+    LOGGER.info('Checking base environment…')
+
     if not exists(env.root):
         run('mkdir -p "{0}"'.format(os.path.dirname(env.root)))
 
@@ -576,6 +580,9 @@ def requirements(fast=False, upgrade=False):
     with cd(env.root):
         with activate_venv():
             if is_development_environment():
+
+                LOGGER.info('Checking development requirements…')
+
                 dev_req = os.path.join(env.root, env.dev_requirements_file)
 
                 # exists(): we are looking for a remote file!
@@ -589,6 +596,8 @@ def requirements(fast=False, upgrade=False):
                     sparks_env=sparks_djsettings_env_var(),
                     django_env=django_settings_env_var(),
                     command=command, requirements_file=dev_req))
+
+            LOGGER.info('Checking requirements…')
 
             req = os.path.join(env.root, env.requirements_file)
 
@@ -653,6 +662,8 @@ def push_translations(remote_configuration=None):
         # remote translations are fetched only on development / test
         # environments. Production are not meant to host i18n work.
         return
+
+    LOGGER.info('Checking for new translations…')
 
     with cd(env.root):
         if run("git status | grep -E 'modified:.*locale.*django.po' "
