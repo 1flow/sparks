@@ -114,6 +114,20 @@ def merge_roles_hosts():
     return merged
 
 
+def set_roledefs_and_hosts(roledefs):
+    """ Just a shortcut to avoid doing the repetitive:
+
+        env.roledefs = { … }
+        env.hosts = merge_roles_hosts()
+
+        In every project fabfile.
+
+    """
+
+    env.roledefs = roledefs
+    env.hosts = merge_roles_hosts()
+
+
 def is_localhost(hostname):
     return hostname in ('localhost', 'localhost.localdomain',
                         '127.0.0.1', '127.0.1.1', '::1')
