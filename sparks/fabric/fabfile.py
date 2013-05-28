@@ -7,6 +7,7 @@ import logging
 from fabric.api              import env, run, sudo, local, task
 from fabric.operations       import get, put
 from fabric.contrib.console  import confirm
+from fabric.decorators       import runs_once
 from fabric.contrib.files    import contains, append, exists, sed
 from fabric.context_managers import cd, settings, hide
 from fabric.colors           import yellow, cyan
@@ -514,9 +515,13 @@ def dev_mongodb(remote_configuration=None):
 
 
 @task
+@runs_once
 @with_remote_configuration
 def dev_mini(remote_configuration=None):
     """ Git and ~/sources/
+
+        .. todo:: use the ``@runs_once`` decorator
+            when it works with parallel execution.
     """
 
     LOGGER.info('Checking dev_mini() targets…')
