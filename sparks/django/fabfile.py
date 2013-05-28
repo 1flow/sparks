@@ -335,7 +335,7 @@ class SupervisorHelper(SimpleObject):
 
         guniconf = self.find_configuration_or_template('gunicorn')
         gunidest = os.path.join(env.root, 'config', 'gunicorn',
-                                '{0}.py'.format(self.program_name))
+                                '{0}.conf'.format(self.program_name))
 
         # NOTE: as the configuration file stays in config/ — which is
         # is a git managed directory – and is not templated at all, we
