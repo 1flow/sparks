@@ -749,6 +749,7 @@ def base(remote_configuration=None):
     install_homebrew()
 
     pkg.pkg_update()
+    pkg.pkg_upgrade()
 
     sys_unattended()
     sys_del_useless()
