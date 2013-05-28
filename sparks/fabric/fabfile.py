@@ -569,8 +569,11 @@ def dev_web(remote_configuration=None):
     LOGGER.info('Checking dev_web() components…')
 
     if not remote_configuration.is_osx:
-        # Because of http://stackoverflow.com/q/7214474/654755
-        pkg.apt.ppa('ppa:chris-lea/node.js')
+        if remote_configuration.lsb.RELEASE == '12.04':
+            if not exists('/etc/apt/sources.list.d/'
+                          'chris-lea-node_js-precise.list'):
+                # Because of http://stackoverflow.com/q/7214474/654755
+                pkg.apt.ppa('ppa:chris-lea/node.js')
 
     # NOTE: nodejs` PPA version already includes `npm`,
     # no need to install it via a separate package on Ubuntu.
