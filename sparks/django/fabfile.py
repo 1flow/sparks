@@ -112,7 +112,7 @@ class SupervisorHelper(SimpleObject):
     """
 
     @classmethod
-    def build_program_name(service=None):
+    def build_program_name(cls, service=None):
         """ Returns a tuple: a boolean and a program name.
 
             The boolean indicates if the fabric `env` has
@@ -126,8 +126,12 @@ class SupervisorHelper(SimpleObject):
 
         """
 
+        LOGGER.warning(service)
+
         if service is None:
             service = get_current_role()
+
+        LOGGER.warning(service)
 
         # We need something more unique than project, in case we have
         # many environments on the same remote machine. And alternative
