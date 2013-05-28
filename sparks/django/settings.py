@@ -104,7 +104,7 @@ def find_settings(settings__file__name):
                        candidates)))
 
 
-def include_snippets(project_root, snippets, project_settings_globals):
+def include_snippets(snippets_list, project__file__, project_globals):
     """ Given a project root and an iterable of modules names, this function
         will use :func:`execfile` and import their content into the ``global``
         namespace. This way, included files content can be made dependant of
@@ -113,7 +113,7 @@ def include_snippets(project_root, snippets, project_settings_globals):
         :param settings_root: a path (as string) representing the Django
             settings directory.
 
-        :param snippets: an iterable of strings which will be included.
+        :param snippets_list: an iterable of strings which will be included.
 
         Typical usage::
 
@@ -130,26 +130,51 @@ def include_snippets(project_root, snippets, project_settings_globals):
         development machine, or the production machine, etc.
 
         For :file:`settings/__init__.py` contents, see :func:`find_settings`.
+
         Then, in :file:`myhostname.py`, write::
 
-            import os
             from sparks.django.settings import include_snippets
 
-            include_snippets(
-                os.path.dirname(__file__), (
+            include_snippets((
                     '00_dev',
                     'common',
                     'email',
                     # whatever more…
                 ),
-                globals()
+                __file__, globals()
             )
 
-        .. note:: the final ``globals()`` argument is important to merge
-            all settings in the current settings module.
+        .. note:: the final ``__file__`` and ``globals()`` argument are fixed
+            and important to merge all settings in the current settings module.
+
+        .. versionchanged:: in 2.0, arguments were re-ordered to include the
+            snippets list first, and to require only ``__file__`` from the
+            caller, avoiding the need to ``import os`` there.
     """
 
-    snippets_path = join(project_root, 'snippets')
+    snippets_path = join(os.path.dirname(project__file__), 'snippets')
 
-    for snippet in snippets:
-        execfile(join(snippets_path, snippet + '.py'), project_settings_globals)
+    for snippet in snippets_list:
+        execfile(join(snippets_path, snippet + '.py'), project_globals)
+
+
+def clone_settings(machine_name, project__file__, project_globals):
+    """ Clone another settings file, to avoid re-writting
+        it completely for only a small subset changes. Usage:
+
+            from sparks.django.settings import clone_settings
+            clone_settings('machine.domain.tld', __file__, globals())
+            # and then you particular settings here…
+
+        You can also specify directly the settings file name, without
+        the ``.py`` extension.
+
+        .. note:: the final ``__file__`` and ``globals()`` argument are fixed
+            and important to merge all settings in the current settings module.
+
+        .. versionadded:: in 2.0.
+    """
+
+    execfile(os.path.join(os.path.dirname(project__file__),
+             '{0}.py'.format(machine_name.replace('.', '_'))),
+             project_globals)
