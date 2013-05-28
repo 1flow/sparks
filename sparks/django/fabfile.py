@@ -39,7 +39,7 @@ from ..fabric import (fabfile, with_remote_configuration,
                       is_local_environment,
                       is_development_environment,
                       is_production_environment,
-                      get_current_role)
+                      get_current_role, merge_roles_hosts)
 from ..pkg import brew
 from ..foundations import postgresql as pg
 from ..foundations.classes import SimpleObject
@@ -1069,6 +1069,9 @@ def fast_deploy():
 @task(default=True, aliases=('fulldeploy', 'full_deploy', ))
 def deploy(fast=False, upgrade=False):
     """ Pull code, ensure runable, restart services. """
+
+    if not env.hosts:
+        env.hosts = merge_roles_hosts()
 
     runable(fast=fast, upgrade=upgrade)
 

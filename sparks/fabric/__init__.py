@@ -102,6 +102,18 @@ def get_current_role():
     return None
 
 
+def merge_roles_hosts():
+    """ Get an axhaustive list of all machines listed
+        in the current ``env.roledefs``. """
+
+    merged = []
+
+    for role in env.roledefs:
+        merged.extend(env.roledefs[role])
+
+    return merged
+
+
 def is_localhost(hostname):
     return hostname in ('localhost', 'localhost.localdomain',
                         '127.0.0.1', '127.0.1.1', '::1')
