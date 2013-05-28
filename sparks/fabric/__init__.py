@@ -462,5 +462,9 @@ if not quiet:
                         '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         level=logging.INFO)
 
+    if not os.environ.get('SPARKS_PARAMIKO_VERBOSE', False):
+        # but please, no paramiko, it's just flooding my terminal.
+        logging.getLogger('paramiko').setLevel(logging.WARNING)
+
 if local_configuration is None:
     local_configuration = LocalConfiguration()
