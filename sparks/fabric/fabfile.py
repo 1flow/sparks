@@ -160,7 +160,7 @@ def install_1password(remote_configuration=None):
 
 @with_remote_configuration
 def install_powerline(remote_configuration=None):
-    """ Install the Ubuntu Mono patched font and powerline (runs dev_mini). """
+    """ Install the Ubuntu Mono patched font and powerline. """
 
     if remote_configuration.is_osx:
         if not exists(tilde('Library/Fonts/UbuntuMono-B-Powerline.ttf')):
@@ -490,6 +490,8 @@ def dev_mysql(remote_configuration=None):
 def dev_postgresql(remote_configuration=None):
     """ PostgreSQL development environment (for python packages build). """
 
+    LOGGER.info('Checking dev_postgresql() targets…')
+
     if not remote_configuration.is_osx:
         pkg.pkg_add(('postgresql-client-9.1', 'postgresql-server-dev-9.1', ))
 
@@ -500,6 +502,8 @@ def dev_postgresql(remote_configuration=None):
 @with_remote_configuration
 def dev_mongodb(remote_configuration=None):
     """ MongoDB development environment (for python packages build). """
+
+    LOGGER.info('Checking dev_mongodb() targets…')
 
     if not remote_configuration.is_osx:
         sys_mongodb()
@@ -512,7 +516,10 @@ def dev_mongodb(remote_configuration=None):
 @task
 @with_remote_configuration
 def dev_mini(remote_configuration=None):
-    """ Git and ~/sources/ """
+    """ Git and ~/sources/
+    """
+
+    LOGGER.info('Checking dev_mini() targets…')
 
     pkg.pkg_add(('git' if remote_configuration.is_osx else 'git-core'))
 
@@ -524,6 +531,8 @@ def dev_mini(remote_configuration=None):
 def dev_django_full(remote_configuration=None):
     """ Django full stack system packages (for python packages build). """
 
+    LOGGER.info('Checking dev_django_full() targets…')
+
     dev_postgresql()
     dev_memcache()
 
@@ -532,6 +541,8 @@ def dev_django_full(remote_configuration=None):
 @with_remote_configuration
 def dev_memcache(remote_configuration=None):
     """ Memcache development environment (for python packages build). """
+
+    LOGGER.info('Checking dev_memcache() targets…')
 
     if not remote_configuration.is_osx:
         pkg.pkg_add(('libmemcached-dev', ))
@@ -544,6 +555,8 @@ def dev_web(remote_configuration=None):
 
     dev_mini()
 
+    LOGGER.info('Checking dev_web() targets…')
+
     if not remote_configuration.is_osx:
         # Because of http://stackoverflow.com/q/7214474/654755
         pkg.apt.ppa('ppa:chris-lea/node.js')
@@ -552,7 +565,7 @@ def dev_web(remote_configuration=None):
     # no need to install it via a separate package on Ubuntu.
     pkg.pkg_add(('nodejs', ))
 
-    # But on others, we need.
+    # But on OSX, we need NPM too.
     if remote_configuration.is_osx:
         pkg.pkg_add(('npm', ))
 
@@ -584,6 +597,8 @@ def dev(remote_configuration=None):
     """ Generic development (dev_mini + git-flow + Python & Ruby utils). """
 
     dev_mini()
+
+    LOGGER.info('Checking dev() targets…')
 
     if remote_configuration.is_osx:
         # On OSX:
@@ -731,11 +746,9 @@ def deployment(remote_configuration=None):
     """ Install Fabric (via PIP for latest paramiko). """
 
     # We remove the system packages in case they were previously
-    # installed, because PIP's versions are more recent.
+    # installed, because PIP's versions are nearly always more recent.
     # Paramiko <1.8 doesn't handle SSH agent correctly and we need it.
     pkg.pkg_del(('fabric', 'python-paramiko', ))
-
-    pkg.pkg_add(('dsh', ))
 
     if not remote_configuration.is_osx:
         pkg.pkg_add(('python-all-dev', ))
