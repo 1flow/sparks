@@ -140,7 +140,9 @@ def set_roledefs_and_hosts(roledefs, parallel=False):
         maximum = 10
 
     env.roledefs = roledefs
-    env.hosts = merge_roles_hosts()
+
+    if not env.hosts:
+        env.hosts = merge_roles_hosts()
 
     if parallel is True:
         env.parallel = True
