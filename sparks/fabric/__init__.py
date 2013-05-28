@@ -531,7 +531,7 @@ def find_configuration_type(hostname):
 
 if not quiet:
     logging.basicConfig(format=
-                        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        '%(asctime)s %(name)s[%(levelname)s] %(message)s',
                         level=logging.INFO)
 
     if not os.environ.get('SPARKS_PARAMIKO_VERBOSE', False):
