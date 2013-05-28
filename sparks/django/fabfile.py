@@ -2,6 +2,19 @@
 """
     Fabric common rules for a Django project.
 
+    Handles deployment and service installation / run via supervisor.
+
+    Supported roles names:
+
+    - ``web``: a gunicorn web server,
+    - ``worker``: a simple celery worker (all queues),
+    - ``worker_{low,medium,high}``: a combination
+      of two or three celery workers (can be combined with
+      simple ``worker`` too, for fine grained scheduling on
+      small architectures),
+    - ``flower``: a flower (celery monitoring) service,
+
+    For more information, jump to :class:`DjangoTask`.
 
 """
 
@@ -10,7 +23,8 @@ import logging
 import datetime
 
 try:
-    from fabric.api              import env, run, sudo, task, local
+    from fabric.api              import (env, run, sudo, task, local,
+                                         roles, execute)
     from fabric.tasks            import Task
     from fabric.operations       import put, prompt
     from fabric.contrib.files    import exists, upload_template
@@ -24,7 +38,8 @@ from ..fabric import (fabfile, with_remote_configuration,
                       local_configuration as platform,
                       is_local_environment,
                       is_development_environment,
-                      is_production_environment)
+                      is_production_environment,
+                      get_current_role)
 from ..pkg import brew
 from ..foundations import postgresql as pg
 from ..foundations.classes import SimpleObject
@@ -47,7 +62,32 @@ env.use_ssh_config        = True
 
 
 # ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Django task
+
+
 class DjangoTask(Task):
+    """ A Simple task wrapper that will ensure you are running your sparks
+        Django tasks from near your :file:`manage.py`. This ensures that
+        paths are always correctly set, which is too difficult to ensure
+        otherwise.
+
+        Sparks Django tasks assume the following project structure:
+
+            $repository_root/
+                config/
+                    *requirements.txt
+                $django_project_root/
+                    settings/                 # or settings.py, to your liking.
+                    $django_app1/
+                    …
+                manage.py
+                fabfile.py
+                Procfile.*
+
+        .. versionadded:: in sparks 1.16.2. This is odd and doesn't conform
+            to `Semantic Versioning  <http://semver.org/>`_. Sorry for that,
+            it should have had. Next time it will do a better job.
+    """
+
     def __init__(self, func, *args, **kwargs):
         super(DjangoTask, self).__init__(*args, **kwargs)
         self.func = func
@@ -63,14 +103,300 @@ class DjangoTask(Task):
         return self(*args, **kwargs)
 
 
+class SupervisorHelper(SimpleObject):
+    """ Handle the supervisor configuration and restart/reload dirty work.
+
+        .. versionadded:: in sparks 2.0, all ``supervisor_*`` functions
+            were merged into this controller, and support for Fabric's
+            ``env.role`` was added.
+
+    """
+
+    @classmethod
+    def build_program_name(service=None):
+        """ Returns a tuple: a boolean and a program name.
+
+            The boolean indicates if the fabric `env` has
+            the :attr:`sparks_djsettings` attribute. The program name
+            will be somewhat unique, built from ``service``, ``env.project``,
+            ``env.sparks_djsettings`` if it exists and ``env.environment``.
+
+            :param service: a string describing the service.
+                Defaults to Fabric's ``get_current_role()``.
+                Can be anything meaningfull, eg. ``worker``, ``db``, etc.
+
+        """
+
+        if service is None:
+            service = get_current_role()
+
+        # We need something more unique than project, in case we have
+        # many environments on the same remote machine. And alternative
+        # settings, too, because we will have a supervisor process for them.
+        if hasattr(env, 'sparks_djsettings'):
+            return True, '{0}_{1}_{2}_{3}'.format(service,
+                                                  env.project,
+                                                  env.sparks_djsettings,
+                                                  env.environment)
+
+        else:
+            return False, '{0}_{1}_{2}'.format(service,
+                                               env.project,
+                                               env.environment)
+
+    @classmethod
+    def add_environment_to_context(context, has_djsettings):
+        """ Helper function: add (or not) an ``environment`` item
+            to :param:`context`, given the current Fabric ``env``.
+
+            If :param:`has_djsettings` is ``True``, ``SPARKS_DJANGO_SETTINGS``
+            will be added.
+
+            If ``env`` has an ``environment_vars`` attributes, they are assumed
+            to be a python list (eg.``[ 'KEY1=value', 'KEY2=value2' ]``) and
+            will be inserted into context too, converted to supervisor
+            configuration file format.
+        """
+
+        env_vars = []
+
+        if has_djsettings:
+            env_vars.append(sparks_djsettings_env_var().strip())
+
+        if hasattr(env, 'environment_vars'):
+                env_vars.extend(env.environment_vars)
+
+        if env_vars:
+            context['environment'] = 'environment={0}'.format(
+                ','.join(env_vars))
+
+        else:
+            # The item must exist, else the templating
+            # engine will raise an error. Too bad.
+            context['environment'] = ''
+
+    def restart_or_reload(self):
+       # cf. http://stackoverflow.com/a/9310434/654755
+
+        if self.update:
+            sudo("supervisorctl update")
+
+            if self.restart:
+                sudo("supervisorctl restart {0}".format(self.program_name))
+
+        else:
+            # In any case, we restart the process during a {fast}deploy,
+            # to reload the Django code even if configuration hasn't changed.
+            sudo("supervisorctl restart {0}".format(self.program_name))
+
+    def configure_program(self, remote_configuration):
+        """ Upload an environment-specific supervisor configuration file.
+            The file is re-generated at each call in case configuration
+            changed in the source repository.
+
+            Supervisor will be automatically restarted if configuration changed.
+
+            Given ``root = remote_configuration.django_settings.BASE_ROOT``,
+            this method will look for all these candidates (in order,
+            first-match wins) for a given service:
+
+                ${root}/config/supervisor/${program_name}.conf
+                ${root}/config/supervisor/${role}.template
+                ${root}/config/supervisor/${role}.conf
+                ${sparks_data_dir}/supervisor/${role}.template
+
+            The service template can end with either ``.conf`` or ``.template``.
+            This is just for convenience: ``.template`` is more meaningful,
+            but ``.conf`` is for consistency in the source repository. Whatever
+            the name and suffix, all files will be treated the same (eg.
+            rendered via Fabric's :func:`upload_template`).
+
+            Templates are feeded with this context:
+
+                context = {
+                    'env': env.environment,
+                    'root': env.root,
+                    'user': env.user,
+                    'branch': env.branch,
+                    'project': env.project,
+                    'program': self.program_name,
+                    'user_home': env.user_home
+                        if hasattr(env, 'user_home')
+                        else remote_configuration.tilde,
+                    'virtualenv': env.virtualenv,
+                }
+
+            And **environment variables** get added too
+            (see :class:`add_environment_to_context` for details).
+
+            .. note:: this method assumes the remote machine is an
+                Ubuntu/Debian server (physical or not), and will deploy
+                supervisor configuration files
+                to :file:`/etc/supervisor/conf.d/`.
+
+        """
+
+        candidates = (
+            os.path.join(platform.django_settings.BASE_ROOT,
+                         'config', 'supervisor', '{0}.conf'.format(
+                         self.program_name)),
+
+            os.path.join(platform.django_settings.BASE_ROOT,
+                         'config', 'supervisor/{0}.template'.format(
+                         self.service)),
+
+            os.path.join(platform.django_settings.BASE_ROOT,
+                         'config', 'supervisor/{0}.conf'.format(
+                         self.service)),
+
+            # Last resort: the sparks template
+            os.path.join(os.path.dirname(__file__),
+                         'supervisor', '{0}.template'.format(self.service))
+        )
+
+        superconf = None
+
+        # os.path.exists(): we are looking for a LOCAL file,
+        # in the current Django project. Devops can prepare a
+        # fully custom supervisor configuration file for the
+        # Django web worker.
+        for candidate in candidates:
+            if os.path.exists(candidate):
+                superconf = candidate
+                break
+
+        if superconf is None:
+            raise RuntimeError('Could not find any configuration or template '
+                               'for {0}. Searched {1}.'.format(
+                               self.program_name, candidates))
+
+        # XXX/TODO: rename templates in sparks, create worker template.
+
+        destination = '/etc/supervisor/conf.d/{0}.conf'.format(
+            self.program_name)
+
+        # NOTE: update docstring if you change this.
+        context = {
+            'env': env.environment,
+            'root': env.root,
+            'user': env.user,
+            'branch': env.branch,
+            'project': env.project,
+            'program': self.program_name,
+            'user_home': env.user_home
+                if hasattr(env, 'user_home')
+                else remote_configuration.tilde,
+            'virtualenv': env.virtualenv,
+        }
+
+        self.add_environment_to_context(context, self.has_djsettings)
+
+        if exists(destination):
+            upload_template(superconf, destination + '.new',
+                            context=context, use_sudo=True, backup=False)
+
+            if sudo('diff {0} {0}.new'.format(destination)) == '':
+                sudo('rm -f {0}.new'.format(destination))
+
+            else:
+                sudo('mv {0}.new {0}'.format(destination))
+                self.update  = True
+                self.restart = True
+
+        else:
+            upload_template(superconf, destination, context=context,
+                            use_sudo=True, backup=False)
+            # No need to restart, the update will
+            # add the new program and start it
+            # automatically, thanks to supervisor.
+            self.update = True
+
+    def handle_gunicorn_config(self):
+        """ Helper function: upload a default gunicorn configuration file
+            if there is none in the project (else, the one
+            from the project will be automatically used).
+        """
+
+        guniconf = os.path.join(
+            platform.django_settings.BASE_ROOT,
+            'config/gunicorn_conf_{0}.py'.format(
+            self.program_name))
+
+        # os.path.exists(): we are looking for a LOCAL file in the
+        # Django project, that will be used remotely if present,
+        # once code is synchronized.
+        if not os.path.exists(guniconf):
+            guniconf = os.path.join(os.path.dirname(__file__),
+                                    'gunicorn_conf_default.py')
+
+        gunidest = os.path.join(env.root,
+                                'config/gunicorn_conf_{0}.py'.format(
+                                self.program_name))
+
+        if exists(gunidest):
+            put(guniconf, gunidest + '.new')
+
+            if sudo('diff {0} {0}.new'.format(gunidest)) == '':
+                sudo('rm -f {0}.new'.format(gunidest))
+
+            else:
+                sudo('mv {0}.new {0}'.format(gunidest))
+                self.update  = True
+                self.restart = True
+
+        else:
+            # copy the default configuration to remote.
+            # WARNING/NOTE: it will be put in the remote git working
+            # directory. This *will* trigger a conflict if a specific
+            # configuration file is added afterwards by the developers,
+            # and they'll need to delete it manually before restarting
+            # the whole deploy operation. I know this isn't cool.
+            put(guniconf, gunidest)
+
+            if not self.update:
+                self.restart = True
+
+
+# ••••••••••••••••••••••••••••••••••••••••••••••••••••• commands & global tasks
+
+
+@task(aliases=('command', 'cmd'))
+def run_command(cmd):
+    """ Run a command on the remote side, inside the virtualenv and ch'ed
+        into ``env.root``. Use like this (but don't do this in production):
+
+        fab test cmd:'./manage.py reset admin --noinput'
+
+    """
+
+    with activate_venv():
+        with cd(env.root):
+            run(cmd)
+
+
 @task(aliases=('base', 'base_components'))
 @with_remote_configuration
 def install_components(remote_configuration=None, upgrade=False):
     """ Install necessary packages to run a full Django stack.
 
-        .. todo:: split me into packages/modules where appropriate.
+        .. todo:: terminate this task. It is not usable yet, except on
+            an OSX development-only machine. Others (servers, test &
+            production) are not implemented yet and require manual
+            installation / configuration.
 
-        .. todo:: split me into server (PG) and clients (PG-dev) packages.
+            - split me into packages/modules where appropriate.
+            - split me into server and clients packages.
+
+        .. note:: server configuration / deployment can nevertheless be
+            leveraged by:
+
+            - a part of ``sparks.fabfile.*`` which contains server tasks,
+            - and by the fact that many Django services are managed by
+              the project requirements (thus installed automatically) and
+              via supervisord. Thus, on the worker/web side, only
+              supervisord requires to be installed. On other machines,
+              redis/memcached/PostgreSQL/MongoDB and friends remain to
+              be loved by your sysadmin skills.
     """
 
     fabfile.dev()
@@ -223,6 +549,7 @@ def init_environment():
 
 
 @task(alias='req')
+@roles('web', 'worker')
 def requirements(fast=False, upgrade=False):
     """ Install PIP requirements (and dev-requirements).
 
@@ -268,6 +595,7 @@ def requirements(fast=False, upgrade=False):
 
 
 @task(alias='pull')
+@roles('web', 'worker')
 def git_update():
 
     # TODO: git up?
@@ -282,6 +610,7 @@ def git_update():
 
 
 @task(alias='pull')
+@roles('web', 'worker')
 def git_pull():
 
     with cd(env.root):
@@ -305,6 +634,7 @@ def git_pull():
 
 
 @task(alias='getlangs')
+@roles('web')
 @with_remote_configuration
 def push_translations(remote_configuration=None):
 
@@ -334,6 +664,7 @@ def push_translations(remote_configuration=None):
 
 
 @task(alias='nginx')
+@roles('load')
 def restart_nginx(fast=False):
 
     if not exists('/etc/nginx'):
@@ -351,174 +682,10 @@ def restart_nginx(fast=False):
             sudo('ln -sf ../sites-available/beau-dimanche.com')
 
 
-@task(alias='celery')
-def restart_celery_service(fast=False):
-    """ Restart celery (only if detected as installed). """
-
-    if exists('/etc/init.d/celeryd'):
-        sudo("/etc/init.d/celeryd restart")
-
-
-def build_supervisor_program_name():
-    """ Returns a tuple: a boolean and a program name.
-
-        The boolean indicates if the fabric `env` has
-        the :attr:`sparks_djsettings` attribute, and the program name
-        will be somewhat unique, built from ``env.project``,
-        ``env.sparks_djsettings`` if it exists and ``env.environment``.
-
-    """
-
-    # We need something more unique than project, in case we have
-    # many environments on the same remote machine. And alternative
-    # settings, too, because we will have a supervisor process for them.
-    if hasattr(env, 'sparks_djsettings'):
-        return True, '{0}_{1}_{2}'.format(env.project,
-                                          env.sparks_djsettings,
-                                          env.environment)
-
-    else:
-        return False, '{0}_{1}'.format(env.project, env.environment)
-
-
-def supervisor_add_environment(context, has_djsettings):
-    """ Helper function: add (or not) an ``environment`` item
-        to :param:`context`, given the current Fabric ``env``.
-
-        If :param:`has_djsettings` is ``True``, ``SPARKS_DJANGO_SETTINGS``
-        will be added.
-
-        If ``env`` has an ``environment_vars`` attributes, they are assumed
-        to be a python list (eg.``[ 'KEY1=value', 'KEY2=value2' ]``) and
-        will be inserted into context too, converted to supervisor
-        configuration file format.
-    """
-
-    env_vars = []
-
-    if has_djsettings:
-        env_vars.append(sparks_djsettings_env_var().strip())
-
-    if hasattr(env, 'environment_vars'):
-            env_vars.extend(env.environment_vars)
-
-    if env_vars:
-        context['environment'] = 'environment={0}'.format(','.join(env_vars))
-
-    else:
-        # The item must exist, else the templating engine will raise an error.
-        context['environment'] = ''
-
-
-def handle_supervisor_config(supervisor, remote_configuration):
-    """ Helper function: Upload an environment-specific and auto-generated
-        supervisor configuration file. Update/restart supervisor
-        only if one of the files changed.
-    """
-
-    superconf = os.path.join(platform.django_settings.BASE_ROOT,
-                             'config',
-                             'gunicorn_supervisor_{0}.conf'.format(
-                             supervisor.program_name))
-
-    # os.path.exists(): we are looking for a LOCAL file,
-    # in the current Django project. Devops can prepare a
-    # fully custom supervisor configuration file for the
-    # Django web worker.
-    if not os.path.exists(superconf):
-        # If full-custom isn't present,
-        # create a sparks-crafted template.
-        superconf = os.path.join(os.path.dirname(__file__),
-                                 'gunicorn_supervisor.template')
-
-    destination = '/etc/supervisor/conf.d/{0}.conf'.format(
-        supervisor.program_name)
-
-    context = {
-        'env': env.environment,
-        'root': env.root,
-        'user': env.user,
-        'branch': env.branch,
-        'project': env.project,
-        'program': supervisor.program_name,
-        'user_home': env.user_home
-            if hasattr(env, 'user_home')
-            else remote_configuration.tilde,
-        'virtualenv': env.virtualenv,
-    }
-
-    supervisor_add_environment(context, supervisor.has_djsettings)
-
-    if exists(destination):
-        upload_template(superconf, destination + '.new',
-                        context=context, use_sudo=True, backup=False)
-
-        if sudo('diff {0} {0}.new'.format(destination)) == '':
-            sudo('rm -f {0}.new'.format(destination))
-
-        else:
-            sudo('mv {0}.new {0}'.format(destination))
-            supervisor.update  = True
-            supervisor.restart = True
-
-    else:
-        upload_template(superconf, destination, context=context,
-                        use_sudo=True, backup=False)
-        # No need to restart, the update will
-        # add the new program and start it
-        # automatically, thanks to supervisor.
-        supervisor.update = True
-
-
-def handle_gunicorn_config(supervisor):
-    """ Helper function: upload a default gunicorn configuration file
-        if there is none in the project (else, the one
-        from the project will be automatically used).
-    """
-
-    guniconf = os.path.join(
-        platform.django_settings.BASE_ROOT,
-        'config/gunicorn_conf_{0}.py'.format(
-        supervisor.program_name))
-
-    # os.path.exists(): we are looking for a LOCAL file in the
-    # Django project, that will be used remotely if present,
-    # once code is synchronized.
-    if not os.path.exists(guniconf):
-        guniconf = os.path.join(os.path.dirname(__file__),
-                                'gunicorn_conf_default.py')
-
-    gunidest = os.path.join(env.root,
-                            'config/gunicorn_conf_{0}.py'.format(
-                            supervisor.program_name))
-
-    if exists(gunidest):
-        put(guniconf, gunidest + '.new')
-
-        if sudo('diff {0} {0}.new'.format(gunidest)) == '':
-            sudo('rm -f {0}.new'.format(gunidest))
-
-        else:
-            sudo('mv {0}.new {0}'.format(gunidest))
-            supervisor.update  = True
-            supervisor.restart = True
-
-    else:
-        # copy the default configuration to remote.
-        # WARNING/NOTE: it will be put in the remote git working
-        # directory. This *will* trigger a conflict if a specific
-        # configuration file is added afterwards by the developers,
-        # and they'll need to delete it manually before restarting
-        # the whole deploy operation. I know this isn't cool.
-        put(guniconf, gunidest)
-
-        if not supervisor.update:
-            supervisor.restart = True
-
-
 @task(task_class=DjangoTask, alias='gunicorn')
+@roles('web')
 @with_remote_configuration
-def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
+def restart_webserver_gunicorn(remote_configuration=None, fast=False):
     """ (Re-)upload configuration files and reload gunicorn via supervisor.
 
         This will reload only one service, even if supervisor handles more
@@ -529,32 +696,52 @@ def restart_gunicorn_supervisor(remote_configuration=None, fast=False):
 
     if exists('/etc/supervisor'):
 
-        has_djsettings, program_name = build_supervisor_program_name()
+        has_djsettings, program_name = SupervisorHelper.build_program_name()
 
-        supervisor = SimpleObject(from_dict={
-                                  'update': False,
-                                  'restart': False,
-                                  'has_djsettings': has_djsettings,
-                                  'program_name': program_name
-                                  })
+        supervisor = SupervisorHelper(from_dict={
+                                      'update': False,
+                                      'restart': False,
+                                      'has_djsettings': has_djsettings,
+                                      'service': get_current_role(),
+                                      'program_name': program_name
+                                      })
 
         if not fast:
-            handle_supervisor_config(supervisor, remote_configuration)
-            handle_gunicorn_config(supervisor)
+            supervisor.configure_program(remote_configuration)
+            supervisor.handle_gunicorn_config()
 
-        # cf. http://stackoverflow.com/a/9310434/654755
+        supervisor.restart_or_reload()
 
-        if supervisor.update:
-            # This will start /
-            sudo("supervisorctl update")
 
-            if supervisor.restart:
-                sudo("supervisorctl restart {0}".format(program_name))
+@task(task_class=DjangoTask, alias='gunicorn')
+@roles('worker', 'worker_low', 'worker_medium', 'worker_high')
+@with_remote_configuration
+def restart_worker_celery(remote_configuration=None, fast=False):
+    """ (Re-)upload configuration files and reload celery via supervisor.
 
-        else:
-            # In any case, we restart the process during a {fast}deploy,
-            # to reload the Django code even if configuration hasn't changed.
-            sudo("supervisorctl restart {0}".format(program_name))
+        This will reload only one service, even if supervisor handles more
+        than one on the remote server. Thus it's safe for production to
+        reload test :-)
+
+    """
+
+    if exists('/etc/supervisor'):
+
+        has_djsettings, program_name = SupervisorHelper.build_program_name()
+
+        supervisor = SupervisorHelper(from_dict={
+                                      'update': False,
+                                      'restart': False,
+                                      'has_djsettings': has_djsettings,
+                                      'service': get_current_role(),
+                                      'program_name': program_name
+                                      })
+
+        if not fast:
+            supervisor.configure_program(remote_configuration)
+            # NO need for supervisor.handle_celery_config(supervisor)
+
+        supervisor.restart_or_reload()
 
 
 # ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Django specific
@@ -644,6 +831,7 @@ def compilemessages():
 
 
 @task(task_class=DjangoTask)
+@roles('db', 'database')
 def syncdb():
     """ Run the Django syndb management command. """
 
@@ -656,6 +844,7 @@ def syncdb():
 
 
 @task(task_class=DjangoTask)
+@roles('db', 'database')
 @with_remote_configuration
 def migrate(remote_configuration=None, args=None):
     """ Run the Django migrate management command, and the Transmeta one
@@ -675,6 +864,7 @@ def migrate(remote_configuration=None, args=None):
 
 
 @task(task_class=DjangoTask, alias='static')
+@roles('web')
 @with_remote_configuration
 def collectstatic(remote_configuration=None, fast=True):
     """ Run the Django collectstatic management command. If :param:`fast`
@@ -689,6 +879,7 @@ def collectstatic(remote_configuration=None, fast=True):
 
 
 @task(task_class=DjangoTask)
+@roles('db', 'database')
 def putdata(filename=None, confirm=True):
     """ Put a local fixture on the remote end with via transient filename
         and load it via Django's ``loaddata`` command.
@@ -708,6 +899,7 @@ def putdata(filename=None, confirm=True):
 
 
 @task(task_class=DjangoTask)
+@roles('db', 'database')
 def getdata(app_model, filename=None):
     """ Get a dump or remote data in a local fixture, via
         Django's ``dumpdata`` management command.
@@ -736,12 +928,14 @@ def getdata(app_model, filename=None):
 
 
 @task(aliases=('maintenance', 'maint', ))
+@roles('web')
 def maintenance_mode(fast=True):
     """ Trigger maintenance mode (and restart services). """
 
     with cd(env.root):
         run('touch MAINTENANCE_MODE')
 
+    # TODO: stop the services on worker* ?
     restart_services(fast=fast)
 
 
@@ -752,10 +946,12 @@ def operational_mode(fast=True):
     with cd(env.root):
         run('rm -f MAINTENANCE_MODE')
 
+    # TODO: start the services on worker* ?
     restart_services(fast=fast)
 
 
 @task(task_class=DjangoTask)
+@roles('db', 'databases')
 @with_remote_configuration
 def createdb(remote_configuration=None, db=None, user=None, password=None,
              installation=False):
@@ -812,9 +1008,9 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
 
 @task(alias='restart')
 def restart_services(fast=False):
-    restart_nginx(fast=fast)
-    restart_celery_service(fast=fast)
-    restart_gunicorn_supervisor(fast=fast)
+    execute(restart_nginx(fast=fast))
+    execute(restart_worker_celery(fast=fast))
+    execute(restart_webserver_gunicorn(fast=fast))
 
 
 @task(aliases=('initial', ))
@@ -822,35 +1018,35 @@ def runable(fast=False, upgrade=False):
     """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
 
     if not fast:
-        install_components(upgrade=upgrade)
+        execute(install_components(upgrade=upgrade))
 
     if not is_local_environment():
 
         if not fast:
-            init_environment()
+            execute(init_environment())
 
-        git_update()
+        execute(git_update())
 
         if not is_production_environment():
             # fast or not, we must catch this one to
             # avoid source repository desynchronization.
-            push_translations()
+            execute(push_translations())
 
-        git_pull()
+        execute(git_pull())
 
-    requirements(fast=fast, upgrade=upgrade)
+    execute(requirements(fast=fast, upgrade=upgrade))
 
     if not fast:
-        createdb()
+        execute(createdb())
 
-    syncdb()
-    migrate()
-    compilemessages()
+    execute(syncdb())
+    execute(migrate())
+    execute(compilemessages())
 
     if not is_local_environment():
         # In debug mode, Django handles the static contents via a dedicated
         # view. We don't need to create/refresh/maintain the global static/ dir.
-        collectstatic(fast=fast)
+        execute(collectstatic(fast=fast))
 
 
 @task(aliases=('fast', 'fastdeploy', ))
