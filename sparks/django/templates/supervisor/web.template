@@ -1,5 +1,5 @@
 [program:%(program)s]
-command=%(user_home)s/.virtualenvs/%(virtualenv)s/bin/gunicorn_django -c %(root)s/config/gunicorn_conf_%(program)s.py --settings "%(project)s.settings" --pythonpath %(root)s
+command=%(user_home)s/.virtualenvs/%(virtualenv)s/bin/gunicorn_django -c %(root)s/config/gunicorn/%(program)s.py --settings "%(project)s.settings" --pythonpath %(root)s
 directory=%(root)s
 user=%(user)s
 autostart=true
