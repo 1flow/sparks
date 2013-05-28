@@ -947,7 +947,7 @@ def getdata(app_model, filename=None):
 
     if filename is None:
         filename = new_fixture_filename(app_model)
-        print('Dump data will be stored in {0}.'.format(filename))
+        print('Dump data stored in {0}'.format(filename))
 
     with open(filename, 'w') as f:
         f.write(django_manage('dumpdata {0} --indent 4 '
