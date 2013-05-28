@@ -114,7 +114,7 @@ def merge_roles_hosts():
     return merged
 
 
-def set_roledefs_and_hosts(roledefs, parallel=True):
+def set_roledefs_and_hosts(roledefs, parallel=False):
     """ Just a shortcut to avoid doing the repetitive:
 
         env.roledefs = { … }
@@ -124,7 +124,8 @@ def set_roledefs_and_hosts(roledefs, parallel=True):
 
         Feel free to set :param:`parallel` to True, or any integer >= 1
         to enable the parallel mode. If set to ``True``, the function will
-        count merged hosts and set parallel to this number.
+        count merged hosts and set parallel to this number. It defaults
+        to ``False`` (no parallel execution).
 
         .. note:: the pool size is always clamped to 10 hosts to avoid making
             your machine and network suffer. If you ever would like to raise
