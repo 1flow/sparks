@@ -197,6 +197,8 @@ def test(remote_configuration=None):
 def sys_easy_sudo(remote_configuration=None):
     """ Allow sudo to run without password for @sudo members. """
 
+    LOGGER.info('Checking sys_easy_sudo() targets…')
+
     if remote_configuration.is_osx:
         # GNU sed is needed for fabric `sed` command to succeed.
         pkg.brew_add('gnu-sed')
@@ -253,6 +255,8 @@ def sys_del_useless(remote_configuration=None):
 
     if remote_configuration.is_osx:
         return
+
+    LOGGER.info('Checking sys_del_useless() targets…')
 
     pkg.apt_del(('apport', 'python-apport',
                 'landscape-client-ui-install', 'gnome-orca',
@@ -341,16 +345,18 @@ def local_perms(remote_configuration=None):
 @with_remote_configuration
 def replicate_acls(remote_configuration=None,
                    origin=None, path=None, apply=False):
-    """ Replicate locally the ACLs and Unix permissions of a given path.
+    """ Replicate locally the ACLs and Unix permissions of a given path on
+        a remote machine. When everything is borked locally, and you have
+        a remote clone in a good health, this is handy.
 
         This helps correcting strange permissions errors from a well-known
         good machine.
 
         Usage:
 
-            fabl acls:origin=10.0.3.37,path=/bin
+            fab … acls:origin=10.0.3.37,path=/bin
             # Then:
-            fabl acls:origin=10.0.3.37,path=/bin,apply=True
+            fab … acls:origin=10.0.3.37,path=/bin,apply=True
     """
 
     if origin is None or path is None:
@@ -730,6 +736,8 @@ def db_mongodb(remote_configuration=None):
 @with_remote_configuration
 def base(remote_configuration=None):
     """ sys_* + brew (on OSX) + byobu, bash-completion, htop. """
+
+    LOGGER.info('Checking base() targets…')
 
     sys_easy_sudo()
 
