@@ -2,7 +2,7 @@
 
 import logging
 
-from ..fabric import task, sudo, quiet, green, run, cd
+from ..fabric import task, sudo, QUIET, green, run, cd
 from ..fabric.utils import list_or_split
 from .common import silent_sudo, is_installed, search
 
@@ -16,7 +16,7 @@ LOGGER = logging.getLogger(__name__)
 def pip_perms(verbose=True):
     """ Apply correct permissions on /usr/local/lib/*. Thanks PIP :-/ """
 
-    if verbose and not quiet:
+    if verbose and not QUIET:
         print(green('Restoring correct permissions in /usr/local/lib…'))
 
     silent_sudo('find /usr/local/lib -type f -print0 '

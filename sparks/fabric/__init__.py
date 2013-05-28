@@ -80,7 +80,8 @@ except ImportError:
 
 
 # Global way to turn all of this module silent.
-quiet = not bool(os.environ.get('SPARKS_VERBOSE', False))
+QUIET = not bool(os.environ.get('SPARKS_VERBOSE', False))
+DEBUG = bool(os.environ.get('SPARKS_DEBUG', False))
 LOGGER = logging.getLogger(__name__)
 remote_configuration = None
 local_configuration  = None
@@ -195,11 +196,9 @@ def is_production_environment():
 class RemoteConfiguration(object):
     """ Define an easy to use object with remote machine configuration. """
 
-    def __init__(self, host_string, verbose=False):
+    def __init__(self, host_string):
 
         self.host_string = host_string
-        self.verbose     = verbose
-        LOGGER.info('SPARKS_VERBOSE is %s!', self.verbose)
 
         # No need to `deactivate` for this calls, it's pure shell.
         self.user, self.tilde = run('echo "${USER},${HOME}"',
@@ -209,7 +208,7 @@ class RemoteConfiguration(object):
         self.get_uname()
         self.get_virtual_machine()
 
-        if verbose:
+        if not QUIET:
             print('Remote is {release} {host} {vm}{arch}, '
                   '{user} in {home}.'.format(
                   release='Apple OSX {0}'.format(self.mac.release)
@@ -248,7 +247,7 @@ class RemoteConfiguration(object):
         with prefix('deactivate >/dev/null 2>&1 || true'):
             out = run("python -c 'import lsb_release; "
                       "print lsb_release.get_lsb_information()'",
-                      quiet=not self.verbose)
+                      quiet=not DEBUG)
 
         try:
             self.lsb    = SimpleObject(from_dict=ast.literal_eval(out))
@@ -276,7 +275,7 @@ class RemoteConfiguration(object):
         # Be sure we don't get stuck in a virtualenv for free.
         with prefix('deactivate >/dev/null 2>&1 || true'):
             out = run("python -c 'import os; print os.uname()'",
-                      quiet=not self.verbose)
+                      quiet=not DEBUG)
 
         self.uname = SimpleObject(from_dict=dict(zip(
                                   ('sysname', 'nodename', 'release',
@@ -292,7 +291,7 @@ class RemoteConfiguration(object):
         # NOTE: this test could fail in VMs where nothing is mounted from
         # the host. In my own configs, this never occurs, but who knows.
         # TODO: check this works under OSX too, or enhance the test.
-        self.is_parallel = run('mount | grep prl_fs', quiet=not self.verbose,
+        self.is_parallel = run('mount | grep prl_fs', quiet=not DEBUG,
                                warn_only=True).succeeded
 
         self.is_vm = self.is_parallel or self.is_vmware
@@ -330,14 +329,14 @@ class RemoteConfiguration(object):
                           "\"w\"); pickle.dump(settings._wrapped, f, "
                           "pickle.HIGHEST_PROTOCOL); f.close()'").format(
                           env_generic, env_sparks, env_django_settings),
-                          quiet=not self.verbose,
+                          quiet=not DEBUG,
                           warn_only=True)
 
                 if out.succeeded:
                     get('__django_settings__.pickle',
                         pickled_settings)
                     run('rm -f __django_settings__.pickle',
-                        quiet=not self.verbose)
+                        quiet=not DEBUG)
 
                     try:
                         self.django_settings = pickle.loads(
@@ -528,10 +527,10 @@ def find_configuration_type(hostname):
         return LocalConfiguration()
 
     else:
-        return RemoteConfiguration(hostname, verbose=not quiet)
+        return RemoteConfiguration(hostname)
 
 
-if not quiet:
+if not QUIET:
     logging.basicConfig(format=
                         '%(asctime)s %(name)s[%(levelname)s] %(message)s',
                         level=logging.INFO)
