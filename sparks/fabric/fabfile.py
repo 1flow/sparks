@@ -735,6 +735,8 @@ def base(remote_configuration=None):
 
     install_homebrew()
 
+    pkg.pkg_update()
+
     sys_unattended()
     sys_del_useless()
     sys_default_services()
@@ -1034,8 +1036,6 @@ def lxc_base(remote_configuration=None):
         return
 
     base()
-
-    pkg.apt_update()
 
     # install the locale before everything, else DPKG borks.
     pkg.apt_add(('language-pack-fr', 'language-pack-en', ))
