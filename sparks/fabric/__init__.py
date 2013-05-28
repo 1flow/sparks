@@ -135,7 +135,7 @@ class RemoteConfiguration(object):
         self.get_virtual_machine()
 
         if not QUIET:
-            print('Remote is {release} {host} {vm}{arch}, '
+            print('Remote is {release} {host} {vm}{arch}, user '
                   '{user} in {home}.'.format(
                   release='Apple OSX {0}'.format(self.mac.release)
                   if self.is_osx
