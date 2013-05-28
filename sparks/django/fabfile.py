@@ -189,6 +189,52 @@ class SupervisorHelper(SimpleObject):
             # to reload the Django code even if configuration hasn't changed.
             sudo("supervisorctl restart {0}".format(self.program_name))
 
+    def find_configuration_or_template(self, service_name=None):
+        """ Return a tuple of candidate configuration files or templates
+            for the given :param:`service_name`, which defaults
+            to ``supervisor`` if not supplied.
+        """
+
+        if service_name is None:
+            service_name = 'supervisor'
+
+        candidates = (
+            os.path.join(platform.django_settings.BASE_ROOT,
+                         'config', service_name,
+                         '{0}.conf'.format(self.program_name)),
+
+            os.path.join(platform.django_settings.BASE_ROOT,
+                         'config', service_name,
+                         '{0}.template'.format(self.service)),
+
+            os.path.join(platform.django_settings.BASE_ROOT,
+                         'config', service_name,
+                         '{0}.conf'.format(self.service)),
+
+            # Last resort: the sparks template
+            os.path.join(os.path.dirname(__file__),
+                         'templates', service_name,
+                         '{0}.template'.format(self.service))
+        )
+
+        superconf = None
+
+        # os.path.exists(): we are looking for a LOCAL file,
+        # in the current Django project. Devops can prepare a
+        # fully custom supervisor configuration file for the
+        # Django web worker.
+        for candidate in candidates:
+            if os.path.exists(candidate):
+                superconf = candidate
+                break
+
+        if superconf is None:
+            raise RuntimeError('Could not find any configuration or '
+                               'template for {0}. Searched {1}.'.format(
+                               self.program_name, candidates))
+
+        return superconf
+
     def configure_program(self, remote_configuration):
         """ Upload an environment-specific supervisor configuration file.
             The file is re-generated at each call in case configuration
@@ -236,39 +282,7 @@ class SupervisorHelper(SimpleObject):
 
         """
 
-        candidates = (
-            os.path.join(platform.django_settings.BASE_ROOT,
-                         'config', 'supervisor', '{0}.conf'.format(
-                         self.program_name)),
-
-            os.path.join(platform.django_settings.BASE_ROOT,
-                         'config', 'supervisor/{0}.template'.format(
-                         self.service)),
-
-            os.path.join(platform.django_settings.BASE_ROOT,
-                         'config', 'supervisor/{0}.conf'.format(
-                         self.service)),
-
-            # Last resort: the sparks template
-            os.path.join(os.path.dirname(__file__),
-                         'supervisor', '{0}.template'.format(self.service))
-        )
-
-        superconf = None
-
-        # os.path.exists(): we are looking for a LOCAL file,
-        # in the current Django project. Devops can prepare a
-        # fully custom supervisor configuration file for the
-        # Django web worker.
-        for candidate in candidates:
-            if os.path.exists(candidate):
-                superconf = candidate
-                break
-
-        if superconf is None:
-            raise RuntimeError('Could not find any configuration or template '
-                               'for {0}. Searched {1}.'.format(
-                               self.program_name, candidates))
+        superconf = self.find_configuration_or_template()
 
         # XXX/TODO: rename templates in sparks, create worker template.
 
@@ -312,26 +326,26 @@ class SupervisorHelper(SimpleObject):
             self.update = True
 
     def handle_gunicorn_config(self):
-        """ Helper function: upload a default gunicorn configuration file
-            if there is none in the project (else, the one
-            from the project will be automatically used).
+        """ Upload a gunicorn configuration file to the server. Principle
+            is exactly the same as the supervisor configuration. Looked
+            up paths are the similar, except that the method will look
+            for them in the :file:`gunicorn/` subdir instead
+            of :file:`supervisor/`.
         """
 
-        guniconf = os.path.join(
-            platform.django_settings.BASE_ROOT,
-            'config/gunicorn_conf_{0}.py'.format(
-            self.program_name))
+        guniconf = self.find_configuration_or_template('gunicorn')
+        gunidest = os.path.join(env.root, 'config', 'gunicorn',
+                                '{0}.py'.format(self.program_name))
 
-        # os.path.exists(): we are looking for a LOCAL file in the
-        # Django project, that will be used remotely if present,
-        # once code is synchronized.
-        if not os.path.exists(guniconf):
-            guniconf = os.path.join(os.path.dirname(__file__),
-                                    'gunicorn_conf_default.py')
-
-        gunidest = os.path.join(env.root,
-                                'config/gunicorn_conf_{0}.py'.format(
-                                self.program_name))
+        # NOTE: as the configuration file stays in config/ — which is
+        # is a git managed directory – and is not templated at all, we
+        # are double-checking a file that is already good, most of the time.
+        #
+        # BUT, in case of a migration, where the developers just created
+        # a new config file whereas before there wasn't any, this will
+        # make the migration process appear natural; the user won't be
+        # annoyed with a 'please move <file> out of the way' GIT message,
+        # and won't be required to make a manual operation.
 
         if exists(gunidest):
             put(guniconf, gunidest + '.new')
@@ -346,11 +360,6 @@ class SupervisorHelper(SimpleObject):
 
         else:
             # copy the default configuration to remote.
-            # WARNING/NOTE: it will be put in the remote git working
-            # directory. This *will* trigger a conflict if a specific
-            # configuration file is added afterwards by the developers,
-            # and they'll need to delete it manually before restarting
-            # the whole deploy operation. I know this isn't cool.
             put(guniconf, gunidest)
 
             if not self.update:
@@ -367,6 +376,7 @@ def run_command(cmd):
 
         fab test cmd:'./manage.py reset admin --noinput'
 
+        .. versionadded:: in 2.0.
     """
 
     with activate_venv():
