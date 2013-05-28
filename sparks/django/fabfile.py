@@ -126,12 +126,8 @@ class SupervisorHelper(SimpleObject):
 
         """
 
-        LOGGER.warning(service)
-
         if service is None:
             service = get_current_role()
-
-        LOGGER.warning(service)
 
         # We need something more unique than project, in case we have
         # many environments on the same remote machine. And alternative
@@ -148,7 +144,7 @@ class SupervisorHelper(SimpleObject):
                                                env.environment)
 
     @classmethod
-    def add_environment_to_context(context, has_djsettings):
+    def add_environment_to_context(cls, context, has_djsettings):
         """ Helper function: add (or not) an ``environment`` item
             to :param:`context`, given the current Fabric ``env``.
 
