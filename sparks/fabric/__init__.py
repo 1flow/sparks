@@ -114,7 +114,7 @@ def merge_roles_hosts():
     return merged
 
 
-def set_roledefs_and_hosts(roledefs):
+def set_roledefs_and_hosts(roledefs, parallel=True):
     """ Just a shortcut to avoid doing the repetitive:
 
         env.roledefs = { … }
@@ -122,10 +122,41 @@ def set_roledefs_and_hosts(roledefs):
 
         In every project fabfile.
 
+        Feel free to set :param:`parallel` to True, or any integer >= 1
+        to enable the parallel mode. If set to ``True``, the function will
+        count merged hosts and set parallel to this number.
+
+        .. note:: the pool size is always clamped to 10 hosts to avoid making
+            your machine and network suffer. If you ever would like to raise
+            this maximum value, just set your shell environment
+            variable ``SPARKS_PARALLEL_MAX`` to any integer value you want,
+            and don't ever rant.
     """
+
+    maximum = int(os.environ.get('SPARKS_PARALLEL_MAX', 10))
+
+    if maximum < 2:
+        maximum = 10
 
     env.roledefs = roledefs
     env.hosts = merge_roles_hosts()
+
+    if parallel is True:
+        env.parallel = True
+        nbhosts = len(set(env.hosts))
+        env.pool_size = maximum if nbhosts > maximum else nbhosts
+
+    else:
+        try:
+            parallel = int(parallel)
+
+        except:
+            pass
+
+        else:
+            if parallel > 1:
+                env.parallel = True
+                env.pool_size = maximum if parallel > maximum else parallel
 
 
 def is_localhost(hostname):
