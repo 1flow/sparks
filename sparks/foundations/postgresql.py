@@ -25,7 +25,9 @@
         # requests via developer tasks.
         psql
             CREATE ROLE oneflow_admin PASSWORD '<passwd>' \
-                NOSUPERUSER CREATEDB CREATEUSER NOINHERIT LOGIN;
+                CREATEDB CREATEUSER NOINHERIT LOGIN;
+
+        # NOTE: NOSUPERUSER conflicts with CREATEUSER.
 
         # Already done in previous command,
         # but keeing it here for memories.
