@@ -308,7 +308,8 @@ class SupervisorHelper(SimpleObject):
             upload_template(superconf, destination + '.new',
                             context=context, use_sudo=True, backup=False)
 
-            if sudo('diff {0} {0}.new'.format(destination)) == '':
+            if sudo('diff {0} {0}.new'.format(destination),
+                    warn_only=True) == '':
                 sudo('rm -f {0}.new'.format(destination))
 
             else:
@@ -349,7 +350,8 @@ class SupervisorHelper(SimpleObject):
         if exists(gunidest):
             put(guniconf, gunidest + '.new')
 
-            if sudo('diff {0} {0}.new'.format(gunidest)) == '':
+            if sudo('diff {0} {0}.new'.format(gunidest),
+                    warn_only=True) == '':
                 sudo('rm -f {0}.new'.format(gunidest))
 
             else:
