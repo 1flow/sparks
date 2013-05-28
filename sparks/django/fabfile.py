@@ -23,8 +23,7 @@ import logging
 import datetime
 
 try:
-    from fabric.api              import (env, run, sudo, task, local,
-                                         roles, execute)
+    from fabric.api              import (env, run, sudo, task, local, roles)
     from fabric.tasks            import Task
     from fabric.operations       import put, prompt
     from fabric.contrib.files    import exists, upload_template
@@ -1018,9 +1017,9 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
 
 @task(alias='restart')
 def restart_services(fast=False):
-    execute(restart_nginx(fast=fast))
-    execute(restart_worker_celery(fast=fast))
-    execute(restart_webserver_gunicorn(fast=fast))
+    restart_nginx(fast=fast)
+    restart_worker_celery(fast=fast)
+    restart_webserver_gunicorn(fast=fast)
 
 
 @task(aliases=('initial', ))
@@ -1028,35 +1027,35 @@ def runable(fast=False, upgrade=False):
     """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
 
     if not fast:
-        execute(install_components(upgrade=upgrade))
+        install_components(upgrade=upgrade)
 
     if not is_local_environment():
 
         if not fast:
-            execute(init_environment())
+            init_environment()
 
-        execute(git_update())
+        git_update()
 
         if not is_production_environment():
             # fast or not, we must catch this one to
             # avoid source repository desynchronization.
-            execute(push_translations())
+            push_translations()
 
-        execute(git_pull())
+        git_pull()
 
-    execute(requirements(fast=fast, upgrade=upgrade))
+    requirements(fast=fast, upgrade=upgrade)
 
     if not fast:
-        execute(createdb())
+        createdb()
 
-    execute(syncdb())
-    execute(migrate())
-    execute(compilemessages())
+    syncdb()
+    migrate()
+    compilemessages()
 
     if not is_local_environment():
         # In debug mode, Django handles the static contents via a dedicated
         # view. We don't need to create/refresh/maintain the global static/ dir.
-        execute(collectstatic(fast=fast))
+        collectstatic(fast=fast)
 
 
 @task(aliases=('fast', 'fastdeploy', ))
