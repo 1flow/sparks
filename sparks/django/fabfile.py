@@ -658,9 +658,16 @@ def git_pull():
 @with_remote_configuration
 def push_translations(remote_configuration=None):
 
-    if not remote_configuration.django_settings.DEBUG:
-        # remote translations are fetched only on development / test
-        # environments. Production are not meant to host i18n work.
+    try:
+        if not remote_configuration.django_settings.DEBUG:
+            # remote translations are fetched only on development / test
+            # environments. Production are not meant to host i18n work.
+            return
+
+    except AttributeError:
+        LOGGER.warning('push_translations() ignored, remote Django settings '
+                       'cannot be loaded (you can ignore this warning during '
+                       'first deployment.')
         return
 
     LOGGER.info('Checking for new translations…')
