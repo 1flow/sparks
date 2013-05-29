@@ -548,15 +548,29 @@ def new_fixture_filename(app_model):
 @task
 def init_environment():
     """ Create ``env.root`` on the remote side, and the ``env.virtualenv``
-        it they do not exist. """
+        it they do not exist.
+
+        if ``env.repository`` exists, the following command will be run
+        automatically::
+
+            git clone ${env.repository} ${env.root}
+
+        Else, the user will be prompted to create the repository manually
+        before continuing.
+
+    """
 
     LOGGER.info('Checking base environment…')
 
     if not exists(env.root):
         run('mkdir -p "{0}"'.format(os.path.dirname(env.root)))
 
-        prompt(u'Please create the git repository in {0}:{1} and press '
-               u'[enter] when done.'.format(env.host_string, env.root))
+        if hasattr(env, 'repository'):
+            run("git clone {0} {1}".format(env.repository, env.root))
+
+        else:
+            prompt(u'Please create the git repository in {0}:{1} and press '
+                   u'[enter] when done.'.format(env.host_string, env.root))
 
     if run('lsvirtualenv | grep {0}'.format(env.virtualenv),
            warn_only=True).strip() == '':
