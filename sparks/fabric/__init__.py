@@ -115,13 +115,19 @@ def merge_roles_hosts():
     return merged
 
 
-def set_roledefs_and_hosts(roledefs, parallel=False):
+def set_roledefs_and_roles_or_hosts(roledefs, roles=True, parallel=False):
     """ Just a shortcut to avoid doing the repetitive:
 
         env.roledefs = { … }
+        env.roles = env.roledefs.keys()
+        # or
         env.hosts = merge_roles_hosts()
 
         In every project fabfile.
+
+        :param roles: defaults to ``True``, create ``env.roles`` with the
+            ``env.roledefs`` keys. If ``False``, ``env.hosts`` will be
+            created from the merged hosts list of all roledefs.
 
         Feel free to set :param:`parallel` to True, or any integer >= 1
         to enable the parallel mode. If set to ``True``, the function will
@@ -142,8 +148,12 @@ def set_roledefs_and_hosts(roledefs, parallel=False):
 
     env.roledefs = roledefs
 
-    if not env.hosts:
-        env.hosts = merge_roles_hosts()
+    if roles:
+        if not env.roles:
+            env.roles = roledefs.keys()
+    else:
+        if not env.hosts:
+            env.hosts = merge_roles_hosts()
 
     if parallel is True:
         env.parallel = True
