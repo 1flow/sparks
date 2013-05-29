@@ -570,7 +570,9 @@ def init_environment():
 
         else:
             prompt(u'Please create the git repository in {0}:{1} and press '
-                   u'[enter] when done.'.format(env.host_string, env.root))
+                   u'[enter] when done.\nIf you want it to be cloned '
+                   u'automatically, just define `env.repository` in '
+                   u'your fabfile.'.format(env.host_string, env.root))
 
     if run('lsvirtualenv | grep {0}'.format(env.virtualenv),
            warn_only=True).strip() == '':
