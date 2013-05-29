@@ -9,7 +9,7 @@ from fabric.operations       import get, put
 from fabric.contrib.console  import confirm
 from fabric.decorators       import runs_once
 from fabric.contrib.files    import contains, append, exists, sed
-from fabric.context_managers import cd, settings, hide
+from fabric.context_managers import cd, lcd, settings, hide
 from fabric.colors           import yellow, cyan
 
 from .. import pkg
@@ -337,7 +337,7 @@ def sys_mongodb(remote_configuration=None):
 def local_perms(remote_configuration=None):
     """ Re-apply correct permissions on well-known files (eg .ssh/*) """
 
-    with cd(tilde()):
+    with lcd(tilde()):
         local('chmod 700 .ssh; chmod 600 .ssh/*')
 
 
