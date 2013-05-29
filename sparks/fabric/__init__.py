@@ -104,7 +104,7 @@ def get_current_role():
 
 
 def merge_roles_hosts():
-    """ Get an axhaustive list of all machines listed
+    """ Get an exhaustive list of all machines listed
         in the current ``env.roledefs``. """
 
     merged = []
