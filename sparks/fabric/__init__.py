@@ -86,6 +86,15 @@ LOGGER = logging.getLogger(__name__)
 remote_configuration = None
 local_configuration  = None
 
+all_roles = [
+    'web',
+    'db', 'databases',
+    'worker', 'flower',
+    'worker_low', 'worker_medium', 'worker_high',
+    'load',
+    'monitoring',
+]
+
 
 # =================================================== Remote system information
 
@@ -147,6 +156,12 @@ def set_roledefs_and_roles_or_hosts(roledefs, roles=True, parallel=False):
         maximum = 10
 
     env.roledefs = roledefs
+
+    # pre-set empty roles with empty lists to avoid the beautiful:
+    #   Fatal error: The following specified roles do not exist:
+    #       worker
+    for key in all_roles:
+        env.roledefs.setdefault(key, [])
 
     if roles:
         if not env.roles:
