@@ -305,6 +305,9 @@ class SupervisorHelper(SimpleObject):
 
         self.add_environment_to_context(context, self.has_djsettings)
 
+        self.update  = False
+        self.restart = False
+
         if exists(destination):
             upload_template(superconf, destination + '.new',
                             context=context, use_sudo=True, backup=False)
@@ -745,8 +748,6 @@ def restart_webserver_gunicorn(remote_configuration=None, fast=False):
         has_djsettings, program_name = SupervisorHelper.build_program_name()
 
         supervisor = SupervisorHelper(from_dict={
-                                      'update': False,
-                                      'restart': False,
                                       'has_djsettings': has_djsettings,
                                       'service': get_current_role(),
                                       'program_name': program_name
@@ -776,8 +777,6 @@ def restart_worker_celery(remote_configuration=None, fast=False):
         has_djsettings, program_name = SupervisorHelper.build_program_name()
 
         supervisor = SupervisorHelper(from_dict={
-                                      'update': False,
-                                      'restart': False,
                                       'has_djsettings': has_djsettings,
                                       'service': get_current_role(),
                                       'program_name': program_name
