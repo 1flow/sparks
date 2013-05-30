@@ -772,6 +772,9 @@ def restart_worker_celery(remote_configuration=None, fast=False):
 
     """
 
+    print('Please implement celery worker service restart')
+    return
+
     if exists('/etc/supervisor'):
 
         has_djsettings, program_name = SupervisorHelper.build_program_name()
@@ -1054,8 +1057,8 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
 @task(alias='restart')
 def restart_services(fast=False):
     execute(restart_nginx, fast=fast)
-    execute(restart_worker_celery, fast=fast)
     execute(restart_webserver_gunicorn, fast=fast)
+    execute(restart_worker_celery, fast=fast)
 
 
 @task(aliases=('initial', ))
