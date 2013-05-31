@@ -102,6 +102,12 @@ all_roles = [
 def get_current_role():
     """ Thanks http://stackoverflow.com/a/9673778/654755 """
 
+    try:
+        # http://stackoverflow.com/a/14470161/654755
+        print(env.host_string.role)
+    except:
+        pass
+
     host  = env.host_string
     roles = env.roledefs
 
