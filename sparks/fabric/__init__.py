@@ -125,7 +125,7 @@ def execute_or_not(task, *args, **kwargs):
 
     else:
         LOGGER.warning('Not executing %s(%s, %s): no roles in current '
-                       'context.', task, args, kwargs)
+                       'context.', task.name, args, kwargs)
 
 
 def get_current_role():
