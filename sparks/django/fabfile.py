@@ -39,7 +39,7 @@ from ..fabric import (fabfile, with_remote_configuration,
                       is_local_environment,
                       is_development_environment,
                       is_production_environment,
-                      get_current_role, execute_or_not)
+                      execute_or_not)
 from ..pkg import brew
 from ..foundations import postgresql as pg
 from ..foundations.classes import SimpleObject
@@ -128,7 +128,7 @@ class SupervisorHelper(SimpleObject):
         """
 
         if service is None:
-            service = get_current_role()
+            service = env.host_string.role
 
         # We need something more unique than project, in case we have
         # many environments on the same remote machine. And alternative
@@ -198,6 +198,8 @@ class SupervisorHelper(SimpleObject):
         if service_name is None:
             service_name = 'supervisor'
 
+        role_name = env.host_string.role
+
         candidates = (
             os.path.join(platform.django_settings.BASE_ROOT,
                          'config', service_name,
@@ -205,16 +207,16 @@ class SupervisorHelper(SimpleObject):
 
             os.path.join(platform.django_settings.BASE_ROOT,
                          'config', service_name,
-                         '{0}.template'.format(self.service)),
+                         '{0}.template'.format(role_name)),
 
             os.path.join(platform.django_settings.BASE_ROOT,
                          'config', service_name,
-                         '{0}.conf'.format(self.service)),
+                         '{0}.conf'.format(role_name)),
 
             # Last resort: the sparks template
             os.path.join(os.path.dirname(__file__),
                          'templates', service_name,
-                         '{0}.template'.format(self.service))
+                         '{0}.template'.format(role_name))
         )
 
         superconf = None
@@ -745,7 +747,6 @@ def restart_webserver_gunicorn(remote_configuration=None, fast=False):
 
         supervisor = SupervisorHelper(from_dict={
                                       'has_djsettings': has_djsettings,
-                                      'service': get_current_role(),
                                       'program_name': program_name
                                       })
 
@@ -776,7 +777,6 @@ def restart_worker_celery(remote_configuration=None, fast=False):
 
         supervisor = SupervisorHelper(from_dict={
                                       'has_djsettings': has_djsettings,
-                                      'service': get_current_role(),
                                       'program_name': program_name
                                       })
 

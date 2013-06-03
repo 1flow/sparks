@@ -128,25 +128,6 @@ def execute_or_not(task, *args, **kwargs):
                        'context.', task.name, args, kwargs)
 
 
-def get_current_role():
-    """ Thanks http://stackoverflow.com/a/9673778/654755 """
-
-    try:
-        # http://stackoverflow.com/a/14470161/654755
-        print(env.host_string.role)
-    except:
-        pass
-
-    host  = env.host_string
-    roles = env.roledefs
-
-    for role in roles:
-        if host in roles[role]:
-            return role
-
-    return None
-
-
 def merge_roles_hosts():
     """ Get an exhaustive list of all machines listed
         in the current ``env.roledefs``. """
