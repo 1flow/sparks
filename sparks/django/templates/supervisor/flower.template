@@ -1,0 +1,9 @@
+[program:%(program)s]
+command=%(user_home)s/.virtualenvs/%(virtualenv)s/bin/python %(root)s/manage.py celery flower
+directory=%(root)s
+user=%(user)s
+autostart=true
+autorestart=true
+priority=991
+stopsignal=KILL
+%(environment)s
