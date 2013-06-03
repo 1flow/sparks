@@ -87,12 +87,17 @@ remote_configuration = None
 local_configuration  = None
 
 all_roles = [
-    'web',
+    'web', 'webserver',
     'db', 'databases',
-    'worker', 'flower',
+    'pg', 'postgresql',
+    'mongo', 'mongodb',
+    'redis', 'redisdb',
+    'worker',
     'worker_low', 'worker_medium', 'worker_high',
-    'load',
+    'load', 'ha', 'loadbalancer',
     'monitoring',
+    'flower',
+    'admin',
 ]
 
 
