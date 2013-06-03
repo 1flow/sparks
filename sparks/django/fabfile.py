@@ -39,7 +39,7 @@ from ..fabric import (fabfile, with_remote_configuration,
                       is_local_environment,
                       is_development_environment,
                       is_production_environment,
-                      get_current_role)
+                      get_current_role, all_roles)
 from ..pkg import brew
 from ..foundations import postgresql as pg
 from ..foundations.classes import SimpleObject
@@ -390,6 +390,7 @@ def run_command(cmd):
 
 
 @task(aliases=('base', 'base_components'))
+@roles(all_roles)
 @with_remote_configuration
 def install_components(remote_configuration=None, upgrade=False):
     """ Install necessary packages to run a full Django stack.
@@ -988,6 +989,7 @@ def maintenance_mode(fast=True):
 
 
 @task(aliases=('operational', 'op', 'normal', 'resume', 'run', ))
+@roles('web')
 def operational_mode(fast=True):
     """ Get out of maintenance mode (and restart services). """
 
@@ -999,7 +1001,7 @@ def operational_mode(fast=True):
 
 
 @task(task_class=DjangoTask)
-@roles('db', 'databases')
+@roles('db', 'databases', 'pg', 'postgresql')
 @with_remote_configuration
 def createdb(remote_configuration=None, db=None, user=None, password=None,
              installation=False):
