@@ -181,6 +181,9 @@ def set_roledefs_and_parallel(roledefs, parallel=False):
     for key in all_roles:
         env.roledefs.setdefault(key, [])
 
+    # merge all hosts for tasks that can run on any of them.
+    env.roledefs['__any__'] = merge_roles_hosts()
+
     if parallel is True:
         env.parallel = True
         nbhosts = len(set(env.hosts))
