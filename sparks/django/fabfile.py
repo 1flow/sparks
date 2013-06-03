@@ -551,6 +551,7 @@ def new_fixture_filename(app_model):
 
 
 @task
+@roles('__any__')
 def init_environment():
     """ Create ``env.root`` on the remote side, and the ``env.virtualenv``
         it they do not exist.
@@ -585,7 +586,8 @@ def init_environment():
 
 
 @task(alias='req')
-@roles('web', 'worker')
+@roles('web', 'webserver',
+       'worker', 'worker_low', 'worker_medium', 'worker_high')
 def requirements(fast=False, upgrade=False):
     """ Install PIP requirements (and dev-requirements).
 
@@ -636,7 +638,8 @@ def requirements(fast=False, upgrade=False):
 
 
 @task(alias='pull')
-@roles('web', 'worker')
+@roles('web', 'webserver',
+       'worker', 'worker_low', 'worker_medium', 'worker_high')
 def git_update():
 
     # TODO: git up?
@@ -651,7 +654,8 @@ def git_update():
 
 
 @task(alias='pull')
-@roles('web', 'worker')
+@roles('web', 'webserver',
+       'worker', 'worker_low', 'worker_medium', 'worker_high')
 def git_pull():
 
     with cd(env.root):
@@ -675,7 +679,7 @@ def git_pull():
 
 
 @task(alias='getlangs')
-@roles('web')
+@roles('lang', 'i18n')
 @with_remote_configuration
 def push_translations(remote_configuration=None):
 
@@ -832,7 +836,10 @@ def django_manage(command, prefix=None, **kwargs):
 
 @with_remote_configuration
 def handlemessages(remote_configuration=None, mode=None):
-    """ Run the Django compilemessages management command. """
+    """ Run the Django compilemessages management command.
+
+        .. note:: not a Fabric task, but a helper function.
+    """
 
     if mode is None:
         mode = 'make'
@@ -875,6 +882,7 @@ def makemessages():
 
 
 @task(task_class=DjangoTask, alias='compile')
+@roles('__any__')
 def compilemessages():
     handlemessages(mode='compile')
 
