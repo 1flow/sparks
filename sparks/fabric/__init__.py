@@ -15,7 +15,7 @@ from ..contrib import lsb_release
 from . import nofabric
 
 try:
-    from fabric.api              import env
+    from fabric.api              import env, execute
     from fabric.api              import run as fabric_run
     from fabric.api              import sudo as fabric_sudo
     from fabric.api              import local as fabric_local
@@ -86,21 +86,46 @@ LOGGER = logging.getLogger(__name__)
 remote_configuration = None
 local_configuration  = None
 
+all_roles = [
+    'web', 'webserver',
+    'db', 'databases',
+    'pg', 'postgresql',
+    'mongo', 'mongodb',
+    'redis', 'redisdb',
+    'worker',
+    'worker_low', 'worker_medium', 'worker_high',
+    'load', 'ha', 'loadbalancer',
+    'monitoring',
+    'lang', 'i18n',
+    'flower',
+    'admin',
+]
+
 
 # =================================================== Remote system information
 
+def execute_or_not(task, *args, **kwargs):
+    """ Run Fabric's execute(), but only if there are hosts/roles to run it on.
+        Else, just discard the task, and print a warning message.
 
-def get_current_role():
-    """ Thanks http://stackoverflow.com/a/9673778/654755 """
+        This allows to have empty roles/hosts lists for some tasks, in
+        architectures where all roles are not needed.
 
-    host  = env.host_string
-    roles = env.roledefs
+        .. versionadded: 2.x.
+    """
 
-    for role in roles:
-        if host in roles[role]:
-            return role
+    # execute kwargs: host, hosts, role, roles and exclude_hosts
 
-    return None
+    roles = kwargs.pop('sparks_roles', ['__any__'])
+    non_empty = [role for role in roles if env.roledefs[role] != []]
+
+    if non_empty:
+        kwargs['roles'] = non_empty
+        return execute(task, *args, **kwargs)
+
+    else:
+        LOGGER.warning('Not executing %s(%s, %s): no roles in current '
+                       'context.', task.name, args, kwargs)
 
 
 def merge_roles_hosts():
@@ -115,13 +140,20 @@ def merge_roles_hosts():
     return merged
 
 
-def set_roledefs_and_hosts(roledefs, parallel=False):
-    """ Just a shortcut to avoid doing the repetitive:
+def set_roledefs_and_parallel(roledefs, parallel=False):
+    """ Define a sparks-compatible but Fabric-happy ``env.roledefs``.
+        It's just a shortcut to avoid doing the repetitive:
 
-        env.roledefs = { … }
-        env.hosts = merge_roles_hosts()
+            env.roledefs = { … }
+            # fill env.roledefs with empty lists for each unused roles.
+            env.parallel = True
+            env.pool_size = …
 
-        In every project fabfile.
+        Sparks has a default set of roles, already suited for clouded
+        web projects. You do not need all of them in all your projects.
+        Via this function, you can define only the one you need, and
+        sparks will take care of making your ``roledefs`` compatible with
+        Fabric, which wants all roles to be defined explicitely.
 
         Feel free to set :param:`parallel` to True, or any integer >= 1
         to enable the parallel mode. If set to ``True``, the function will
@@ -133,6 +165,12 @@ def set_roledefs_and_hosts(roledefs, parallel=False):
             this maximum value, just set your shell environment
             variable ``SPARKS_PARALLEL_MAX`` to any integer value you want,
             and don't ever rant.
+
+        .. versionadded:: new in version 2.0.
+
+        .. versionchanged:: in version 2.1, this method was named
+            after ``set_roledefs_and_roles_or_hosts``, but the whole process
+            was still under design.
     """
 
     maximum = int(os.environ.get('SPARKS_PARALLEL_MAX', 10))
@@ -142,8 +180,14 @@ def set_roledefs_and_hosts(roledefs, parallel=False):
 
     env.roledefs = roledefs
 
-    if not env.hosts:
-        env.hosts = merge_roles_hosts()
+    # pre-set empty roles with empty lists to avoid the beautiful:
+    #   Fatal error: The following specified roles do not exist:
+    #       worker
+    for key in all_roles:
+        env.roledefs.setdefault(key, [])
+
+    # merge all hosts for tasks that can run on any of them.
+    env.roledefs['__any__'] = merge_roles_hosts()
 
     if parallel is True:
         env.parallel = True
