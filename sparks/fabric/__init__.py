@@ -135,19 +135,20 @@ def merge_roles_hosts():
     return merged
 
 
-def set_roledefs_and_roles_or_hosts(roledefs, roles=True, parallel=False):
-    """ Just a shortcut to avoid doing the repetitive:
+def set_roledefs_and_parallel(roledefs, parallel=False):
+    """ Define a sparks-compatible but Fabric-happy ``env.roledefs``.
+        It's just a shortcut to avoid doing the repetitive:
 
-        env.roledefs = { … }
-        env.roles = env.roledefs.keys()
-        # or
-        env.hosts = merge_roles_hosts()
+            env.roledefs = { … }
+            # fill env.roledefs with empty lists for each unused roles.
+            env.parallel = True
+            env.pool_size = …
 
-        In every project fabfile.
-
-        :param roles: defaults to ``True``, create ``env.roles`` with the
-            ``env.roledefs`` keys. If ``False``, ``env.hosts`` will be
-            created from the merged hosts list of all roledefs.
+        Sparks has a default set of roles, already suited for clouded
+        web projects. You do not need all of them in all your projects.
+        Via this function, you can define only the one you need, and
+        sparks will take care of making your ``roledefs`` compatible with
+        Fabric, which wants all roles to be defined explicitely.
 
         Feel free to set :param:`parallel` to True, or any integer >= 1
         to enable the parallel mode. If set to ``True``, the function will
@@ -159,6 +160,12 @@ def set_roledefs_and_roles_or_hosts(roledefs, roles=True, parallel=False):
             this maximum value, just set your shell environment
             variable ``SPARKS_PARALLEL_MAX`` to any integer value you want,
             and don't ever rant.
+
+        .. versionadded:: new in version 2.0.
+
+        .. versionchanged:: in version 2.1, this method was named
+            after ``set_roledefs_and_roles_or_hosts``, but the whole process
+            was still under design.
     """
 
     maximum = int(os.environ.get('SPARKS_PARALLEL_MAX', 10))
@@ -173,13 +180,6 @@ def set_roledefs_and_roles_or_hosts(roledefs, roles=True, parallel=False):
     #       worker
     for key in all_roles:
         env.roledefs.setdefault(key, [])
-
-    if roles:
-        if not env.roles:
-            env.roles = roledefs.keys()
-    else:
-        if not env.hosts:
-            env.hosts = merge_roles_hosts()
 
     if parallel is True:
         env.parallel = True
