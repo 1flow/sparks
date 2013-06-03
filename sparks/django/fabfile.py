@@ -636,6 +636,8 @@ def requirements(fast=False, upgrade=False):
                 django_env=django_settings_env_var(),
                 command=command, requirements_file=req))
 
+            LOGGER.info('Done checking requirements.')
+
 
 @task(alias='pull')
 @roles('web', 'webserver',
@@ -1016,6 +1018,8 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
     """ Create the PostgreSQL user & database if they don't already exist.
         Install PostgreSQL on the remote system if asked to. """
 
+    LOGGER.info('Checking database setup…')
+
     if installation:
         from ..fabric import fabfile
         fabfile.db_postgresql()
@@ -1062,6 +1066,8 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
 
         if sudo(pg.SELECT_DB.format(pg_env=pg_env, db=db)).strip() == '':
             sudo(pg.CREATE_DB.format(pg_env=pg_env, db=db, user=user))
+
+    LOGGER.info('Done checking database setup.')
 
 
 @task(alias='restart')
