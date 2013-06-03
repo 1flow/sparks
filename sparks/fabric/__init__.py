@@ -15,7 +15,7 @@ from ..contrib import lsb_release
 from . import nofabric
 
 try:
-    from fabric.api              import env
+    from fabric.api              import env, execute
     from fabric.api              import run as fabric_run
     from fabric.api              import sudo as fabric_sudo
     from fabric.api              import local as fabric_local
@@ -103,6 +103,29 @@ all_roles = [
 
 
 # =================================================== Remote system information
+
+def execute_or_not(task, *args, **kwargs):
+    """ Run Fabric's execute(), but only if there are hosts/roles to run it on.
+        Else, just discard the task, and print a warning message.
+
+        This allows to have empty roles/hosts lists for some tasks, in
+        architectures where all roles are not needed.
+
+        .. versionadded: 2.x.
+    """
+
+    # execute kwargs: host, hosts, role, roles and exclude_hosts
+
+    roles = kwargs.pop('sparks_roles', ['__any__'])
+    non_empty = [role for role in roles if env.roledefs[role] != []]
+
+    if non_empty:
+        kwargs['roles'] = non_empty
+        return execute(task, *args, **kwargs)
+
+    else:
+        LOGGER.warning('Not executing %s(%s, %s): no roles in current '
+                       'context.', task, args, kwargs)
 
 
 def get_current_role():

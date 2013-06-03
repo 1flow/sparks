@@ -23,8 +23,8 @@ import logging
 import datetime
 
 try:
-    from fabric.api              import (env, run, sudo, task, local, roles,
-                                         execute)
+    from fabric.api              import (env, run, sudo, task, local,
+                                         roles, execute)
     from fabric.tasks            import Task
     from fabric.operations       import put, prompt
     from fabric.contrib.files    import exists, upload_template
@@ -39,7 +39,7 @@ from ..fabric import (fabfile, with_remote_configuration,
                       is_local_environment,
                       is_development_environment,
                       is_production_environment,
-                      get_current_role, all_roles)
+                      get_current_role, execute_or_not)
 from ..pkg import brew
 from ..foundations import postgresql as pg
 from ..foundations.classes import SimpleObject
@@ -390,7 +390,6 @@ def run_command(cmd):
 
 
 @task(aliases=('base', 'base_components'))
-@roles(all_roles)
 @with_remote_configuration
 def install_components(remote_configuration=None, upgrade=False):
     """ Install necessary packages to run a full Django stack.
@@ -551,7 +550,6 @@ def new_fixture_filename(app_model):
 
 
 @task
-@roles('__any__')
 def init_environment():
     """ Create ``env.root`` on the remote side, and the ``env.virtualenv``
         it they do not exist.
@@ -586,8 +584,6 @@ def init_environment():
 
 
 @task(alias='req')
-@roles('web', 'webserver',
-       'worker', 'worker_low', 'worker_medium', 'worker_high')
 def requirements(fast=False, upgrade=False):
     """ Install PIP requirements (and dev-requirements).
 
@@ -640,8 +636,6 @@ def requirements(fast=False, upgrade=False):
 
 
 @task(alias='pull')
-@roles('web', 'webserver',
-       'worker', 'worker_low', 'worker_medium', 'worker_high')
 def git_update():
 
     # TODO: git up?
@@ -656,8 +650,6 @@ def git_update():
 
 
 @task(alias='pull')
-@roles('web', 'webserver',
-       'worker', 'worker_low', 'worker_medium', 'worker_high')
 def git_pull():
 
     with cd(env.root):
@@ -681,7 +673,6 @@ def git_pull():
 
 
 @task(alias='getlangs')
-@roles('lang', 'i18n')
 @with_remote_configuration
 def push_translations(remote_configuration=None):
 
@@ -720,7 +711,6 @@ def push_translations(remote_configuration=None):
 
 
 @task(alias='nginx')
-@roles('load')
 def restart_nginx(fast=False):
 
     if not exists('/etc/nginx'):
@@ -739,7 +729,6 @@ def restart_nginx(fast=False):
 
 
 @task(task_class=DjangoTask, alias='gunicorn')
-@roles('web')
 @with_remote_configuration
 def restart_webserver_gunicorn(remote_configuration=None, fast=False):
     """ (Re-)upload configuration files and reload gunicorn via supervisor.
@@ -768,7 +757,6 @@ def restart_webserver_gunicorn(remote_configuration=None, fast=False):
 
 
 @task(task_class=DjangoTask, alias='gunicorn')
-@roles('worker', 'worker_low', 'worker_medium', 'worker_high')
 @with_remote_configuration
 def restart_worker_celery(remote_configuration=None, fast=False):
     """ (Re-)upload configuration files and reload celery via supervisor.
@@ -799,7 +787,7 @@ def restart_worker_celery(remote_configuration=None, fast=False):
         supervisor.restart_or_reload()
 
 
-# ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Django specific
+# •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Django tasks
 
 @task(task_class=DjangoTask, alias='manage')
 def django_manage(command, prefix=None, **kwargs):
@@ -884,134 +872,11 @@ def makemessages():
 
 
 @task(task_class=DjangoTask, alias='compile')
-@roles('__any__')
 def compilemessages():
     handlemessages(mode='compile')
 
 
 @task(task_class=DjangoTask)
-@roles('db', 'database')
-def syncdb():
-    """ Run the Django syndb management command. """
-
-    with activate_venv():
-        with cd(env.root):
-            # TODO: this should be managed by git and the developers, not here.
-            run('chmod 755 manage.py', quiet=True)
-
-    django_manage('syncdb --noinput')
-
-
-@task(task_class=DjangoTask)
-@roles('db', 'database')
-@with_remote_configuration
-def migrate(remote_configuration=None, args=None):
-    """ Run the Django migrate management command, and the Transmeta one
-        if ``django-transmeta`` is installed.
-
-        .. versionchanged:: in 1.16 the function checks if ``transmeta`` is
-            installed remotely and runs the command properly. before, it just
-            ran the command inconditionnaly with ``warn_only=True``, which
-            was less than ideal in case of a problem because the fab procedure
-            didn't stop.
-    """
-
-    django_manage('migrate ' + (args or ''))
-
-    if 'transmeta' in remote_configuration.django_settings.INSTALLED_APPS:
-        django_manage('sync_transmeta_db', prefix='yes | ')
-
-
-@task(task_class=DjangoTask, alias='static')
-@roles('web')
-@with_remote_configuration
-def collectstatic(remote_configuration=None, fast=True):
-    """ Run the Django collectstatic management command. If :param:`fast`
-        is ``False``, the ``STATIC_ROOT`` will be erased first. """
-
-    if not fast:
-        with cd(env.root):
-            run('rm -rf "{0}"'.format(
-                remote_configuration.django_settings.STATIC_ROOT))
-
-    django_manage('collectstatic --noinput')
-
-
-@task(task_class=DjangoTask)
-@roles('db', 'database')
-def putdata(filename=None, confirm=True):
-    """ Put a local fixture on the remote end with via transient filename
-        and load it via Django's ``loaddata`` command.
-
-        :param
-    """
-
-    if filename is None:
-        filename = get_all_fixtures(order_by='date')[0]
-
-        if confirm:
-            prompt('OK to load {0} ([enter] or Control-C)?'.format(filename))
-
-    remote_file = list(put(filename))[0]
-
-    django_manage('loaddata {0}'.format(remote_file))
-
-
-@task(task_class=DjangoTask)
-@roles('db', 'database')
-def getdata(app_model, filename=None):
-    """ Get a dump or remote data in a local fixture, via
-        Django's ``dumpdata`` management command.
-
-        Examples::
-
-            # more or less abstract examples
-            fab test getdata:myapp.MyModel
-            fab production custom_settings getdata:myapp.MyModel
-
-            # The 1flowapp.com landing page.
-            fab test oneflowapp getdata:landing.LandingContent
-
-        .. versionadded:: 1.16
-    """
-
-    if filename is None:
-        filename = new_fixture_filename(app_model)
-        print('Dump data stored in {0}'.format(filename))
-
-    with open(filename, 'w') as f:
-        f.write(django_manage('dumpdata {0} --indent 4 '
-                '--format json --natural'.format(app_model), quiet=True))
-
-# ••••••••••••••••••••••••••••••••••••••••••••••••••••••• Deployment meta-tasks
-
-
-@task(aliases=('maintenance', 'maint', ))
-@roles('web')
-def maintenance_mode(fast=True):
-    """ Trigger maintenance mode (and restart services). """
-
-    with cd(env.root):
-        run('touch MAINTENANCE_MODE')
-
-    # TODO: stop the services on worker* ?
-    restart_services(fast=fast)
-
-
-@task(aliases=('operational', 'op', 'normal', 'resume', 'run', ))
-@roles('web')
-def operational_mode(fast=True):
-    """ Get out of maintenance mode (and restart services). """
-
-    with cd(env.root):
-        run('rm -f MAINTENANCE_MODE')
-
-    # TODO: start the services on worker* ?
-    restart_services(fast=fast)
-
-
-@task(task_class=DjangoTask)
-@roles('db', 'databases', 'pg', 'postgresql')
 @with_remote_configuration
 def createdb(remote_configuration=None, db=None, user=None, password=None,
              installation=False):
@@ -1070,11 +935,135 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
     LOGGER.info('Done checking database setup.')
 
 
+@task(task_class=DjangoTask)
+def syncdb():
+    """ Run the Django syndb management command. """
+
+    with activate_venv():
+        with cd(env.root):
+            # TODO: this should be managed by git and the developers, not here.
+            run('chmod 755 manage.py', quiet=True)
+
+    django_manage('syncdb --noinput')
+
+
+@task(task_class=DjangoTask)
+@with_remote_configuration
+def migrate(remote_configuration=None, args=None):
+    """ Run the Django migrate management command, and the Transmeta one
+        if ``django-transmeta`` is installed.
+
+        .. versionchanged:: in 1.16 the function checks if ``transmeta`` is
+            installed remotely and runs the command properly. before, it just
+            ran the command inconditionnaly with ``warn_only=True``, which
+            was less than ideal in case of a problem because the fab procedure
+            didn't stop.
+    """
+
+    django_manage('migrate ' + (args or ''))
+
+    if 'transmeta' in remote_configuration.django_settings.INSTALLED_APPS:
+        django_manage('sync_transmeta_db', prefix='yes | ')
+
+
+@task(task_class=DjangoTask, alias='static')
+@with_remote_configuration
+def collectstatic(remote_configuration=None, fast=True):
+    """ Run the Django collectstatic management command. If :param:`fast`
+        is ``False``, the ``STATIC_ROOT`` will be erased first. """
+
+    if not fast:
+        with cd(env.root):
+            run('rm -rf "{0}"'.format(
+                remote_configuration.django_settings.STATIC_ROOT))
+
+    django_manage('collectstatic --noinput')
+
+
+# ••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Direct-target tasks
+
+
+@task(task_class=DjangoTask)
+@roles('db')
+def putdata(filename=None, confirm=True):
+    """ Put a local fixture on the remote end with via transient filename
+        and load it via Django's ``loaddata`` command.
+
+        :param
+    """
+
+    if filename is None:
+        filename = get_all_fixtures(order_by='date')[0]
+
+        if confirm:
+            prompt('OK to load {0} ([enter] or Control-C)?'.format(filename))
+
+    remote_file = list(put(filename))[0]
+
+    django_manage('loaddata {0}'.format(remote_file))
+
+
+@task(task_class=DjangoTask)
+@roles('db')
+def getdata(app_model, filename=None):
+    """ Get a dump or remote data in a local fixture, via
+        Django's ``dumpdata`` management command.
+
+        Examples::
+
+            # more or less abstract examples
+            fab test getdata:myapp.MyModel
+            fab production custom_settings getdata:myapp.MyModel
+
+            # The 1flowapp.com landing page.
+            fab test oneflowapp getdata:landing.LandingContent
+
+        .. versionadded:: 1.16
+    """
+
+    if filename is None:
+        filename = new_fixture_filename(app_model)
+        print('Dump data stored in {0}'.format(filename))
+
+    with open(filename, 'w') as f:
+        f.write(django_manage('dumpdata {0} --indent 4 '
+                '--format json --natural'.format(app_model), quiet=True))
+
+
+@task(aliases=('maintenance', 'maint', ))
+@roles('web')
+def maintenance_mode(fast=True):
+    """ Trigger maintenance mode (and restart services). """
+
+    with cd(env.root):
+        run('touch MAINTENANCE_MODE')
+
+    # TODO: stop the services on worker* ?
+    restart_services(fast=fast)
+
+
+@task(aliases=('operational', 'op', 'normal', 'resume', 'run', ))
+@roles('web')
+def operational_mode(fast=True):
+    """ Get out of maintenance mode (and restart services). """
+
+    with cd(env.root):
+        run('rm -f MAINTENANCE_MODE')
+
+    # TODO: start the services on worker* ?
+    restart_services(fast=fast)
+
+
+# ••••••••••••••••••••••••••••••••••••••••••••••••••••••• Deployment meta-tasks
+
+
 @task(alias='restart')
 def restart_services(fast=False):
-    execute(restart_nginx, fast=fast)
-    execute(restart_webserver_gunicorn, fast=fast)
-    execute(restart_worker_celery, fast=fast)
+    execute_or_not(restart_nginx, fast=fast, sparks_roles=('load', ))
+    execute_or_not(restart_webserver_gunicorn, fast=fast,
+                   sparks_roles=('web', ))
+    execute_or_not(restart_worker_celery, fast=fast, sparks_roles=('worker',
+                   'worker_low', 'worker_medium', 'worker_high'))
 
 
 @task(aliases=('initial', ))
@@ -1082,41 +1071,49 @@ def runable(fast=False, upgrade=False):
     """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
 
     if not fast:
-        execute(install_components, upgrade=upgrade)
+        execute_or_not(install_components, upgrade=upgrade,
+                       sparks_roles=('__any__', ))
 
     if not is_local_environment():
 
         if not fast:
-            execute(init_environment)
+            execute_or_not(init_environment, sparks_roles=('__any__', ))
 
-        execute(git_update)
+        execute_or_not(git_update, sparks_roles=('web', 'worker',
+                       'worker_low', 'worker_medium', 'worker_high'))
 
         if not is_production_environment():
             # fast or not, we must catch this one to
             # avoid source repository desynchronization.
-            execute(push_translations)
+            execute_or_not(push_translations, sparks_roles=('lang', ))
 
-        execute(git_pull)
+        execute_or_not(git_pull, sparks_roles=('web', 'worker',
+                       'worker_low', 'worker_medium', 'worker_high'))
 
-    execute(requirements, fast=fast, upgrade=upgrade)
+    execute_or_not(requirements, fast=fast, upgrade=upgrade,
+                   sparks_roles=('web', 'worker',
+                   'worker_low', 'worker_medium', 'worker_high'))
 
     if not fast:
-        execute(createdb)
+        execute_or_not(createdb, sparks_roles=('db', 'pg', ))
 
-    execute(syncdb)
-    execute(migrate)
-    execute(compilemessages)
+    execute_or_not(syncdb, sparks_roles=('db', 'pg', ))
+    execute_or_not(migrate, sparks_roles=('db', 'pg', ))
+    execute_or_not(compilemessages, sparks_roles=('web', 'worker',
+                   'worker_low', 'worker_medium', 'worker_high'))
 
     if not is_local_environment():
         # In debug mode, Django handles the static contents via a dedicated
         # view. We don't need to create/refresh/maintain the global static/ dir.
-        execute(collectstatic, fast=fast)
+        execute_or_not(collectstatic, fast=fast, sparks_roles=('web', ))
 
 
 @task(aliases=('fast', 'fastdeploy', ))
 def fast_deploy():
     """ Deploy FAST! For templates / static changes only. """
 
+    # not our execute_or_not(), here we want Fabric
+    # to handle its classic execution model.
     execute(deploy, fast=True)
 
 
@@ -1124,6 +1121,10 @@ def fast_deploy():
 def deploy(fast=False, upgrade=False):
     """ Pull code, ensure runable, restart services. """
 
+    # not our execute_or_not(), here we want Fabric
+    # to handle its classic execution model.
     execute(runable, fast=fast, upgrade=upgrade)
 
+    # not our execute_or_not(), here we want Fabric
+    # to handle its classic execution model.
     execute(restart_services, fast=fast)
