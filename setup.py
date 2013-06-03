@@ -12,7 +12,7 @@ setup(
     url="https://github.com/Karmak23/sparks",
 
     packages=find_packages(),
-    install_requires=['Fabric'],
+    install_requires=['-e git+https://github.com/Karmak23/fabric#egg=fabric'],
 
     keywords=(
         'installation',
