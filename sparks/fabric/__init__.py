@@ -96,6 +96,7 @@ all_roles = [
     'worker_low', 'worker_medium', 'worker_high',
     'load', 'ha', 'loadbalancer',
     'monitoring',
+    'lang', 'i18n',
     'flower',
     'admin',
 ]
