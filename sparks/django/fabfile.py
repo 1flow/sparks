@@ -1066,12 +1066,12 @@ def runable(fast=False, upgrade=False):
     """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
 
     if not fast:
-        install_components(upgrade=upgrade)
+        execute(install_components, upgrade=upgrade)
 
     if not is_local_environment():
 
         if not fast:
-            init_environment()
+            execute(init_environment)
 
         execute(git_update)
 
@@ -1089,7 +1089,7 @@ def runable(fast=False, upgrade=False):
 
     execute(syncdb)
     execute(migrate)
-    compilemessages()
+    execute(compilemessages)
 
     if not is_local_environment():
         # In debug mode, Django handles the static contents via a dedicated
@@ -1101,13 +1101,13 @@ def runable(fast=False, upgrade=False):
 def fast_deploy():
     """ Deploy FAST! For templates / static changes only. """
 
-    deploy(fast=True)
+    execute(deploy, fast=True)
 
 
 @task(default=True, aliases=('fulldeploy', 'full_deploy', ))
 def deploy(fast=False, upgrade=False):
     """ Pull code, ensure runable, restart services. """
 
-    runable(fast=fast, upgrade=upgrade)
+    execute(runable, fast=fast, upgrade=upgrade)
 
-    restart_services(fast=fast)
+    execute(restart_services, fast=fast)
