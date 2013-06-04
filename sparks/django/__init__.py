@@ -10,7 +10,7 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 
-def create_admin_user(email=None, password=None):
+def create_admin_user(username=None, email=None, password=None):
 
     # additional process for creating an admin without input or misc data…
     # cf. http://stackoverflow.com/a/13466241/654755
@@ -21,7 +21,7 @@ def create_admin_user(email=None, password=None):
             from django.conf import settings
             from django.db import IntegrityError
 
-            admin_id       = 'admin'
+            admin_username = 'admin' if username is None else username
             admin_email    = email or 'contact@oliviercortes.com'
             admin_password = password or ('nimdatoor'
                                           if settings.DEBUG
@@ -30,7 +30,7 @@ def create_admin_user(email=None, password=None):
             User = get_user_model()
 
             try:
-                user = User.objects.create_superuser(username=admin_id,
+                user = User.objects.create_superuser(username=admin_username,
                                                      email=admin_email,
                                                      password=admin_password)
                 LOGGER.info('Created superuser %s.', user)
