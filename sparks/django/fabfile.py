@@ -983,9 +983,7 @@ def collectstatic(remote_configuration=None, fast=True):
 # ••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Direct-target tasks
 
 
-@task(task_class=DjangoTask)
-@roles('db')
-def putdata(filename=None, confirm=True):
+def putdata_task(filename=None, confirm=True, **kwargs):
     """ Put a local fixture on the remote end with via transient filename
         and load it via Django's ``loaddata`` command.
 
@@ -1004,8 +1002,14 @@ def putdata(filename=None, confirm=True):
 
 
 @task(task_class=DjangoTask)
-@roles('db')
-def getdata(app_model, filename=None):
+def putdata(filename=None, confirm=True):
+
+    # re-wrap the internal task via execute() to catch roledefs.
+    execute_or_not(putdata_task, filename=filename, confirm=confirm,
+                   sparks_roles=('db', ))
+
+
+def getdata_task(app_model, filename=None, **kwargs):
     """ Get a dump or remote data in a local fixture, via
         Django's ``dumpdata`` management command.
 
@@ -1028,6 +1032,14 @@ def getdata(app_model, filename=None):
     with open(filename, 'w') as f:
         f.write(django_manage('dumpdata {0} --indent 4 '
                 '--format json --natural'.format(app_model), quiet=True))
+
+
+@task(task_class=DjangoTask)
+def getdata(app_model, filename=None):
+
+    # re-wrap the internal task via execute() to catch roledefs.
+    execute_or_not(getdata_task, app_model=app_model,
+                   filename=filename, sparks_roles=('db', ))
 
 
 @task(aliases=('maintenance', 'maint', ))
