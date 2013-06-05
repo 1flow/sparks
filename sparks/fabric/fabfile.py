@@ -284,7 +284,7 @@ def sys_admin_pkgs(remote_configuration=None):
     pkg.pkg_add(('wget', 'multitail', ))
 
     if not remote_configuration.is_osx:
-        pkg.apt_add(('acl', 'attr', 'colordiff', ))
+        pkg.apt_add(('acl', 'attr', 'colordiff', 'telnet', 'psmisc', 'host', ))
 
 
 @task
