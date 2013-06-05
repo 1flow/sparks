@@ -284,7 +284,7 @@ def sys_admin_pkgs(remote_configuration=None):
     pkg.pkg_add(('wget', 'multitail', ))
 
     if not remote_configuration.is_osx:
-        pkg.apt_add(('acl', 'attr', 'colordiff', ))
+        pkg.apt_add(('acl', 'attr', 'colordiff', 'telnet', 'psmisc', 'host', ))
 
 
 @task
@@ -630,6 +630,10 @@ def dev(remote_configuration=None):
 
         # Remove eventually DEB installed old packages (see just after).
         pkg.apt_del(('python-virtualenv', 'virtualenvwrapper', ))
+
+    # Gettext is used nearly everywhere, and Django
+    # {make,compile}messages commands need it.
+    pkg.pkg_add(('gettext', ))
 
     LOGGER.info('Checking dev():python components…')
 

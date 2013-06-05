@@ -112,6 +112,13 @@ class SupervisorHelper(SimpleObject):
 
     """
 
+    def __init__(self, *args, **kwargs):
+        # Too bad, SimpleObject is an old-style class (and must stay)
+        SimpleObject.__init__(self, *args, **kwargs)
+
+        self.update  = False
+        self.restart = False
+
     @classmethod
     def build_program_name(cls, service=None):
         """ Returns a tuple: a boolean and a program name.
@@ -306,9 +313,6 @@ class SupervisorHelper(SimpleObject):
         }
 
         self.add_environment_to_context(context, self.has_djsettings)
-
-        self.update  = False
-        self.restart = False
 
         if exists(destination):
             upload_template(superconf, destination + '.new',
@@ -639,6 +643,7 @@ def requirements(fast=False, upgrade=False):
 
 @task(alias='pull')
 def git_update():
+    """ Push latest code from local to origin, checkout branch on remote. """
 
     # TODO: git up?
 
@@ -653,6 +658,7 @@ def git_update():
 
 @task(alias='pull')
 def git_pull():
+    """ Pull latest code from origin to remote, reload sparks settings if changes. """ # NOQA
 
     with cd(env.root):
         if not run('git pull').strip().endswith('Already up-to-date.'):
@@ -677,6 +683,7 @@ def git_pull():
 @task(alias='getlangs')
 @with_remote_configuration
 def push_translations(remote_configuration=None):
+    """ If new gettext translations are available on remote, commit and push them. """ # NOQA
 
     try:
         if not remote_configuration.django_settings.DEBUG:
@@ -714,6 +721,7 @@ def push_translations(remote_configuration=None):
 
 @task(alias='nginx')
 def restart_nginx(fast=False):
+    """ Restart the remote nginx (if installed), after having refreshed its configuration file. """ # NOQA
 
     if not exists('/etc/nginx'):
         return
@@ -757,7 +765,7 @@ def restart_webserver_gunicorn(remote_configuration=None, fast=False):
         supervisor.restart_or_reload()
 
 
-@task(task_class=DjangoTask, alias='gunicorn')
+@task(task_class=DjangoTask, alias='celery')
 @with_remote_configuration
 def restart_worker_celery(remote_configuration=None, fast=False):
     """ (Re-)upload configuration files and reload celery via supervisor.
@@ -767,9 +775,6 @@ def restart_worker_celery(remote_configuration=None, fast=False):
         reload test :-)
 
     """
-
-    print('Please implement celery worker service restart')
-    return
 
     if exists('/etc/supervisor'):
 
@@ -782,7 +787,8 @@ def restart_worker_celery(remote_configuration=None, fast=False):
 
         if not fast:
             supervisor.configure_program(remote_configuration)
-            # NO need for supervisor.handle_celery_config(supervisor)
+            # NO need:
+            #   supervisor.handle_celery_config(supervisor)
 
         supervisor.restart_or_reload()
 
@@ -984,11 +990,6 @@ def collectstatic(remote_configuration=None, fast=True):
 
 
 def putdata_task(filename=None, confirm=True, **kwargs):
-    """ Put a local fixture on the remote end with via transient filename
-        and load it via Django's ``loaddata`` command.
-
-        :param
-    """
 
     if filename is None:
         filename = get_all_fixtures(order_by='date')[0]
@@ -1003,6 +1004,8 @@ def putdata_task(filename=None, confirm=True, **kwargs):
 
 @task(task_class=DjangoTask)
 def putdata(filename=None, confirm=True):
+    """ Load a local fixture on the remote via Django's ``loaddata`` command.
+    """
 
     # re-wrap the internal task via execute() to catch roledefs.
     execute_or_not(putdata_task, filename=filename, confirm=confirm,
@@ -1010,20 +1013,6 @@ def putdata(filename=None, confirm=True):
 
 
 def getdata_task(app_model, filename=None, **kwargs):
-    """ Get a dump or remote data in a local fixture, via
-        Django's ``dumpdata`` management command.
-
-        Examples::
-
-            # more or less abstract examples
-            fab test getdata:myapp.MyModel
-            fab production custom_settings getdata:myapp.MyModel
-
-            # The 1flowapp.com landing page.
-            fab test oneflowapp getdata:landing.LandingContent
-
-        .. versionadded:: 1.16
-    """
 
     if filename is None:
         filename = new_fixture_filename(app_model)
@@ -1036,6 +1025,20 @@ def getdata_task(app_model, filename=None, **kwargs):
 
 @task(task_class=DjangoTask)
 def getdata(app_model, filename=None):
+    """ Get a dump or remote data in a local fixture,
+        via Django's ``dumpdata`` management command.
+
+        Examples::
+
+            # more or less abstract examples
+            fab test getdata:myapp.MyModel
+            fab production custom_settings getdata:myapp.MyModel
+
+            # The 1flowapp.com landing page.
+            fab test oneflowapp getdata:landing.LandingContent
+
+        .. versionadded:: 1.16
+    """
 
     # re-wrap the internal task via execute() to catch roledefs.
     execute_or_not(getdata_task, app_model=app_model,
@@ -1071,11 +1074,17 @@ def operational_mode(fast=True):
 
 @task(alias='restart')
 def restart_services(fast=False):
+    """ Restart all remote services (nginx, gunicorn, celery…) in one task. """
+
     execute_or_not(restart_nginx, fast=fast, sparks_roles=('load', ))
     execute_or_not(restart_webserver_gunicorn, fast=fast,
                    sparks_roles=('web', ))
-    execute_or_not(restart_worker_celery, fast=fast, sparks_roles=('worker',
-                   'worker_low', 'worker_medium', 'worker_high'))
+    # Run this multiple time, for each role:
+    # each of them has a dedicated supervisor configuration,
+    # even when running on the same machine.
+    for role in ('worker',
+                 'worker_low', 'worker_medium', 'worker_high', 'flower'):
+        execute_or_not(restart_worker_celery, fast=fast, sparks_roles=(role, ))
 
 
 @task(aliases=('initial', ))
