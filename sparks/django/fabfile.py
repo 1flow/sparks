@@ -776,9 +776,6 @@ def restart_worker_celery(remote_configuration=None, fast=False):
 
     """
 
-    print('Please implement celery worker service restart')
-    return
-
     if exists('/etc/supervisor'):
 
         has_djsettings, program_name = SupervisorHelper.build_program_name()
@@ -790,7 +787,8 @@ def restart_worker_celery(remote_configuration=None, fast=False):
 
         if not fast:
             supervisor.configure_program(remote_configuration)
-            # NO need for supervisor.handle_celery_config(supervisor)
+            # NO need:
+            #   supervisor.handle_celery_config(supervisor)
 
         supervisor.restart_or_reload()
 
