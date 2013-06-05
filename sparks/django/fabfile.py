@@ -112,6 +112,13 @@ class SupervisorHelper(SimpleObject):
 
     """
 
+    def __init__(self, *args, **kwargs):
+        # Too bad, SimpleObject is an old-style class (and must stay)
+        SimpleObject.__init__(self, *args, **kwargs)
+
+        self.update  = False
+        self.restart = False
+
     @classmethod
     def build_program_name(cls, service=None):
         """ Returns a tuple: a boolean and a program name.
@@ -306,9 +313,6 @@ class SupervisorHelper(SimpleObject):
         }
 
         self.add_environment_to_context(context, self.has_djsettings)
-
-        self.update  = False
-        self.restart = False
 
         if exists(destination):
             upload_template(superconf, destination + '.new',
