@@ -765,7 +765,7 @@ def restart_webserver_gunicorn(remote_configuration=None, fast=False):
         supervisor.restart_or_reload()
 
 
-@task(task_class=DjangoTask, alias='gunicorn')
+@task(task_class=DjangoTask, alias='celery')
 @with_remote_configuration
 def restart_worker_celery(remote_configuration=None, fast=False):
     """ (Re-)upload configuration files and reload celery via supervisor.
@@ -1079,8 +1079,12 @@ def restart_services(fast=False):
     execute_or_not(restart_nginx, fast=fast, sparks_roles=('load', ))
     execute_or_not(restart_webserver_gunicorn, fast=fast,
                    sparks_roles=('web', ))
-    execute_or_not(restart_worker_celery, fast=fast, sparks_roles=('worker',
-                   'worker_low', 'worker_medium', 'worker_high'))
+    # Run this multiple time, for each role:
+    # each of them has a dedicated supervisor configuration,
+    # even when running on the same machine.
+    for role in ('worker',
+                 'worker_low', 'worker_medium', 'worker_high', 'flower'):
+        execute_or_not(restart_worker_celery, fast=fast, sparks_roles=(role, ))
 
 
 @task(aliases=('initial', ))
