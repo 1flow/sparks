@@ -988,11 +988,6 @@ def collectstatic(remote_configuration=None, fast=True):
 
 
 def putdata_task(filename=None, confirm=True, **kwargs):
-    """ Put a local fixture on the remote end with via transient filename
-        and load it via Django's ``loaddata`` command.
-
-        :param
-    """
 
     if filename is None:
         filename = get_all_fixtures(order_by='date')[0]
@@ -1007,6 +1002,8 @@ def putdata_task(filename=None, confirm=True, **kwargs):
 
 @task(task_class=DjangoTask)
 def putdata(filename=None, confirm=True):
+    """ Load a local fixture on the remote via Django's ``loaddata`` command.
+    """
 
     # re-wrap the internal task via execute() to catch roledefs.
     execute_or_not(putdata_task, filename=filename, confirm=confirm,
@@ -1014,20 +1011,6 @@ def putdata(filename=None, confirm=True):
 
 
 def getdata_task(app_model, filename=None, **kwargs):
-    """ Get a dump or remote data in a local fixture, via
-        Django's ``dumpdata`` management command.
-
-        Examples::
-
-            # more or less abstract examples
-            fab test getdata:myapp.MyModel
-            fab production custom_settings getdata:myapp.MyModel
-
-            # The 1flowapp.com landing page.
-            fab test oneflowapp getdata:landing.LandingContent
-
-        .. versionadded:: 1.16
-    """
 
     if filename is None:
         filename = new_fixture_filename(app_model)
@@ -1040,6 +1023,20 @@ def getdata_task(app_model, filename=None, **kwargs):
 
 @task(task_class=DjangoTask)
 def getdata(app_model, filename=None):
+    """ Get a dump or remote data in a local fixture,
+        via Django's ``dumpdata`` management command.
+
+        Examples::
+
+            # more or less abstract examples
+            fab test getdata:myapp.MyModel
+            fab production custom_settings getdata:myapp.MyModel
+
+            # The 1flowapp.com landing page.
+            fab test oneflowapp getdata:landing.LandingContent
+
+        .. versionadded:: 1.16
+    """
 
     # re-wrap the internal task via execute() to catch roledefs.
     execute_or_not(getdata_task, app_model=app_model,
