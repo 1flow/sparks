@@ -643,6 +643,7 @@ def requirements(fast=False, upgrade=False):
 
 @task(alias='pull')
 def git_update():
+    """ Push latest code from local to origin, checkout branch on remote. """
 
     # TODO: git up?
 
@@ -657,6 +658,7 @@ def git_update():
 
 @task(alias='pull')
 def git_pull():
+    """ Pull latest code from origin to remote, reload sparks settings if changes. """ # NOQA
 
     with cd(env.root):
         if not run('git pull').strip().endswith('Already up-to-date.'):
@@ -681,6 +683,7 @@ def git_pull():
 @task(alias='getlangs')
 @with_remote_configuration
 def push_translations(remote_configuration=None):
+    """ If new gettext translations are available on remote, commit and push them. """ # NOQA
 
     try:
         if not remote_configuration.django_settings.DEBUG:
@@ -718,6 +721,7 @@ def push_translations(remote_configuration=None):
 
 @task(alias='nginx')
 def restart_nginx(fast=False):
+    """ Restart the remote nginx (if installed), after having refreshed its configuration file. """ # NOQA
 
     if not exists('/etc/nginx'):
         return
@@ -1072,6 +1076,8 @@ def operational_mode(fast=True):
 
 @task(alias='restart')
 def restart_services(fast=False):
+    """ Restart all remote services (nginx, gunicorn, celery…) in one task. """
+
     execute_or_not(restart_nginx, fast=fast, sparks_roles=('load', ))
     execute_or_not(restart_webserver_gunicorn, fast=fast,
                    sparks_roles=('web', ))
