@@ -124,8 +124,8 @@ def execute_or_not(task, *args, **kwargs):
         return execute(task, *args, **kwargs)
 
     else:
-        LOGGER.warning('Not executing %s(%s, %s): no roles in current '
-                       'context.', task.name, args, kwargs)
+        LOGGER.warning('Not executing %s(%s, %s): no role(s) “%s” in current '
+                       'context.', task.name, args, kwargs, ', '.join(roles))
 
 
 def merge_roles_hosts():
