@@ -631,6 +631,10 @@ def dev(remote_configuration=None):
         # Remove eventually DEB installed old packages (see just after).
         pkg.apt_del(('python-virtualenv', 'virtualenvwrapper', ))
 
+    # Gettext is used nearly everywhere, and Django
+    # {make,compile}messages commands need it.
+    pkg.pkg_add(('gettext', ))
+
     LOGGER.info('Checking dev():python components…')
 
     # Add them from PIP, to have latest
