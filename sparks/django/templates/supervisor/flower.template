@@ -4,6 +4,7 @@ directory=%(root)s
 user=%(user)s
 autostart=true
 autorestart=true
+redirect_stderr=true
 priority=991
 stopsignal=KILL
 %(environment)s
