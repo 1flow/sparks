@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="sparks",
-    version='2.4.3',
+    version='2.4.4',
     author="Olivier Cortès",
     author_email="contact@oliviercortes.com",
     description="My project/machine bootstrap library",
