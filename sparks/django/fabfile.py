@@ -151,9 +151,8 @@ class SupervisorHelper(SimpleObject):
                                                env.project,
                                                env.environment)
 
-    @classmethod
-    def add_environment_to_context(cls, context, has_djsettings):
-        """ Helper function: add (or not) an ``environment`` item
+    def add_environment_to_context(self, context, has_djsettings):
+        """ Helper method: add (or not) an ``environment`` item
             to :param:`context`, given the current Fabric ``env``.
 
             If :param:`has_djsettings` is ``True``, ``SPARKS_DJANGO_SETTINGS``
@@ -181,6 +180,43 @@ class SupervisorHelper(SimpleObject):
             # The item must exist, else the templating
             # engine will raise an error. Too bad.
             context['environment'] = ''
+
+    def add_command_pre_post_to_context(self, context, has_djsettings):
+        """ This method is called during the context build and before
+            supervisor template rendering. It will set the context variables
+            ``command_pre_args`` and ``command_post_args`` to empty values
+            in the first time. Then it will call the
+            method ``self.custom_context_handler()`` if it exists, passing
+            a copy of the current context to it, in case handler needs to
+            inspect current values. The custom handler should return the
+            context copy, with ``command_{pre,post}_args`` modified to fit
+            the needs.
+
+            .. note:: the mechanism is not perfect, security wise, but sparks
+                is not oriented towards strict security in its current
+                incarnation. Abusing it would be non-sense anyway, because
+                people using it already have sysadmin rights on remote machines
+                on which sparks will run.
+
+            .. versionadded:: 2.6
+        """
+
+        # In all cases, these context variables must exist and be empty,
+        # to avoid letting some unresolved `%(var)s` in templates.
+        context.update({
+            'command_pre_args': '',
+            'command_post_args': '',
+        })
+
+        custom_handler = getattr(self, 'custom_context_handler', None)
+
+        if custom_handler is None:
+            return
+
+        temp_context = custom_handler(context.copy(), has_djsettings)
+
+        context['command_pre_args']  = temp_context['command_pre_args']
+        context['command_post_args'] = temp_context['command_post_args']
 
     def restart_or_reload(self):
        # cf. http://stackoverflow.com/a/9310434/654755
@@ -281,13 +317,25 @@ class SupervisorHelper(SimpleObject):
                     'virtualenv': env.virtualenv,
                 }
 
-            And **environment variables** get added too
+            Some **environment variables** can be added too
             (see :class:`add_environment_to_context` for details).
+
+            In some specific cases, two other keys are added to context:
+
+            - ``command_pre_args``
+            - ``command_post_args``
+
+            These two keys are just strings that will be prepended and suffixed
+            to the final supervisor ``command`` directive.
 
             .. note:: this method assumes the remote machine is an
                 Ubuntu/Debian server (physical or not), and will deploy
                 supervisor configuration files
                 to :file:`/etc/supervisor/conf.d/`.
+
+            .. versionchanged:: in version 2.6, the ``command_{pre,post}_args``
+                were added, notably to handle installing more than one celery
+                worker on the same machine.
 
         """
 
@@ -313,6 +361,7 @@ class SupervisorHelper(SimpleObject):
         }
 
         self.add_environment_to_context(context, self.has_djsettings)
+        self.add_command_pre_post_to_context(context, self.has_djsettings)
 
         if exists(destination):
             upload_template(superconf, destination + '.new',
@@ -826,6 +875,35 @@ def restart_webserver_gunicorn(remote_configuration=None, fast=False):
         supervisor.restart_or_reload()
 
 
+def worker_hostname(context, has_djsettings):
+    """ This is the celery custom context handler. It will add
+        the ``--hostname`` argument to the celery command line, as suggested
+        at http://docs.celeryproject.org/en/latest/userguide/workers.html#starting-the-worker """ # NOQA
+
+    def many_workers_on_same_host():
+        hostname = env.host_string
+        wcount   = 0
+
+        for key, value in env.roledefs.items():
+            if key.startswith('worker'):
+                if hostname in value:
+                    wcount += 1
+                    if wcount > 1:
+                        return True
+
+        return wcount > 1
+
+    if env.host_string.role.startswith('worker_'):
+        if many_workers_on_same_host():
+            context.update({
+                'command_pre_args': '',
+                'command_post_args': '--hostname {0}.{1}'.format(
+                    env.host_string.role, env.host_string),
+            })
+
+    return context
+
+
 @task(task_class=DjangoTask, alias='celery')
 @with_remote_configuration
 def restart_worker_celery(remote_configuration=None, fast=False):
@@ -843,7 +921,8 @@ def restart_worker_celery(remote_configuration=None, fast=False):
 
         supervisor = SupervisorHelper(from_dict={
                                       'has_djsettings': has_djsettings,
-                                      'program_name': program_name
+                                      'program_name': program_name,
+                                      'custom_context_handler': worker_hostname,
                                       })
 
         if not fast:
