@@ -492,15 +492,12 @@ class activate_venv(object):
     """
 
     # Keep them as class objects, they never change…
-    my_prefix    = None
     project_file = None
-    has_project  = False
+    has_project  = None
 
     def __init__(self):
 
-        if activate_venv.my_prefix is None:
-            activate_venv.my_prefix = prefix('workon %s' % env.virtualenv)
-
+        if activate_venv.has_project is None:
             workon_home = run('echo $WORKON_HOME', quiet=QUIET).strip() \
                 or '${HOME}/.virtualenvs'
 
@@ -508,6 +505,8 @@ class activate_venv(object):
                                                       env.virtualenv,
                                                       '.project')
             activate_venv.has_project  = exists(activate_venv.project_file)
+
+        self.my_prefix = prefix('workon %s' % env.virtualenv)
 
     def __call__(self, *args, **kwargs):
         return self
@@ -517,11 +516,11 @@ class activate_venv(object):
             run('mv "{0}" "{0}.disabled"'.format(activate_venv.project_file),
                 quiet=QUIET)
 
-        activate_venv.my_prefix.__enter__()
+        self.my_prefix.__enter__()
 
     def __exit__(self, *args, **kwargs):
 
-        activate_venv.my_prefix.__exit__(*args, **kwargs)
+        self.my_prefix.__exit__(*args, **kwargs)
 
         if activate_venv.has_project:
             run('mv "{0}.disabled" "{0}"'.format(activate_venv.project_file),
