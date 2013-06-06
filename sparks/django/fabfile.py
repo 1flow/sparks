@@ -597,10 +597,11 @@ def requirements(fast=False, upgrade=False):
             with other fab tasks which handle it.
     """
 
+    # Thanks http://stackoverflow.com/a/9362082/654755
     if upgrade:
-        command = 'pip install -U'
+        command = 'yes w | pip install -U'
     else:
-        command = 'pip install'
+        command = 'yes w | pip install'
 
     with cd(env.root):
         with activate_venv():
