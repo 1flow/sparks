@@ -708,9 +708,12 @@ def requirements(fast=False, upgrade=False):
 
     # Thanks http://stackoverflow.com/a/9362082/654755
     if upgrade:
-        command = 'yes w | pip install -U'
+        command = 'yes w | {sparks_env}{django_env} pip install -U'
     else:
-        command = 'yes w | pip install'
+        command = 'yes w | {sparks_env}{django_env} pip install'
+
+    command = command.format(sparks_env=sparks_djsettings_env_var(),
+                             django_env=django_settings_env_var())
 
     with cd(env.root):
         with activate_venv():
@@ -726,10 +729,7 @@ def requirements(fast=False, upgrade=False):
                                            'dev-requirements.txt')
                     #TODO: "put" it there !!
 
-                run("{sparks_env}{django_env}{command} "
-                    "--requirement {requirements_file}".format(
-                    sparks_env=sparks_djsettings_env_var(),
-                    django_env=django_settings_env_var(),
+                run("{command} --requirement {requirements_file}".format(
                     command=command, requirements_file=dev_req))
 
             LOGGER.info('Checking requirements…')
@@ -742,10 +742,7 @@ def requirements(fast=False, upgrade=False):
                                    'requirements.txt')
                 #TODO: "put" it on the remote side !!
 
-            run("{sparks_env}{django_env}{command} "
-                "--requirement {requirements_file}".format(
-                sparks_env=sparks_djsettings_env_var(),
-                django_env=django_settings_env_var(),
+            run("{command} --requirement {requirements_file}".format(
                 command=command, requirements_file=req))
 
             LOGGER.info('Done checking requirements.')
