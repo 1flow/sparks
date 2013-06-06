@@ -435,19 +435,25 @@ def install_components(remote_configuration=None, upgrade=False):
         # you can change the port to 80 in: /usr/local/etc/nginx/nginx.conf
         # You will then need to run nginx as root: `sudo nginx`.
 
-        run('ln -sfv /usr/local/opt/nginx/*.plist ~/Library/LaunchAgents')
-        run('launchctl load ~/Library/LaunchAgents/homebrew.mxcl.nginx.plist')
+        run('ln -sfv /usr/local/opt/nginx/*.plist ~/Library/LaunchAgents',
+            quiet=QUIET)
+        run('launchctl load ~/Library/LaunchAgents/homebrew.mxcl.nginx.plist',
+            quiet=QUIET)
 
-        run('ln -sfv /usr/local/opt/redis/*.plist ~/Library/LaunchAgents')
-        run('launchctl load ~/Library/LaunchAgents/homebrew.*.redis.plist')
+        run('ln -sfv /usr/local/opt/redis/*.plist ~/Library/LaunchAgents',
+            quiet=QUIET)
+        run('launchctl load ~/Library/LaunchAgents/homebrew.*.redis.plist',
+            quiet=QUIET)
 
-        run('ln -sfv /usr/local/opt/memcached/*.plist ~/Library/LaunchAgents')
-        run('launchctl load ~/Library/LaunchAgents/homebrew.*.memcached.plist')
+        run('ln -sfv /usr/local/opt/memcached/*.plist ~/Library/LaunchAgents',
+            quiet=QUIET)
+        run('launchctl load ~/Library/LaunchAgents/homebrew.*.memcached.plist',
+            quiet=QUIET)
 
-        run('ln -sfv /usr/local/opt/rabbitmq/*.plist ~/Library/LaunchAgents')
-        run('launchctl load ~/Library/LaunchAgents/homebrew.*.rabbitmq.plist')
-
-        print('NO WEB-SERVER installed, assuming this is a dev machine.')
+        run('ln -sfv /usr/local/opt/rabbitmq/*.plist ~/Library/LaunchAgents',
+            quiet=QUIET)
+        run('launchctl load ~/Library/LaunchAgents/homebrew.*.rabbitmq.plist',
+            quiet=QUIET)
 
     else:
         #apt.apt_add(('python-pip', 'supervisor', 'nginx-full',))
