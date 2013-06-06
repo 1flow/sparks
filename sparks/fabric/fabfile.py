@@ -283,7 +283,11 @@ def sys_admin_pkgs(remote_configuration=None):
 
     pkg.pkg_add(('wget', 'multitail', ))
 
-    if not remote_configuration.is_osx:
+    if remote_configuration.is_osx:
+        # See https://github.com/mperham/lunchy
+        pkg.gem_add(('lunchy', ))
+
+    else:
         pkg.apt_add(('acl', 'attr', 'colordiff', 'telnet', 'psmisc', 'host', ))
 
 
