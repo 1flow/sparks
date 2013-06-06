@@ -39,7 +39,7 @@ from ..fabric import (fabfile, with_remote_configuration,
                       is_local_environment,
                       is_development_environment,
                       is_production_environment,
-                      execute_or_not)
+                      execute_or_not, QUIET)
 from ..pkg import brew
 from ..foundations import postgresql as pg
 from ..foundations.classes import SimpleObject
@@ -476,9 +476,56 @@ def get_git_branch():
     return branch
 
 
-def activate_venv():
+class activate_venv(object):
+    """ Activate the virtualenv at the Fabric level.
 
-    return prefix('workon %s' % env.virtualenv)
+        Additionnaly, try to deal gently with virtualenvwrapper's
+        :file:`.project` file, which totally borks the remote path
+        and anihilates Fabric's ``cd()`` benefits in normal conditions.
+
+        For performance reasons, remote calls are done only at first call.
+        If for some reason you would like to refresh the class values, you
+        should file a pull request and implement the needed work
+        in the :meth:`__call__` method.
+
+        .. versionadded:: 2.5.
+    """
+
+    # Keep them as class objects, they never change…
+    my_prefix    = None
+    project_file = None
+    has_project  = False
+
+    def __init__(self):
+
+        if activate_venv.my_prefix is None:
+            activate_venv.my_prefix = prefix('workon %s' % env.virtualenv)
+
+            workon_home = run('echo $WORKON_HOME', quiet=QUIET).strip() \
+                or '${HOME}/.virtualenvs'
+
+            activate_venv.project_file = os.path.join(workon_home,
+                                                      env.virtualenv,
+                                                      '.project')
+            activate_venv.has_project  = exists(activate_venv.project_file)
+
+    def __call__(self, *args, **kwargs):
+        return self
+
+    def __enter__(self):
+        if activate_venv.has_project:
+            run('mv "{0}" "{0}.disabled"'.format(activate_venv.project_file),
+                quiet=QUIET)
+
+        activate_venv.my_prefix.__enter__()
+
+    def __exit__(self, *args, **kwargs):
+
+        activate_venv.my_prefix.__exit__(*args, **kwargs)
+
+        if activate_venv.has_project:
+            run('mv "{0}.disabled" "{0}"'.format(activate_venv.project_file),
+                quiet=QUIET)
 
 
 def sparks_djsettings_env_var():
@@ -856,7 +903,8 @@ def handlemessages(remote_configuration=None, mode=None):
     def compile_internal(run_from):
         for language in languages:
             run('{0}{1}./manage.py {2}messages --locale {3}'.format(
-                sparks_djsettings_env_var(), run_from, mode, language))
+                sparks_djsettings_env_var(), run_from, mode, language),
+                quiet=QUIET)
 
     # Transform language codes (eg. 'fr-fr') to locale names (eg. 'fr_FR'),
     # keeping extensions (eg. '.utf-8'), but don't touch short codes (eg. 'en').
@@ -878,6 +926,8 @@ def handlemessages(remote_configuration=None, mode=None):
                 else:
                     for short_app_name in project_apps:
                         with cd(short_app_name):
+                            LOGGER.info('Compiling language files for app %s…',
+                                        short_app_name)
                             compile_internal(run_from='../../')
 
 
