@@ -756,15 +756,6 @@ def restart_webserver_gunicorn(remote_configuration=None, fast=False):
         than one on the remote server. Thus it's safe for production to
         reload test :-)
 
-        .. note:: for the gunicorn Django supervisor program to work, you
-            need to have ``'gunicorn'`` in your ``INSTALLED_APPS``. This
-            is the proper way to do it, else you could encounter strange
-            errors when using ``Celery`` tasks on the Django side, like::
-
-                kombu.serialization in dumps
-                TypeError: expected string or Unicode object, NoneType found
-
-            Believe me, it happens. And nobody knows why, even Google.
     """
 
     if exists('/etc/supervisor'):
@@ -778,12 +769,6 @@ def restart_webserver_gunicorn(remote_configuration=None, fast=False):
 
         if not fast:
             supervisor.configure_program(remote_configuration)
-            if not 'gunicorn' \
-                    in remote_configuration.django_settings.INSTALLED_APPS:
-                raise RuntimeError('You should have "gunicorn" in your '
-                                   'INSTALLED_APPS, else the service will '
-                                   'not be able to run.')
-
             supervisor.handle_gunicorn_config()
 
         supervisor.restart_or_reload()
