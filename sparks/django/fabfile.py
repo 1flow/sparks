@@ -428,7 +428,15 @@ def install_components(remote_configuration=None, upgrade=False):
 
     # OSX == test environment == no nginx/supervisor/etc
     if remote_configuration.is_osx:
-        brew.brew_add(('redis', 'memcached', 'libmemcached', 'rabbitmq', ))
+        brew.brew_add(('nginx', 'redis', 'rabbitmq',
+                      'memcached', 'libmemcached', ))
+
+        # If you want to host pages on your local machine to the wider network
+        # you can change the port to 80 in: /usr/local/etc/nginx/nginx.conf
+        # You will then need to run nginx as root: `sudo nginx`.
+
+        run('ln -sfv /usr/local/opt/nginx/*.plist ~/Library/LaunchAgents')
+        run('launchctl load ~/Library/LaunchAgents/homebrew.mxcl.nginx.plist')
 
         run('ln -sfv /usr/local/opt/redis/*.plist ~/Library/LaunchAgents')
         run('launchctl load ~/Library/LaunchAgents/homebrew.*.redis.plist')
