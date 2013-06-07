@@ -23,8 +23,7 @@ import logging
 import datetime
 
 try:
-    from fabric.api              import (env, run, sudo, task, local,
-                                         roles, execute)
+    from fabric.api              import env, run, sudo, task, local, execute
     from fabric.tasks            import Task
     from fabric.operations       import put, prompt
     from fabric.contrib.files    import exists, upload_template
@@ -1186,27 +1185,55 @@ def getdata(app_model, filename=None):
 
 
 @task(aliases=('maintenance', 'maint', ))
-@roles('web')
 def maintenance_mode(fast=True):
     """ Trigger maintenance mode (and restart services). """
 
-    with cd(env.root):
-        run('touch MAINTENANCE_MODE')
+    result = execute_or_not(maintenance_mode_task, fast=fast,
+                            sparks_roles=('web', ))
 
-    # TODO: stop the services on worker* ?
-    restart_services(fast=fast)
+    if result is None:
+        return
+
+    if any(result.values()):
+        restart_services(fast=fast)
+
+
+@task
+def maintenance_mode_task(fast):
+
+    with cd(env.root):
+        if exists('MAINTENANCE_MODE'):
+            LOGGER.info('Already in maintenance mode, not restarting services.')
+            return False
+
+        run('touch MAINTENANCE_MODE', quiet=QUIET)
+        return True
 
 
 @task(aliases=('operational', 'op', 'normal', 'resume', 'run', ))
-@roles('web')
 def operational_mode(fast=True):
     """ Get out of maintenance mode (and restart services). """
 
-    with cd(env.root):
-        run('rm -f MAINTENANCE_MODE')
+    result = execute_or_not(operational_mode_task, fast=fast,
+                            sparks_roles=('web', ))
 
-    # TODO: start the services on worker* ?
-    restart_services(fast=fast)
+    if result is None:
+        return
+
+    if any(result.values()):
+        restart_services(fast=fast)
+
+
+@task
+def operational_mode_task(fast):
+
+    with cd(env.root):
+        if exists('MAINTENANCE_MODE'):
+            run('rm -f  MAINTENANCE_MODE', quiet=QUIET)
+            return True
+        else:
+            LOGGER.info('Already in operational mode, not restarting services.')
+            return False
 
 
 # ••••••••••••••••••••••••••••••••••••••••••••••••••••••• Deployment meta-tasks
