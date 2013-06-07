@@ -1065,7 +1065,8 @@ def lxc_base(remote_configuration=None):
     # Remove firefox's locale, it's completely sys_del_useless in a LXC.
     pkg.apt_del(('firefox-locale-fr', 'firefox-locale-en', ))
 
-    # TODO: nullmailer, bsd-mailx… Cf. my LXC documentation.
+    # TODO: nullmailer, cf. my LXC documentation.
+    pkg.apt_add(('bsd-mailx', ))
 
     # install a dev env.
     dev()
