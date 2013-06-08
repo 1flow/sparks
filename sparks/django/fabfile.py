@@ -438,6 +438,13 @@ def run_command(cmd):
         .. versionadded:: in 2.0.
     """
 
+    # Wrap the real task to eventually run on all hosts it none specified.
+    execute_or_not(run_command_task, cmd)
+
+
+@task
+def run_command_task(cmd):
+
     with activate_venv():
         with cd(env.root):
             run(cmd)
