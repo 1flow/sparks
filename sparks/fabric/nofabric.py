@@ -17,9 +17,6 @@ class FabricOutputString(SimpleObject):
     """ A Fabric-compatible output result. """
 
     def __str__(self):
-        return str(self.output)
-
-    def __unicode__(self):
         return self.output
 
 
