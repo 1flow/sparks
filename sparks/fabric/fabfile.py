@@ -1,6 +1,7 @@
 # -*- coding: utf8 -*-
 
 import os
+import pwd
 import uuid
 import logging
 
@@ -21,7 +22,7 @@ from .utils import (with_remote_configuration, dsh_to_roledefs,
 LOGGER = logging.getLogger(__name__)
 local_osx_apps = '~/Downloads/{Mac,OSX}*/'
 central_osx_apps = 'duncan:oliviercortes.com/sparks/osx'
-
+is_olive = pwd.getpwuid(os.getuid()).pw_name in ('olive', 'karmak23')
 
 # ================================================ Fabric configuration
 
@@ -33,6 +34,10 @@ env.roledefs.update(dsh_to_roledefs())
 
 def info(text):
     print(cyan(text))
+
+
+def github():
+    return 'git@github.com:' if is_olive else 'https://github.com/'
 
 # ====================================================== Fabric targets
 
@@ -184,7 +189,7 @@ def install_powerline(remote_configuration=None):
             run('fc-cache -vf')
 
     git_clone_or_update('powerline-shell',
-                        'git@github.com:Karmak23/powerline-shell.git')
+                        '{0}Karmak23/powerline-shell.git'.format(github()))
 
 # ---------------------------------------------------- Sysadmin recipes
 
@@ -303,7 +308,7 @@ def sys_ssh_powerline(remote_configuration=None):
     """ Make remote SSHd accept the POWERLINE_SHELL environment variable. """
 
     git_clone_or_update('powerline-shell',
-                        'git@github.com:Karmak23/powerline-shell.git')
+                        '{0}Karmak23/powerline-shell.git'.format(github()))
 
     if remote_configuration.is_osx:
         # No need to reload on OSX, cf. http://superuser.com/q/478035/206338
