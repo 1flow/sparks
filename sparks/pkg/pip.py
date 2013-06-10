@@ -19,10 +19,12 @@ def pip_perms(verbose=True):
     if verbose and not QUIET:
         print(green('Restoring correct permissions in /usr/local/lib…'))
 
+    # we need to repeat sudo because neither Fabric nor our nofabric can
+    # handle piped commands correctly (sudo will be only for the 1st part).
     silent_sudo('find /usr/local/lib -type f -print0 '
-                '| xargs -0 -n 1024 chmod u+rw,g+r,o+r')
+                '| sudo xargs -0 -n 1024 chmod u+rw,g+r,o+r')
     silent_sudo('find /usr/local/lib -type d -print0 '
-                '| xargs -0 -n 1024 chmod u+rwx,g+rx,o+rx')
+                '| sudo xargs -0 -n 1024 chmod u+rwx,g+rx,o+rx')
 
 
 def __pip_find_executable_internal(executable_names=None):

@@ -57,7 +57,7 @@ def main(remote_configuration=None):
     else:
         task = 'dev'
 
-    os.system('pushd {0}; fab -H localhost {1}; popd'.format(cd_to, task))
+    os.system('cd "{0}"; fab -H localhost {1}'.format(cd_to, task))
 
 if __name__ == '__main__':
     main()
