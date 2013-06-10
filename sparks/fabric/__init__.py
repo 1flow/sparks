@@ -439,7 +439,7 @@ class LocalConfiguration(object):
         self.hostname = self.uname.nodename
 
         self.user, self.tilde = nofabric.local('echo "${USER},${HOME}"',
-                                               ).output.strip().split(',')
+                                               ).strip().split(',')
 
         # TODO: implement me (and under OSX too).
         self.is_vmware = False
