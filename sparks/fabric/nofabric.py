@@ -22,22 +22,19 @@ class _AttributeString(str):
 
 def run(command, *a, **kw):
 
-    output = _AttributeString()
-
-    output.command = command
-
     try:
-        #print '>> running', command
-        output = subprocess.check_output(command,
-                                         shell=kw.pop('shell', True),
-                                         universal_newlines=True)
+        output = _AttributeString(subprocess.check_output(command,
+                                  shell=kw.pop('shell', True),
+                                  universal_newlines=True))
 
     except subprocess.CalledProcessError as e:
-        output           = e.output
+        output           = _AttributeString(e.output)
+        output.command   = command
         output.failed    = True
         output.succeeded = False
 
     else:
+        output.command   = command
         output.failed    = False
         output.succeeded = True
 
