@@ -15,22 +15,25 @@ if __package__ is None:
 
 from sparks import fabric as sf
 
+DROPBOX_PATH = os.path.expanduser('~/Dropbox')
+
 
 @sf.with_remote_configuration
 def main(remote_configuration=None):
-    if remote_configuration.lsb_release:
-        if remote_configuration.is_vm:
-            if not os.path.exists(os.path.expanduser('~/Dropbox')):
-                if remote_configuration.is_parallel:
-                    sf.nofabric._run('ln -sf /media/psf/Home/Dropbox ~/')
+    if remote_configuration.lsb:
+        if os.path.exist(DROPBOX_PATH):
+            if remote_configuration.is_vm:
+                if not os.path.exists(DROPBOX_PATH):
+                    if remote_configuration.is_parallel:
+                        sf.nofabric.run('ln -sf /media/psf/Home/Dropbox ~/')
 
-                else:
-                    # TODO: implement for vmware.
-                    pass
+                    else:
+                        # TODO: implement for vmware.
+                        pass
 
-        for filename in ('bashrc', 'ssh'):
-            sf.nofabric._run('ln -sf %s ~/.%s' % (sf.dotfiles('dot.%s'
-                             % filename), filename))
+            for filename in ('bashrc', 'ssh'):
+                sf.nofabric.run('ln -sf %s ~/.%s' % (sf.dotfiles('dot.%s'
+                                % filename), filename))
 
         sf.nofabric.sudo('apt-get update')
         sf.nofabric.sudo('apt-get install -y --force-yes gdebi python-pip ssh '
