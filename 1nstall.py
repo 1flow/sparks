@@ -21,7 +21,7 @@ DROPBOX_PATH = os.path.expanduser('~/Dropbox')
 @sf.with_remote_configuration
 def main(remote_configuration=None):
     if remote_configuration.lsb:
-        if os.path.exist(DROPBOX_PATH):
+        if os.path.exists(DROPBOX_PATH):
             if remote_configuration.is_vm:
                 if not os.path.exists(DROPBOX_PATH):
                     if remote_configuration.is_parallel:
