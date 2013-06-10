@@ -8,6 +8,7 @@
 """
 import sys
 import os
+import pwd
 
 if __package__ is None:
     # See ./fabfile.py for explanations
@@ -46,7 +47,17 @@ def main(remote_configuration=None):
                          'https://raw.github.com/mxcl/homebrew/go)"')
         sf.nofabric.sudo('brew update; brew install python pip')
 
-    os.system('cd ~/Dropbox/configuration; fab -H localhost myenv')
+    if os.path.exists(DROPBOX_PATH):
+        cd_to = '~/Dropbox/configuration'
+    else:
+        cd_to = '.'
+
+    if pwd.getpwuid(os.getuid()).pw_name in ('olive', 'karmak23'):
+        task = 'myenv'
+    else:
+        task = 'dev'
+
+    os.system('pushd {0}; fab -H localhost {1}; popd'.format(cd_to, task))
 
 if __name__ == '__main__':
     main()
