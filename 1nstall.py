@@ -35,16 +35,16 @@ def main(remote_configuration=None):
             sf.nofabric._run('ln -sf %s ~/.%s' % (sf.dotfiles('dot.%s'
                              % filename), filename))
 
-        sf.nofabric._sudo('apt-get update')
-        sf.nofabric._sudo('apt-get install -y --force-yes gdebi python-pip ssh '
-                          'python-all-dev build-essential')
-        sf.nofabric._sudo('pip install fabric')
+        sf.nofabric.sudo('apt-get update')
+        sf.nofabric.sudo('apt-get install -y --force-yes gdebi python-pip ssh '
+                         'python-all-dev build-essential')
+        sf.nofabric.sudo('pip install fabric')
 
     else:
         # TODO: there's work to do here: install Xcode & CLI tools for Xcode.
-        sf.nofabric._sudo('ruby -e "$(curl -fsSL '
-                          'https://raw.github.com/mxcl/homebrew/go)"')
-        sf.nofabric._sudo('brew update; brew install python pip')
+        sf.nofabric.sudo('ruby -e "$(curl -fsSL '
+                         'https://raw.github.com/mxcl/homebrew/go)"')
+        sf.nofabric.sudo('brew update; brew install python pip')
 
     os.system('cd ~/Dropbox/configuration; fab -H localhost myenv')
 
