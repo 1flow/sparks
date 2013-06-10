@@ -10,30 +10,30 @@ Used in :program:`1nstall` and when fabric is not available.
 """
 
 import subprocess
-from ..foundations.classes import SimpleObject
 
 
-class FabricOutputString(SimpleObject):
-    """ A Fabric-compatible output result. """
+class _AttributeString(str):
+    """ Directly taken from Fabric's operations. Clever. """
 
-    def __str__(self):
-        return str(self.output)
+    @property
+    def stdout(self):
+        return str(self)
 
 
 def run(command, *a, **kw):
 
-    output = FabricOutputString()
+    output = _AttributeString()
 
     output.command = command
 
     try:
         #print '>> running', command
-        output.output = subprocess.check_output(command,
-                                                shell=kw.pop('shell', True),
-                                                universal_newlines=True)
+        output = subprocess.check_output(command,
+                                         shell=kw.pop('shell', True),
+                                         universal_newlines=True)
 
     except subprocess.CalledProcessError as e:
-        output.output    = e.output
+        output           = e.output
         output.failed    = True
         output.succeeded = False
 
