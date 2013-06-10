@@ -13,9 +13,6 @@ if __package__ is None:
     # See ./fabfile.py for explanations
     sys.path.append(os.path.expanduser('~/Dropbox'))
 
-from fabric.api import env
-env.host_string = 'localhost'
-
 from sparks import fabric as sf
 
 
