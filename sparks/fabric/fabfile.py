@@ -39,6 +39,7 @@ def info(text):
 # -------------------------------------- Standalone application recipes
 
 
+@task
 @with_remote_configuration
 def install_chrome(remote_configuration=None):
     """ Install Google Chrome via .DEB packages from Google. """
@@ -60,6 +61,7 @@ def install_chrome(remote_configuration=None):
         pkg.apt_add('google-chrome-stable')
 
 
+@task
 @with_remote_configuration
 def install_skype(remote_configuration=None):
     """ Install Skype 32bit via Ubuntu partner repository. """
@@ -75,6 +77,7 @@ def install_skype(remote_configuration=None):
                         'skype', '/usr/bin/skype')
 
 
+@task
 @with_remote_configuration
 def install_sublime(remote_configuration=None, overwrite=False):
     """ Install Sublime Text 2 in /opt via a downloaded .tar.bz2. """
@@ -115,6 +118,7 @@ def install_sublime(remote_configuration=None, overwrite=False):
                 '/usr/share/applications', use_sudo=True)
 
 
+@task
 @with_remote_configuration
 def install_homebrew(remote_configuration=None):
     """ Install Homebrew on OSX from http://mxcl.github.com/homebrew/ """
@@ -146,6 +150,7 @@ def install_homebrew(remote_configuration=None):
     LOGGER.warning('You still have to install Xcode and its CLI tools.')
 
 
+@task
 @with_remote_configuration
 def install_1password(remote_configuration=None):
     """ NOT IMPLEMENTED: Install 1Password. """
@@ -159,6 +164,7 @@ def install_1password(remote_configuration=None):
         pkg.apt_add('wine')
 
 
+@task
 @with_remote_configuration
 def install_powerline(remote_configuration=None):
     """ Install the Ubuntu Mono patched font and powerline. """
@@ -678,6 +684,7 @@ def dev(remote_configuration=None):
     #pkg.pip3_add(('virtualenv', 'virtualenvwrapper', ))
 
     pkg.gem_add(('git-up', ))
+
 
 # --------------------------------------------------- Databases recipes
 
