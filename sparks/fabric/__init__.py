@@ -533,7 +533,11 @@ def with_remote_configuration(func):
     def wrapped(*args, **kwargs):
         global remote_configuration
         if remote_configuration is None:
-            remote_configuration = find_configuration_type(env.host_string)
+            try:
+                remote_configuration = find_configuration_type(env.host_string)
+            except NameError:
+                # no 'env', probably running from 1nstall.
+                remote_configuration = find_configuration_type('localhost')
 
         elif remote_configuration.host_string != env.host_string:
             # host changed: fabric is running the same task on another host.
