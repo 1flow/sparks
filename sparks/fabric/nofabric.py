@@ -13,9 +13,19 @@ import subprocess
 from ..foundations.classes import SimpleObject
 
 
+class FabricOutputString(SimpleObject):
+    """ A Fabric-compatible output result. """
+
+    def __str__(self):
+        return str(self.output)
+
+    def __unicode__(self):
+        return self.output
+
+
 def run(command, *a, **kw):
 
-    output = SimpleObject()
+    output = FabricOutputString()
 
     output.command = command
 
