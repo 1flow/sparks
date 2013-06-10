@@ -17,7 +17,7 @@ class FabricOutputString(SimpleObject):
     """ A Fabric-compatible output result. """
 
     def __str__(self):
-        return self.output
+        return str(self.output)
 
 
 def run(command, *a, **kw):
