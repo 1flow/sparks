@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="sparks",
-    version='2.7.1',
+    version='2.7.2',
     author="Olivier Cortès",
     author_email="contact@oliviercortes.com",
     description="My Django project & cloud deployment library (Fabric based)",
