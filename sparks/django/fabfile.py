@@ -39,7 +39,7 @@ from ..fabric import (fabfile, with_remote_configuration,
                       is_development_environment,
                       is_production_environment,
                       execute_or_not, QUIET)
-from ..pkg import brew
+from ..pkg import brew, apt
 from ..foundations import postgresql as pg
 from ..foundations.classes import SimpleObject
 
@@ -128,7 +128,9 @@ class SupervisorHelper(SimpleObject):
             ``env.sparks_djsettings`` if it exists and ``env.environment``.
 
             :param service: a string describing the service.
-                Defaults to Fabric's ``get_current_role()``.
+                Defaults to Fabric's ``env.host_string.role`` (which is
+                a sparks specific attributes, not yet merged into Fabric
+                as os 2013-06).
                 Can be anything meaningfull, eg. ``worker``, ``db``, etc.
 
         """
@@ -483,8 +485,14 @@ def install_components(remote_configuration=None, upgrade=False):
 
     # OSX == test environment == no nginx/supervisor/etc
     if remote_configuration.is_osx:
-        brew.brew_add(('nginx', 'redis', 'rabbitmq',
-                      'memcached', 'libmemcached', ))
+
+        LOGGER.warning('Considering a development environment, '
+                       'installing everything on OSX.')
+
+        # We use redis for Celery queues.
+        # 'rabbitmq',
+
+        brew.brew_add(('nginx', 'redis', 'memcached', 'libmemcached', ))
 
         # If you want to host pages on your local machine to the wider network
         # you can change the port to 80 in: /usr/local/etc/nginx/nginx.conf
@@ -505,21 +513,36 @@ def install_components(remote_configuration=None, upgrade=False):
         run('launchctl load ~/Library/LaunchAgents/homebrew.*.memcached.plist',
             quiet=QUIET)
 
-        run('ln -sfv /usr/local/opt/rabbitmq/*.plist ~/Library/LaunchAgents',
-            quiet=QUIET)
-        run('launchctl load ~/Library/LaunchAgents/homebrew.*.rabbitmq.plist',
-            quiet=QUIET)
+        fabfile.db_postgresql()
+        fabfile.db_mongodb()
+
+        # run('ln -sfv /usr/local/opt/rabbitmq/*.plist ~/Library/LaunchAgents',
+        #     quiet=QUIET)
+        # run('launchctl load ~/Library/LaunchAgents/homebrew.*.rabbitmq.plist',
+        #     quiet=QUIET)
 
     else:
-        #apt.apt_add(('python-pip', 'supervisor', 'nginx-full',))
-        #apt.apt_add(('redis-server', 'memcached', ))
+        current_role = env.host_string.role
 
-        # fabfile.sys_django(env.sys_components
-        #                    if hasattr(env, 'sys_components')
-        #                    else '')
-        #fabfile.dev_django_full()
-        #fabfile.dev_memcache()
-        pass
+        if current_role.startswith('worker'):
+            apt.apt_add(('supervisor', ))
+
+        if current_role == 'web':
+            apt.apt_add(('supervisor', 'nginx-full', ))
+
+        if is_local_environment():
+            LOGGER.info('Installing all services for a local development '
+                        'environment…')
+            apt.apt_add(('redis-server', 'memcached', ))
+            fabfile.db_postgresql()
+            fabfile.db_mongodb()
+
+            # Already done in dev_django_full()
+            #fabfile.dev_memcache()
+
+        else:
+            LOGGER.warning('NOT installing redis/PostgreSQL/MongoDB/Memcache '
+                           'on a production system.')
 
 # ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Helpers
 
