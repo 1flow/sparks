@@ -533,6 +533,11 @@ def install_components(remote_configuration=None, upgrade=False):
         if is_local_environment():
             LOGGER.info('Installing all services for a local development '
                         'environment…')
+
+            # These are duplicated here in case env.host_string has been
+            # manually set to localhost in fabfile, which I do myself
+            apt.apt_add(('supervisor', 'nginx-full', ))
+
             apt.apt_add(('redis-server', 'memcached', ))
             fabfile.db_postgresql()
             fabfile.db_mongodb()

@@ -331,7 +331,13 @@ def sys_mongodb(remote_configuration=None):
     """ Install the MongoDB APT repository if on Ubuntu and 12.04. """
 
     if remote_configuration.lsb.ID.lower() == 'ubuntu':
-        if remote_configuration.lsb.RELEASE == '12.04':
+        major_distro_version = \
+            int(remote_configuration.lsb.RELEASE.split('.')[0])
+
+        if major_distro_version < 12:
+            LOGGER.warning('Unsupported (too old) Ubuntu version for MongoDB.')
+
+        elif remote_configuration.lsb.RELEASE in (12, 13):
             if not exists('/etc/apt/sources.list.d/10gen.list'):
                 sudo('apt-key adv --keyserver keyserver.ubuntu.com '
                      '--recv 7F0CEB10')
@@ -339,9 +345,11 @@ def sys_mongodb(remote_configuration=None):
                        'deb http://downloads-distro.mongodb.org/'
                        'repo/ubuntu-upstart dist 10gen', use_sudo=True)
                 pkg.apt_update()
+            return 'mongodb-10gen'
         else:
-            print('MongoDB install not implemented on anything else than '
-                  '12.04. Please submit a patch.')
+            LOGGER.warning('Installing mongodb package, hope this is the good '
+                           'version!')
+            return 'mongodb'
     else:
         print('MongoDB install not implemented on anything else than '
               'Ubuntu. Please submit a patch.')
@@ -753,8 +761,8 @@ def db_mongodb(remote_configuration=None):
                 '~/Library/LaunchAgents/homebrew.*.mongodb.plist')
 
     else:
-        sys_mongodb()
-        pkg.apt_add('mongodb-10gen')
+        package_name = sys_mongodb()
+        pkg.apt_add((package_name, ))
 
     dev_mongodb()
 
