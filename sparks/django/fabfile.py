@@ -542,7 +542,7 @@ def install_components(remote_configuration=None, upgrade=False):
 
         else:
             LOGGER.warning('NOT installing redis/PostgreSQL/MongoDB/Memcache '
-                           'on a production system.')
+                           'on anything other than local developement envs.')
 
 # ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Helpers
 
