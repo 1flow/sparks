@@ -1274,11 +1274,9 @@ def runable(fast=False, upgrade=False):
         execute_or_not(install_components, upgrade=upgrade,
                        sparks_roles=('__any__', ))
 
+        execute_or_not(init_environment, sparks_roles=('__any__', ))
+
     if not is_local_environment():
-
-        if not fast:
-            execute_or_not(init_environment, sparks_roles=('__any__', ))
-
         execute_or_not(git_update, sparks_roles=('web', 'worker',
                        'worker_low', 'worker_medium', 'worker_high'))
 
