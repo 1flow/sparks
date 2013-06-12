@@ -584,7 +584,9 @@ def dev_web(remote_configuration=None):
     LOGGER.info('Checking dev_web() components…')
 
     if not remote_configuration.is_osx:
-        if remote_configuration.lsb.RELEASE == '12.04':
+        major_distro_version = \
+            int(remote_configuration.lsb.RELEASE.split('.')[0])
+        if major_distro_version >= 12 and major_distro_version <= 13:
             if not exists('/etc/apt/sources.list.d/'
                           'chris-lea-node_js-precise.list'):
                 # Because of http://stackoverflow.com/q/7214474/654755

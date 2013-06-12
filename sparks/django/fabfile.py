@@ -1124,6 +1124,11 @@ def collectstatic(remote_configuration=None, fast=True):
     """ Run the Django collectstatic management command. If :param:`fast`
         is ``False``, the ``STATIC_ROOT`` will be erased first. """
 
+    if remote_configuration.django_settings.DEBUG:
+        LOGGER.info('NOT running collectstatic on %s because `DEBUG=True`.',
+                    env.host_string)
+        return
+
     if not fast:
         with cd(env.root):
             run('rm -rf "{0}"'.format(
@@ -1269,11 +1274,9 @@ def runable(fast=False, upgrade=False):
         execute_or_not(install_components, upgrade=upgrade,
                        sparks_roles=('__any__', ))
 
+        execute_or_not(init_environment, sparks_roles=('__any__', ))
+
     if not is_local_environment():
-
-        if not fast:
-            execute_or_not(init_environment, sparks_roles=('__any__', ))
-
         execute_or_not(git_update, sparks_roles=('web', 'worker',
                        'worker_low', 'worker_medium', 'worker_high'))
 
@@ -1297,10 +1300,7 @@ def runable(fast=False, upgrade=False):
     execute_or_not(compilemessages, sparks_roles=('web', 'worker',
                    'worker_low', 'worker_medium', 'worker_high'))
 
-    if not is_local_environment():
-        # In debug mode, Django handles the static contents via a dedicated
-        # view. We don't need to create/refresh/maintain the global static/ dir.
-        execute_or_not(collectstatic, fast=fast, sparks_roles=('web', ))
+    execute_or_not(collectstatic, fast=fast, sparks_roles=('web', ))
 
 
 @task(aliases=('fast', 'fastdeploy', ))
