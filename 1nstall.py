@@ -39,13 +39,14 @@ def main(remote_configuration=None):
         sf.nofabric.sudo('apt-get update')
         sf.nofabric.sudo('apt-get install -y --force-yes gdebi python-pip ssh '
                          'python-all-dev build-essential')
-        sf.nofabric.sudo('pip install fabric')
 
     else:
         # TODO: there's work to do here: install Xcode & CLI tools for Xcode.
-        sf.nofabric.sudo('ruby -e "$(curl -fsSL '
+        sf.nofabric.run('ruby -e "$(curl -fsSL '
                          'https://raw.github.com/mxcl/homebrew/go)"')
-        sf.nofabric.sudo('brew update; brew install python pip')
+        sf.nofabric.run('brew update; brew install python pip')
+
+    sf.nofabric.sudo('pip install fabric')
 
     if os.path.exists(DROPBOX_PATH):
         cd_to = '~/Dropbox/configuration'
