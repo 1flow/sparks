@@ -586,11 +586,17 @@ def dev_web(remote_configuration=None):
     if not remote_configuration.is_osx:
         major_distro_version = \
             int(remote_configuration.lsb.RELEASE.split('.')[0])
+
         if major_distro_version >= 12 and major_distro_version <= 13:
             if not exists('/etc/apt/sources.list.d/'
-                          'chris-lea-node_js-precise.list'):
+                          'chris-lea-node_js-{0}.list'.format(
+                          remote_configuration.lsb.CODENAME)):
                 # Because of http://stackoverflow.com/q/7214474/654755
                 pkg.apt.ppa('ppa:chris-lea/node.js')
+
+                # We need to remove it first, because pkg_add won't
+                # upgrade it, unlike `apt-get install nodejs` does.
+                pkg.pkg_del(('nodejs', ))
 
     # NOTE: nodejs` PPA version already includes `npm`,
     # no need to install it via a separate package on Ubuntu.
