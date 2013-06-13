@@ -536,8 +536,8 @@ def install_components(remote_configuration=None, upgrade=False):
                         'environment…')
 
             # These are duplicated here in case env.host_string has been
-            # manually set to localhost in fabfile, which I do myself
-            apt.apt_add(('supervisor', 'nginx-full', ))
+            # manually set to localhost in fabfile, which I do myself.
+            apt.apt_add(('nginx-full', ))
 
             apt.apt_add(('redis-server', 'memcached', ))
             fabfile.db_postgresql()
@@ -1308,6 +1308,11 @@ def operational_mode_task(fast):
 @task(alias='restart')
 def restart_services(fast=False):
     """ Restart all remote services (nginx, gunicorn, celery…) in one task. """
+
+    if is_local_environment():
+        LOGGER.warning('Not restarting services, this is a local environment '
+                       'and should be managed via Honcho.')
+        return
 
     execute_or_not(restart_nginx, fast=fast, sparks_roles=('load', ))
     execute_or_not(restart_webserver_gunicorn, fast=fast,
