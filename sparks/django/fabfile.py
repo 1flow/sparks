@@ -1103,6 +1103,7 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
 
     with settings(sudo_user=pg.get_admin_user()):
 
+        # WARNING: don't .strip() here, else we fail Fabric's attributes.
         db_user_result = sudo(pg.SELECT_USER.format(
                 pg_env=pg_env, user=user), warn_only=True)
 
