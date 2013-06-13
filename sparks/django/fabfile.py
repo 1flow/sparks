@@ -1111,7 +1111,7 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
             if is_local_environment():
                 raise RuntimeError('Is your local user account `{0}` a '
                                    'PostgreSQL administrator? it shoud be. '
-                                   'To acheive it, please run:{0}'.format(
+                                   'To acheive it, please run:{1}'.format(
                                    pwd.getpwuid(os.getuid()).pw_name, '''
     sudo su - postgres
     USER=<your-username-here>
