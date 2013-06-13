@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 
 from setuptools import setup, find_packages
+from .sparks import version
 
 setup(
     name="sparks",
-    version='2.7.2',
+    version=version,
     author="Olivier Cortès",
     author_email="contact@oliviercortes.com",
     description="My Django project & cloud deployment library (Fabric based)",
