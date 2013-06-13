@@ -1128,7 +1128,7 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
                                    'SPARKS_PG_SUPERPASS or in your fabfile via '
                                    'env.pg_super{user,pass}.')
 
-        if db_user_result.strip() == '':
+        if db_user_result.strip() in ('', 'Password:'):
             sudo(pg.CREATE_USER.format(
                  pg_env=pg_env, user=user, password=password))
         else:
