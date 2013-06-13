@@ -1102,10 +1102,10 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
 
     with settings(sudo_user=pg.get_admin_user()):
 
-        current_db_user = sudo(pg.SELECT_USER.format(
-                pg_env=pg_env, user=user), warn_only=True).strip()
+        db_user_result = sudo(pg.SELECT_USER.format(
+                pg_env=pg_env, user=user), warn_only=True)
 
-        if current_db_user.failed:
+        if db_user_result.failed:
             if is_local_environment():
                 raise RuntimeError('Is your local user account `{0}` a '
                                    'PostgreSQL administrator? it shoud be. '
@@ -1125,7 +1125,7 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
                                    'SPARKS_PG_SUPERPASS or in your fabfile via '
                                    'env.pg_super{user,pass}.')
 
-        if current_db_user == '':
+        if db_user_result.strip() == '':
             sudo(pg.CREATE_USER.format(
                  pg_env=pg_env, user=user, password=password))
         else:
