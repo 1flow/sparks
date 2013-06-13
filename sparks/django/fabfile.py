@@ -1101,8 +1101,31 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
     pg_env = ' '.join(pg_env)
 
     with settings(sudo_user=pg.get_admin_user()):
-        if sudo(pg.SELECT_USER.format(
-                pg_env=pg_env, user=user)).strip() == '':
+
+        current_db_user = sudo(pg.SELECT_USER.format(
+                pg_env=pg_env, user=user, warn_only=True)).strip()
+
+        if current_db_user.failed:
+            if is_local_environment():
+                raise RuntimeError('Is your local user account `{0}` a '
+                                   'PostgreSQL administrator? it shoud be. '
+                                   'To acheive it, please run:{0}'.format('''
+    sudo su - postgres
+    USER=<your-username-here>
+    PASS=<your-password-here>
+    createuser --login --no-inherit --createdb --createrole --superuser ${USER}
+    echo "ALTER USER ${USER} WITH ENCRYPTED PASSWORD '${PASS}';" | psql
+    [exit]
+'''))
+            else:
+                raise RuntimeError('Your remote system lacks a dedicated '
+                                   'PostgreSQL administrator account. Did '
+                                   'you create one? You can specify it either '
+                                   'via SPARKS_PG_SUPERUSER and '
+                                   'SPARKS_PG_SUPERPASS or in your fabfile via '
+                                   'env.pg_super{user,pass}.')
+
+        if current_db_user == '':
             sudo(pg.CREATE_USER.format(
                  pg_env=pg_env, user=user, password=password))
         else:

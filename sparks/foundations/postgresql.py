@@ -69,21 +69,19 @@ def get_admin_user(remote_configuration=None):
     environ_user = os.environ.get('SPARKS_PG_SUPERUSER', None)
 
     if environ_user is not None:
+        LOGGER.info('Using environment variable SPARKS_PG_SUPERUSER.')
         return environ_user
 
-    if remote_configuration.is_osx:
-        if is_local_environment():
-            return pwd.getpwuid(os.getuid()).pw_name
-
-        else:
-            raise NotImplementedError("Don't know how to find PG user "
-                                      "on remote OSX server.")
-    elif remote_configuration.lsb:
-        # FIXED: on Ubuntu / Debian, it's been `postgres` since ages.
-        return 'postgres'
+    if is_local_environment():
+        return pwd.getpwuid(os.getuid()).pw_name
 
     else:
-        raise NotImplementedError("Which kind of remote sytem is this??")
+        if remote_configuration.lsb:
+            # FIXED: on Ubuntu / Debian, it's been `postgres` since ages.
+            return 'postgres'
+
+        raise NotImplementedError("Don't know how to find PG user "
+                                  "on remote OSX server / Ubuntu.")
 
 
 @with_remote_configuration
