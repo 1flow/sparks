@@ -1103,7 +1103,7 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
     with settings(sudo_user=pg.get_admin_user()):
 
         current_db_user = sudo(pg.SELECT_USER.format(
-                pg_env=pg_env, user=user, warn_only=True)).strip()
+                pg_env=pg_env, user=user), warn_only=True).strip()
 
         if current_db_user.failed:
             if is_local_environment():
