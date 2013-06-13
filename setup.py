@@ -1,8 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import sys
+
 from setuptools import setup, find_packages
-from .sparks import version
+
+if '.' in sys.path:
+    sys.path.remove('.')
+
+# We want to be sure that Python will import the sparks from here, and not
+# the one eventually installed system-wide or in the current virtualenv.
+sys.path.insert(0, '.')
+
+from sparks import version
 
 setup(
     name="sparks",
