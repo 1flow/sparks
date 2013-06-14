@@ -632,7 +632,9 @@ def dev_web(remote_configuration=None):
                  ))
 
     pkg.gem_add(
-        ('compass', )                   # used in Django-pipeline
+        ('compass',                   # used in Django-pipeline
+         'bundle',                    # used to build Handlebars or EmberJS
+         )
     )
 
 
