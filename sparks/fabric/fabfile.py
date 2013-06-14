@@ -837,7 +837,7 @@ def graphdev(remote_configuration=None):
         .. todo:: clean / refactor contents (OSX mainly).
     """
 
-    pkg.pkg_add(('pdksh', 'zsh', ))
+    #pkg.pkg_add(('pdksh', 'zsh', ))
 
     if remote_configuration.is_osx:
         # TODO: download/install on OSX:

@@ -19,6 +19,7 @@
 """
 
 import os
+import pwd
 import logging
 import datetime
 
@@ -535,8 +536,8 @@ def install_components(remote_configuration=None, upgrade=False):
                         'environment…')
 
             # These are duplicated here in case env.host_string has been
-            # manually set to localhost in fabfile, which I do myself
-            apt.apt_add(('supervisor', 'nginx-full', ))
+            # manually set to localhost in fabfile, which I do myself.
+            apt.apt_add(('nginx-full', ))
 
             apt.apt_add(('redis-server', 'memcached', ))
             fabfile.db_postgresql()
@@ -1101,8 +1102,33 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
     pg_env = ' '.join(pg_env)
 
     with settings(sudo_user=pg.get_admin_user()):
-        if sudo(pg.SELECT_USER.format(
-                pg_env=pg_env, user=user)).strip() == '':
+
+        # WARNING: don't .strip() here, else we fail Fabric's attributes.
+        db_user_result = sudo(pg.SELECT_USER.format(
+                pg_env=pg_env, user=user), warn_only=True)
+
+        if db_user_result.failed:
+            if is_local_environment():
+                raise RuntimeError('Is your local user account `{0}` a '
+                                   'PostgreSQL administrator? it shoud be. '
+                                   'To acheive it, please run:{1}'.format(
+                                   pwd.getpwuid(os.getuid()).pw_name, '''
+    sudo su - postgres
+    USER=<your-username-here>
+    PASS=<your-password-here>
+    createuser --login --no-inherit --createdb --createrole --superuser ${USER}
+    echo "ALTER USER ${USER} WITH ENCRYPTED PASSWORD '${PASS}';" | psql
+    [exit]
+'''))
+            else:
+                raise RuntimeError('Your remote system lacks a dedicated '
+                                   'PostgreSQL administrator account. Did '
+                                   'you create one? You can specify it either '
+                                   'via SPARKS_PG_SUPERUSER and '
+                                   'SPARKS_PG_SUPERPASS or in your fabfile via '
+                                   'env.pg_super{user,pass}.')
+
+        if db_user_result.strip() in ('', 'Password:'):
             sudo(pg.CREATE_USER.format(
                  pg_env=pg_env, user=user, password=password))
         else:
@@ -1282,6 +1308,11 @@ def operational_mode_task(fast):
 @task(alias='restart')
 def restart_services(fast=False):
     """ Restart all remote services (nginx, gunicorn, celery…) in one task. """
+
+    if is_local_environment():
+        LOGGER.warning('Not restarting services, this is a local environment '
+                       'and should be managed via Honcho.')
+        return
 
     execute_or_not(restart_nginx, fast=fast, sparks_roles=('load', ))
     execute_or_not(restart_webserver_gunicorn, fast=fast,
