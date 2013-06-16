@@ -84,6 +84,28 @@ def install_skype(remote_configuration=None):
 
 @task
 @with_remote_configuration
+def install_bitcoin(remote_configuration=None):
+    """ Install Bitcoind via Ubuntu PPA. """
+
+    if remote_configuration.is_osx:
+        return
+
+    else:
+        if not exists('/etc/apt/sources.list.d/bitcoin-bitcoin-{0}.list'.format(
+                      remote_configuration.lsb.CODENAME)):
+            pkg.apt.ppa('ppa:bitcoin/bitcoin')
+
+            if exists('/usr/bin/bitcoind'):
+                pkg.apt.upgrade()
+                LOGGER.warning('You probably need to upgrade your wallet '
+                               'with -upgradewallet option.')
+
+            else:
+                pkg.apt_add('bitcoind')
+
+
+@task
+@with_remote_configuration
 def install_sublime(remote_configuration=None, overwrite=False):
     """ Install Sublime Text 2 in /opt via a downloaded .tar.bz2. """
 
