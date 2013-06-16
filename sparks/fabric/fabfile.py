@@ -300,6 +300,20 @@ def sys_del_useless(remote_configuration=None):
 
 @task
 @with_remote_configuration
+def sys_low_resources_purge(remote_configuration=None):
+    """ Remove more packages on a low-resource system (LSB only). """
+
+    if remote_configuration.is_osx:
+        return
+
+    LOGGER.info('Removing packages for a low-resource system…')
+
+    pkg.apt_del(('bluez', 'blueman', 'oneconf', 'colord',
+                 'zeitgeist', ))
+
+
+@task
+@with_remote_configuration
 def sys_default_services(remote_configuration=None):
     """ Activate some system services I need / use. """
 
