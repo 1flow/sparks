@@ -1317,11 +1317,17 @@ def restart_services(fast=False):
     execute_or_not(restart_nginx, fast=fast, sparks_roles=('load', ))
     execute_or_not(restart_webserver_gunicorn, fast=fast,
                    sparks_roles=('web', ))
+
+    roles_to_restart = ('worker',
+                        'worker_low', 'worker_medium', 'worker_high', )
+
+    if not fast:
+        roles_to_restart += ('flower', )
+
     # Run this multiple time, for each role:
     # each of them has a dedicated supervisor configuration,
     # even when running on the same machine.
-    for role in ('worker',
-                 'worker_low', 'worker_medium', 'worker_high', 'flower'):
+    for role in roles_to_restart:
         execute_or_not(restart_worker_celery, fast=fast, sparks_roles=(role, ))
 
 
