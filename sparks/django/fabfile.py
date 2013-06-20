@@ -189,7 +189,8 @@ class SupervisorHelper(SimpleObject):
             ``command_pre_args`` and ``command_post_args`` to empty values
             in the first time. Then it will call the
             method ``self.custom_context_handler()`` if it exists, passing
-            a copy of the current context to it, in case handler needs to
+            a copy of the current context, a ``has_djsettings`` boolean and
+            and the ``remote_configuration`` to it, in case handler needs to
             inspect current values. The custom handler should return the
             context copy, with ``command_{pre,post}_args`` modified to fit
             the needs.
@@ -199,6 +200,10 @@ class SupervisorHelper(SimpleObject):
                 incarnation. Abusing it would be non-sense anyway, because
                 people using it already have sysadmin rights on remote machines
                 on which sparks will run.
+
+            .. note:: for ``remote_configuration`` to be passed; you need to
+                pass it as an argument to the SupervisorHelper constructor.
+                See the celery handling part for an example.
 
             .. versionadded:: 2.6
         """
@@ -211,11 +216,12 @@ class SupervisorHelper(SimpleObject):
         })
 
         custom_handler = getattr(self, 'custom_context_handler', None)
-
+        remote_configuration = getattr(self, 'remote_configuration', None)
         if custom_handler is None:
             return
 
-        temp_context = custom_handler(context.copy(), has_djsettings)
+        temp_context = custom_handler(context.copy(), has_djsettings,
+                                      remote_configuration)
 
         context['command_pre_args']  = temp_context['command_pre_args']
         context['command_post_args'] = temp_context['command_post_args']
@@ -907,7 +913,7 @@ def restart_webserver_gunicorn(remote_configuration=None, fast=False):
         supervisor.restart_or_reload()
 
 
-def worker_hostname(context, has_djsettings):
+def worker_options(context, has_djsettings, remote_configuration):
     """ This is the celery custom context handler. It will add
         the ``--hostname`` argument to the celery command line, as suggested
         at http://docs.celeryproject.org/en/latest/userguide/workers.html#starting-the-worker """ # NOQA
@@ -925,13 +931,23 @@ def worker_hostname(context, has_djsettings):
 
         return wcount > 1
 
+    command_pre_args  = ''
+    command_post_args = ''
+
     if env.host_string.role.startswith('worker_'):
         if many_workers_on_same_host():
-            context.update({
-                'command_pre_args': '',
-                'command_post_args': '--hostname {0}.{1}'.format(
-                    env.host_string.role, env.host_string),
-            })
+            command_post_args += '--hostname {0}.{1}'.format(
+                env.host_string.role, env.host_string
+            )
+
+    if remote_configuration is not None:
+        # TODO: should be if remote_configuration.is_lxc:
+        command_post_args += ' -c 1'
+
+    context.update({
+        'command_pre_args': command_pre_args,
+        'command_post_args': command_post_args,
+    })
 
     return context
 
@@ -954,7 +970,9 @@ def restart_worker_celery(remote_configuration=None, fast=False):
         supervisor = SupervisorHelper(from_dict={
                                       'has_djsettings': has_djsettings,
                                       'program_name': program_name,
-                                      'custom_context_handler': worker_hostname,
+                                      'custom_context_handler': worker_options,
+                                      'remote_configuration':
+                                      remote_configuration,
                                       })
 
         if not fast:
