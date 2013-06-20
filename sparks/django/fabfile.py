@@ -465,7 +465,10 @@ def sed_command(*args, **kwargs):
         and ch'ed into ``env.root``. Use like this (but don't do this in
         production)::
 
-            fab test sed:.git/config,'url = olive@','url = git@'
+            # In fact, this WON'T work because of spaces and equals signs.
+            #   fab test sed:.git/config,'url = olive@','url = git@'
+            # You should try avoiding them, and this should work:
+            fab test sdf.sed:.git/config,'(url.*)olive@','\1git@'
 
         Reminder of Fabric 1.6.1 ``sed`` function arguments::
 
@@ -817,7 +820,7 @@ def requirements(fast=False, upgrade=False):
             LOGGER.info('Done checking requirements.')
 
 
-@task(alias='pull')
+@task(alias='update')
 def git_update():
     """ Push latest code from local to origin, checkout branch on remote. """
 
@@ -834,7 +837,8 @@ def git_update():
 
 @task(alias='pull')
 def git_pull():
-    """ Pull latest code from origin to remote, reload sparks settings if changes. """ # NOQA
+    """ Pull latest code from origin to remote,
+        reload sparks settings if changes. """
 
     with cd(env.root):
         if not run('git pull').strip().endswith('Already up-to-date.'):
