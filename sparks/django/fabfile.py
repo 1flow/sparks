@@ -27,7 +27,7 @@ try:
     from fabric.api              import env, run, sudo, task, local, execute
     from fabric.tasks            import Task
     from fabric.operations       import put, prompt
-    from fabric.contrib.files    import exists, upload_template
+    from fabric.contrib.files    import exists, upload_template, sed
     from fabric.context_managers import cd, prefix, settings
 
 except ImportError:
@@ -452,6 +452,37 @@ def run_command(cmd):
 
 
 @task
+def sed_command_task(*args, **kwargs):
+
+    with activate_venv():
+        with cd(env.root):
+            sed(*args, **kwargs)
+
+
+@task(aliases=('sed', ))
+def sed_command(*args, **kwargs):
+    """ Run a Fabric sed command on the remote side, inside the virtualenv
+        and ch'ed into ``env.root``. Use like this (but don't do this in
+        production)::
+
+            # In fact, this WON'T work because of spaces and equals signs.
+            #   fab test sed:.git/config,'url = olive@','url = git@'
+            # You should try avoiding them, and this should work:
+            fab test sdf.sed:.git/config,'(url.*)olive@','\1git@'
+
+        Reminder of Fabric 1.6.1 ``sed`` function arguments::
+
+            filename, before, after, limit='', use_sudo=False,
+            backup='.bak', flags='', shell=False
+
+        .. versionadded:: in 2.8.
+    """
+
+    # Wrap the real task to eventually run on all hosts it none specified.
+    execute_or_not(sed_command_task, *args, **kwargs)
+
+
+@task
 def run_command_task(cmd):
 
     with activate_venv():
@@ -789,7 +820,7 @@ def requirements(fast=False, upgrade=False):
             LOGGER.info('Done checking requirements.')
 
 
-@task(alias='pull')
+@task(alias='update')
 def git_update():
     """ Push latest code from local to origin, checkout branch on remote. """
 
@@ -806,7 +837,8 @@ def git_update():
 
 @task(alias='pull')
 def git_pull():
-    """ Pull latest code from origin to remote, reload sparks settings if changes. """ # NOQA
+    """ Pull latest code from origin to remote,
+        reload sparks settings if changes. """
 
     with cd(env.root):
         if not run('git pull').strip().endswith('Already up-to-date.'):

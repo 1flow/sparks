@@ -1128,7 +1128,7 @@ def lxc_base(remote_configuration=None):
     # install the locale before everything, else DPKG borks.
     pkg.apt_add(('language-pack-fr', 'language-pack-en', ))
 
-    # Remove firefox's locale, it's completely sys_del_useless in a LXC.
+    # Remove firefox's locale, it's completely useless in a LXC.
     pkg.apt_del(('firefox-locale-fr', 'firefox-locale-en', ))
 
     # TODO: nullmailer, cf. my LXC documentation.
@@ -1137,6 +1137,19 @@ def lxc_base(remote_configuration=None):
     # install a dev env.
     dev()
 
+@task
+@with_remote_configuration
+def lxc_purge(remote_configuration=None):
+    """ Remove useless packages on LXC guest. """
+
+    if remote_configuration.is_osx:
+        info('Skipped lxc_purge (not on LSB).')
+        return
+
+    # Some other useless packages on LXCs…
+    pkg.apt_del(('man-db', 'ureadahead', 'dbus', ))
+
+    sudo('apt-get autoremove --purge --yes --force-yes')
 
 @task
 @with_remote_configuration
