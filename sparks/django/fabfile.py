@@ -27,7 +27,7 @@ try:
     from fabric.api              import env, run, sudo, task, local, execute
     from fabric.tasks            import Task
     from fabric.operations       import put, prompt
-    from fabric.contrib.files    import exists, upload_template
+    from fabric.contrib.files    import exists, upload_template, sed
     from fabric.context_managers import cd, prefix, settings
 
 except ImportError:
@@ -449,6 +449,34 @@ def run_command(cmd):
 
     # Wrap the real task to eventually run on all hosts it none specified.
     execute_or_not(run_command_task, cmd)
+
+
+@task
+def sed_command_task(*args, **kwargs):
+
+    with activate_venv():
+        with cd(env.root):
+            sed(*args, **kwargs)
+
+
+@task(aliases=('sed', ))
+def sed_command(*args, **kwargs):
+    """ Run a Fabric sed command on the remote side, inside the virtualenv
+        and ch'ed into ``env.root``. Use like this (but don't do this in
+        production)::
+
+            fab test sed:.git/config,'url = olive@','url = git@'
+
+        Reminder of Fabric 1.6.1 ``sed`` function arguments::
+
+            filename, before, after, limit='', use_sudo=False,
+            backup='.bak', flags='', shell=False
+
+        .. versionadded:: in 2.8.
+    """
+
+    # Wrap the real task to eventually run on all hosts it none specified.
+    execute_or_not(sed_command_task, *args, **kwargs)
 
 
 @task
