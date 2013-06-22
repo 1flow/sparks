@@ -111,27 +111,74 @@ def execute_or_not(task, *args, **kwargs):
         This allows to have empty roles/hosts lists for some tasks, in
         architectures where all roles are not needed.
 
+        .. note:: if you would like to have many services on the same host
+            (eg. a worker_high and a worker_low, with 2 different
+            configurations), you should call execute_or_not() once at a
+            time for each role, not one time with all roles grouped in a
+            list parameter. See `sparks.django.fabfile.restart_services()`
+            for an example. **This is a limitation of the sparks model**.
+
         .. versionadded: 2.x.
     """
 
     # execute kwargs: host, hosts, role, roles and exclude_hosts
 
     roles = kwargs.pop('sparks_roles', ['__any__'])
-
-    if env.host_string:
-        # If the user manually specified a host string / list,
-        # we must not add superfluous roles / machines.
-        return execute(task, *args, **kwargs)
-
     non_empty = [role for role in roles if env.roledefs[role] != []]
 
-    if non_empty:
-        kwargs['roles'] = non_empty
-        return execute(task, *args, **kwargs)
+    #LOGGER.warning('ROLES/NON_EMPTY: %s %s', roles, non_empty)
+
+    # Reset in case. The role should be found preferably in
+    # env.host_string.role, but in ONE case (when running sparks
+    # tasks on single hosts with -H), Fabric will set it to None
+    # and will reset all other attributes (thus we can't use
+    # env.host_string.sparks_role for example) and we still
+    # need our tasks to figure out the machine's role.
+    env.sparks_current_role = None
+
+    if env.host_string:
+        if non_empty:
+
+            should_run = False
+
+            for role in non_empty:
+                if env.host_string in env.roledefs[role]:
+                    should_run = True
+
+                    if env.host_string.role is None:
+                        # Supposing we are running via -H, populate the role
+                        # manually in a dedicated attribute. Fabric's execute
+                        # will reset env.host_string, and it's legitimate if
+                        # only -H is given on CLI.
+                        env.sparks_current_role = role
+
+                    # No need to look further.
+                    break
+
+            if should_run:
+                # If the user manually specified a host string / list,
+                # we must not add superfluous roles / machines.
+                return execute(task, *args, **kwargs)
+
+            else:
+                LOGGER.warning('Not executing %s(%s, %s): host %s not '
+                               'in current role(s) “%s”.',
+                               task.name, args, kwargs,
+                               env.host_string, ', '.join(roles))
+        else:
+            LOGGER.warning('Not executing %s(%s, %s): no role(s) “%s” in '
+                           'current context.', task.name, args, kwargs,
+                           ', '.join(roles))
 
     else:
-        LOGGER.warning('Not executing %s(%s, %s): no role(s) “%s” in current '
-                       'context.', task.name, args, kwargs, ', '.join(roles))
+        if non_empty:
+            kwargs['roles'] = non_empty
+            return execute(task, *args, **kwargs)
+
+        else:
+            LOGGER.warning('Not executing %s(%s, %s): no role(s) “%s” in '
+                           'current context.', task.name, args, kwargs,
+                           ', '.join(roles))
 
 
 def merge_roles_hosts():

@@ -131,13 +131,22 @@ class SupervisorHelper(SimpleObject):
             :param service: a string describing the service.
                 Defaults to Fabric's ``env.host_string.role`` (which is
                 a sparks specific attributes, not yet merged into Fabric
-                as os 2013-06).
+                as os 2013-06) or ``env.sparks_current_role`` which is
+                obviously sparks specific too, and exists when only the
+                ``-H`` argument is given on command line.
                 Can be anything meaningfull, eg. ``worker``, ``db``, etc.
 
         """
 
+        role_name = env.host_string.role or env.sparks_current_role
+
+        if role_name is None:
+            # This shouldn't happen, in fact. Either Fabric should have
+            # set the first, or sparks' execute_or_not() the second.
+            raise RuntimeError('WE HAVE NO ROLE, THIS IS MANDATORY.')
+
         if service is None:
-            service = env.host_string.role
+            service = role_name
 
         # We need something more unique than project, in case we have
         # many environments on the same remote machine. And alternative
@@ -249,7 +258,7 @@ class SupervisorHelper(SimpleObject):
         if service_name is None:
             service_name = 'supervisor'
 
-        role_name = env.host_string.role
+        role_name = env.host_string.role or env.sparks_current_role
 
         candidates = (
             os.path.join(platform.django_settings.BASE_ROOT,
@@ -560,7 +569,7 @@ def install_components(remote_configuration=None, upgrade=False):
         #     quiet=QUIET)
 
     else:
-        current_role = env.host_string.role
+        current_role = env.host_string.role or env.sparks_current_role
 
         if current_role.startswith('worker'):
             apt.apt_add(('supervisor', ))
@@ -966,10 +975,12 @@ def worker_options(context, has_djsettings, remote_configuration):
     command_pre_args  = ''
     command_post_args = ''
 
-    if env.host_string.role.startswith('worker_'):
+    role_name = env.host_string.role or env.sparks_current_role
+
+    if role_name.startswith('worker_'):
         if many_workers_on_same_host():
             command_post_args += '--hostname {0}.{1}'.format(
-                env.host_string.role, env.host_string
+                role_name, env.host_string
             )
 
     if remote_configuration is not None:
@@ -1377,6 +1388,9 @@ def restart_services(fast=False):
     # Run this multiple time, for each role:
     # each of them has a dedicated supervisor configuration,
     # even when running on the same machine.
+    # Degrouping role execution ensures execute_or_not() gets an unique
+    # role for each host it will execute on. This is a limitation of the
+    # the execute_or_not() function.
     for role in roles_to_restart:
         execute_or_not(restart_worker_celery, fast=fast, sparks_roles=(role, ))
 
