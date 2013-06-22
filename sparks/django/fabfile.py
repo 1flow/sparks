@@ -983,9 +983,14 @@ def worker_options(context, has_djsettings, remote_configuration):
                 role_name, env.host_string
             )
 
-    if remote_configuration is not None:
-        # TODO: should be if remote_configuration.is_lxc:
-        command_post_args += ' -c 1'
+        if remote_configuration is not None:
+            worker_concurrency = env.sparks_options.get('worker_concurrency', {})
+
+            # TODO: '2' should be 'if remote_configuration.is_lxc'
+            # but we don't have this configuration attribute yet.
+
+            command_post_args += ' -c {0}'.format(
+                worker_concurrency.get(env.host_string, 2))
 
     context.update({
         'command_pre_args': command_pre_args,
