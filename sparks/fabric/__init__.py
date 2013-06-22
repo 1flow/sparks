@@ -117,6 +117,12 @@ def execute_or_not(task, *args, **kwargs):
     # execute kwargs: host, hosts, role, roles and exclude_hosts
 
     roles = kwargs.pop('sparks_roles', ['__any__'])
+
+    if env.host_string:
+        # If the user manually specified a host string / list,
+        # we must not add superfluous roles / machines.
+        return execute(task, *args, **kwargs)
+
     non_empty = [role for role in roles if env.roledefs[role] != []]
 
     if non_empty:
