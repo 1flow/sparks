@@ -977,20 +977,29 @@ def worker_options(context, has_djsettings, remote_configuration):
 
     role_name = env.host_string.role or env.sparks_current_role
 
+    # NOTE: the final '_' is intentional: exclude the simple 'worker' role.
     if role_name.startswith('worker_'):
         if many_workers_on_same_host():
             command_post_args += '--hostname {0}.{1}'.format(
                 role_name, env.host_string
             )
 
-        if remote_configuration is not None:
-            worker_concurrency = env.sparks_options.get('worker_concurrency', {})
+    # NOTE: the void of '_' is intentional: all worker-related roles
+    if role_name.startswith('worker'):
+        worker_concurrency = env.sparks_options.get('worker_concurrency', {})
 
-            # TODO: '2' should be 'if remote_configuration.is_lxc'
-            # but we don't have this configuration attribute yet.
+        # TODO: '2' should be 'if remote_configuration.is_lxc'
+        # but we don't have this configuration attribute yet.
 
-            command_post_args += ' -c {0}'.format(
-                worker_concurrency.get(env.host_string, 2))
+        command_post_args += ' -c {0}'.format(
+            worker_concurrency.get(env.host_string, 2))
+
+        max_tasks_per_child = env.sparks_options.get('max_tasks_per_child', {})
+
+        command_post_args += ' --maxtasksperchild={0}'.format(
+            max_tasks_per_child.get(env.host_string,
+                                    max_tasks_per_child.get(
+                                    '__all__', 30)))
 
     context.update({
         'command_pre_args': command_pre_args,
