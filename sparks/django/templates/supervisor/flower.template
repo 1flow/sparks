@@ -1,5 +1,5 @@
 [program:%(program)s]
-command=%(command_pre_args)s %(user_home)s/.virtualenvs/%(virtualenv)s/bin/python %(root)s/manage.py celery flower %(command_post_args)s
+command=nice -n 19 ionice -c 3 %(command_pre_args)s %(user_home)s/.virtualenvs/%(virtualenv)s/bin/python %(root)s/manage.py celery flower %(command_post_args)s
 directory=%(root)s
 user=%(user)s
 autostart=true
