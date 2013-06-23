@@ -208,7 +208,7 @@ def install_powerline(remote_configuration=None):
         if not exists(tilde('.fonts/ubuntu-mono-powerline-ttf')):
             run('git clone https://github.com/pdf/ubuntu-mono-powerline-ttf.git'
                 ' ~/.fonts/ubuntu-mono-powerline-ttf')
-            run('fc-cache -vf')
+            run('fc-cache -vf', warn_only=True, quiet=True)
 
     git_clone_or_update('powerline-shell',
                         '{0}Karmak23/powerline-shell.git'.format(github()))
