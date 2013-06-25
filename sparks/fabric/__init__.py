@@ -145,7 +145,8 @@ def execute_or_not(task, *args, **kwargs):
                 if env.host_string in env.roledefs[role]:
                     should_run = True
 
-                    if env.host_string.role is None:
+                    if not hasattr(env.host_string, 'role') \
+                            or env.host_string.role is None:
                         # Supposing we are running via -H, populate the role
                         # manually in a dedicated attribute. Fabric's execute
                         # will reset env.host_string, and it's legitimate if
