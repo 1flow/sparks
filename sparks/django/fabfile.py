@@ -833,12 +833,6 @@ def requirements(fast=False, upgrade=False):
 def git_update():
     """ Push latest code from local to origin, checkout branch on remote. """
 
-    # TODO: git up?
-
-    # Push everything first. This is not strictly mandatory.
-    # Don't fail if local user doesn't have my `pa` alias.
-    local('git pa || true')
-
     with cd(env.root):
         if not is_local_environment():
             run('git checkout %s' % get_git_branch())
@@ -1418,6 +1412,10 @@ def runable(fast=False, upgrade=False):
                        sparks_roles=('__any__', ))
 
         execute_or_not(init_environment, sparks_roles=('__any__', ))
+
+    # Push everything first.
+    # Don't fail if local user doesn't have my aliases.
+    local('git upa || git up || git pa || git push')
 
     if not is_local_environment():
         execute_or_not(git_update, sparks_roles=('web', 'worker',
