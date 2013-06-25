@@ -24,7 +24,8 @@ import logging
 import datetime
 
 try:
-    from fabric.api              import env, run, sudo, task, local, execute
+    from fabric.api              import (env, run, sudo, task,
+                                         local, execute, serial)
     from fabric.tasks            import Task
     from fabric.operations       import put, prompt
     from fabric.contrib.files    import exists, upload_template, sed
@@ -838,10 +839,14 @@ def git_update():
             run('git checkout %s' % get_git_branch())
 
 
+@serial
 @task(alias='pull')
 def git_pull():
     """ Pull latest code from origin to remote,
-        reload sparks settings if changes. """
+        reload sparks settings if changes.
+
+        Serial task to avoid git lock conflicts on central repository.
+    """
 
     with cd(env.root):
         if not run('git pull').strip().endswith('Already up-to-date.'):
