@@ -40,4 +40,4 @@ def create_admin_user(username=None, email=None, password=None):
                 # DeprecationWarning: BaseException.message
                 # has been deprecated as of Python 2.6
                 if not 'duplicate key' in e.args[0]:
-                    raise
+                    LOGGER.warning('Sparks could not create an admin user!')
