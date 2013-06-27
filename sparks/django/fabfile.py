@@ -868,6 +868,22 @@ def git_pull():
                                  'first deploy)')
 
 
+@serial
+@task(alias='pull')
+def git_clean():
+    """ clean old Python compiled files. To avoid crashes like this one:
+
+        http://dev.1flow.net/webapps/obi1flow/group/783/
+
+        Which occured after removing profiles/admin.py and emptying models.py
+        but admin.pyc was left il place and refered to an ancient model…
+    """
+
+    with cd(env.root):
+        run("find . -name '*.pyc' -or -name '*.pyo' -print 0 "
+            " | xargs -0 rm -f", warn_only=True)
+
+
 @task(alias='getlangs')
 @with_remote_configuration
 def push_translations(remote_configuration=None):
@@ -1433,6 +1449,9 @@ def runable(fast=False, upgrade=False):
 
         execute_or_not(git_pull, sparks_roles=('web', 'worker',
                        'worker_low', 'worker_medium', 'worker_high'))
+
+    execute_or_not(git_clean, sparks_roles=('web', 'worker',
+                   'worker_low', 'worker_medium', 'worker_high'))
 
     execute_or_not(requirements, fast=fast, upgrade=upgrade,
                    sparks_roles=('web', 'worker',

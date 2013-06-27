@@ -124,7 +124,7 @@ def execute_or_not(task, *args, **kwargs):
     # execute kwargs: host, hosts, role, roles and exclude_hosts
 
     roles = kwargs.pop('sparks_roles', ['__any__'])
-    non_empty = [role for role in roles if env.roledefs[role] != []]
+    non_empty = [role for role in roles if env.roledefs.get(role, []) != []]
 
     #LOGGER.warning('ROLES/NON_EMPTY: %s %s', roles, non_empty)
 
