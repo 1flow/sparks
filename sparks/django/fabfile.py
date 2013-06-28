@@ -139,7 +139,8 @@ class SupervisorHelper(SimpleObject):
 
         """
 
-        role_name = env.host_string.role or env.sparks_current_role
+        role_name = getattr(env.host_string, 'role', None
+                            ) or env.sparks_current_role
 
         if role_name is None:
             # This shouldn't happen, in fact. Either Fabric should have
@@ -571,7 +572,8 @@ def install_components(remote_configuration=None, upgrade=False):
         #     quiet=QUIET)
 
     else:
-        current_role = env.host_string.role or env.sparks_current_role
+        current_role = getattr(env.host_string, 'role', None
+                               ) or env.sparks_current_role
 
         if current_role.startswith('worker'):
             apt.apt_add(('supervisor', ))
@@ -991,7 +993,8 @@ def worker_options(context, has_djsettings, remote_configuration):
     command_pre_args  = ''
     command_post_args = ''
 
-    role_name = env.host_string.role or env.sparks_current_role
+    role_name = getattr(env.host_string, 'role', None
+                        ) or env.sparks_current_role
 
     # NOTE: the final '_' is intentional: exclude the simple 'worker' role.
     if role_name.startswith('worker_'):
