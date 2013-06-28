@@ -259,7 +259,8 @@ class SupervisorHelper(SimpleObject):
         if service_name is None:
             service_name = 'supervisor'
 
-        role_name = env.host_string.role or env.sparks_current_role
+        role_name = getattr(env.host_string, 'role', None
+                            ) or env.sparks_current_role
 
         candidates = (
             os.path.join(platform.django_settings.BASE_ROOT,
