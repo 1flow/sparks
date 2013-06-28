@@ -1005,7 +1005,8 @@ def worker_options(context, has_djsettings, remote_configuration):
 
     # NOTE: the void of '_' is intentional: all worker-related roles
     if role_name.startswith('worker'):
-        worker_concurrency = env.sparks_options.get('worker_concurrency', {})
+        sparks_options = getattr(env, 'sparks_options', {})
+        worker_concurrency = sparks_options.get('worker_concurrency', {})
 
         # TODO: '2' should be 'if remote_configuration.is_lxc'
         # but we don't have this configuration attribute yet.
@@ -1013,7 +1014,7 @@ def worker_options(context, has_djsettings, remote_configuration):
         command_post_args += ' -c {0}'.format(
             worker_concurrency.get(env.host_string, 2))
 
-        max_tasks_per_child = env.sparks_options.get('max_tasks_per_child', {})
+        max_tasks_per_child = sparks_options.get('max_tasks_per_child', {})
 
         command_post_args += ' --maxtasksperchild={0}'.format(
             max_tasks_per_child.get(env.host_string,
