@@ -1462,15 +1462,16 @@ def runable(fast=False, upgrade=False):
                    sparks_roles=('web', 'worker',
                    'worker_low', 'worker_medium', 'worker_high'))
 
+    execute_or_not(compilemessages, sparks_roles=('web', 'worker',
+                   'worker_low', 'worker_medium', 'worker_high'))
+
+    execute_or_not(collectstatic, fast=fast, sparks_roles=('web', ))
+
     if not fast:
         execute_or_not(createdb, sparks_roles=('db', 'pg', ))
 
     execute_or_not(syncdb, sparks_roles=('db', 'pg', ))
     execute_or_not(migrate, sparks_roles=('db', 'pg', ))
-    execute_or_not(compilemessages, sparks_roles=('web', 'worker',
-                   'worker_low', 'worker_medium', 'worker_high'))
-
-    execute_or_not(collectstatic, fast=fast, sparks_roles=('web', ))
 
 
 @task(aliases=('fast', 'fastdeploy', ))
