@@ -1,8 +1,11 @@
 # -*- coding: utf8 -*-
+from __future__ import print_function
 
 import sys
 import os
 import ast
+import string
+import random
 import logging
 import platform
 import functools
@@ -15,12 +18,12 @@ from ..contrib import lsb_release
 from . import nofabric
 
 try:
-    from fabric.api              import env, execute
+    from fabric.api              import env, execute, task
     from fabric.api              import run as fabric_run
     from fabric.api              import sudo as fabric_sudo
     from fabric.api              import local as fabric_local
-    from fabric.operations       import get
-    from fabric.context_managers import prefix
+    from fabric.operations       import get, put
+    from fabric.context_managers import prefix, cd, lcd, hide
     from fabric.colors           import cyan
 
     # imported from utils
@@ -102,7 +105,7 @@ all_roles = [
 ]
 
 
-# =================================================== Remote system information
+# ===================================================== Fabric helper functions
 
 def execute_or_not(task, *args, **kwargs):
     """ Run Fabric's execute(), but only if there are hosts/roles to run it on.
@@ -260,6 +263,100 @@ def set_roledefs_and_parallel(roledefs, parallel=False):
                 env.parallel = True
                 env.pool_size = maximum if parallel > maximum else parallel
 
+
+def generate_random_name():
+    return ''.join(
+        random.choice(
+            string.ascii_uppercase
+            + string.digits
+            + string.ascii_lowercase
+        ) for x in range(10))
+
+# ================================================ general-purpose Fabric tasks
+
+
+@task
+def get_dir_with_sudo(remote_path, local_path=None):
+
+    with cd(remote_path):
+        source_basename = os.path.basename(remote_path)
+
+        print('Downloading {0}:{1}…'.format(env.host_string, remote_path),
+              end='')
+        sys.stdout.flush()
+
+        save_file_name = '../{0}-copy-{1}.tar.gz'.format(source_basename,
+                                                         generate_random_name())
+        while exists(save_file_name):
+            save_file_name = '../{0}-copy-{1}.tar.gz'.format(
+                source_basename, generate_random_name())
+
+        # chmod will allow get() to succeed, provided the
+        # user has correct access to full containing path…
+        sudo("tar -czf '{0}' . ; chmod 644 '{0}'".format(save_file_name),
+             quiet=True)
+
+        with hide('running', 'stdout', 'stderr'):
+            downloaded = get(save_file_name, local_path)[0]
+
+        sudo('rm -f "{0}"'.format(save_file_name), quiet=True)
+
+        local_dirname, local_basename = downloaded.rsplit(os.sep, 1)
+
+        local_full_name = os.path.join(local_dirname, source_basename)
+
+        with lcd(local_dirname):
+            with hide('running', 'stdout', 'stderr'):
+                local('mkdir -p "{0}"'.format(source_basename))
+
+                with lcd(source_basename):
+                    local('tar -xzf "../{0}"'.format(local_basename))
+
+                local('rm -f "{0}"'.format(local_basename))
+
+            print('into {1} directory.'.format(remote_path, local_full_name))
+
+            return local_full_name
+
+
+@task
+def put_dir_with_sudo(local_path, remote_path):
+    # TODO: implement remote_path=None & return remote_path
+
+    with lcd(local_path):
+        source_basename = os.path.basename(local_path)
+
+        print('Uploading {0} to {1}:{2}…'.format(local_path, env.host_string,
+              remote_path), end='')
+        sys.stdout.flush()
+
+        save_file_name = '../{0}-copy-{1}.tar.gz'.format(source_basename,
+                                                         generate_random_name())
+        while os.path.exists(save_file_name):
+            save_file_name = '../{0}-copy-{1}.tar.gz'.format(
+                source_basename, generate_random_name())
+
+        with hide('running', 'stdout', 'stderr'):
+            local("tar -czf '{0}' . ".format(save_file_name))
+
+        remote_dirname, remote_basename = remote_path.rsplit(os.sep, 1)
+
+        with hide('running', 'stdout', 'stderr'):
+            put(save_file_name, remote_dirname, use_sudo=True)
+            local('rm -f "{0}"'.format(save_file_name))
+
+        with cd(remote_dirname):
+            with hide('running', 'stdout', 'stderr'):
+                sudo('mkdir -p "{0}"'.format(remote_basename))
+
+                with cd(remote_basename):
+                    sudo('tar -xzf "{0}"'.format(save_file_name))
+                    sudo('rm -f "{0}"'.format(save_file_name))
+
+            print(' done.')
+
+
+# =================================================== Remote system information
 
 def is_localhost(hostname):
     return hostname in ('localhost', 'localhost.localdomain',
