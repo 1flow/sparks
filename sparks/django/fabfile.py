@@ -56,8 +56,11 @@ LOGGER = logging.getLogger(__name__)
 
 
 # These can be overridden in local projects fabfiles.
-env.requirements_file     = 'config/requirements.txt'
-env.dev_requirements_file = 'config/dev-requirements.txt'
+env.requirements_dir      = 'config'
+env.requirements_file     = os.path.join(env.requirements_dir,
+                                         'requirements.txt')
+env.dev_requirements_file = os.path.join(env.requirements_dir,
+                                         'dev-requirements.txt')
 env.branch                = '<GIT-FLOW-DEPENDANT>'
 env.use_ssh_config        = True
 
@@ -829,6 +832,19 @@ def requirements(fast=False, upgrade=False):
 
             run("{command} --requirement {requirements_file}".format(
                 command=command, requirements_file=req))
+
+            role_name = getattr(env.host_string, 'role', None
+                                ) or env.sparks_current_role
+
+            custom_script = os.path.join(env.root, env.requirements_dir,
+                                         role_name + '.sh')
+
+            if exists(custom_script):
+                LOGGER.info('Running custom requirements script…')
+
+                run('bash "{0}" install "{1}" "{2}" "{3}" "{4}"'.format(
+                    custom_script, env.environment, env.virtualenv,
+                    role_name, env.host_string))
 
             LOGGER.info('Done checking requirements.')
 
