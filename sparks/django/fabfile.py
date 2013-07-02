@@ -808,21 +808,6 @@ def requirements(fast=False, upgrade=False):
     with cd(env.root):
         with activate_venv():
 
-            role_name = getattr(env.host_string, 'role', None
-                                ) or env.sparks_current_role
-
-            custom_script = os.path.join(env.root, env.requirements_dir,
-                                         role_name + '.sh')
-
-            has_custom_script = exists(custom_script)
-
-            if has_custom_script:
-                LOGGER.info('Running custom requirements script (preinstall)…')
-
-                run('bash "{0}" preinstall "{1}" "{2}" "{3}" "{4}"'.format(
-                    custom_script, env.environment, env.virtualenv,
-                    role_name, env.host_string))
-
             if is_development_environment():
 
                 LOGGER.info('Checking development requirements…')
@@ -838,6 +823,23 @@ def requirements(fast=False, upgrade=False):
                 run("{command} --requirement {requirements_file}".format(
                     command=command, requirements_file=dev_req))
 
+            else:
+                role_name = getattr(env.host_string, 'role', None
+                                    ) or env.sparks_current_role
+
+                custom_script = os.path.join(env.root, env.requirements_dir,
+                                             role_name + '.sh')
+
+                has_custom_script = exists(custom_script)
+
+                if has_custom_script:
+                    LOGGER.info('Running custom requirements script '
+                                '(preinstall)…')
+
+                    run('bash "{0}" preinstall "{1}" "{2}" "{3}" "{4}"'.format(
+                        custom_script, env.environment, env.virtualenv,
+                        role_name, env.host_string))
+
             LOGGER.info('Checking requirements…')
 
             req = os.path.join(env.root, env.requirements_file)
@@ -851,7 +853,7 @@ def requirements(fast=False, upgrade=False):
             run("{command} --requirement {requirements_file}".format(
                 command=command, requirements_file=req))
 
-            if has_custom_script:
+            if not is_development_environment() and has_custom_script:
                 LOGGER.info('Running custom requirements script (install)…')
 
                 run('bash "{0}" install "{1}" "{2}" "{3}" "{4}"'.format(
