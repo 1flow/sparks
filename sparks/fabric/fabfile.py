@@ -373,7 +373,7 @@ def sys_mongodb(remote_configuration=None):
         if major_distro_version < 12:
             LOGGER.warning('Unsupported (too old) Ubuntu version for MongoDB.')
 
-        elif remote_configuration.lsb.RELEASE in (12, 13):
+        elif major_distro_version in (12, 13):
             if not exists('/etc/apt/sources.list.d/10gen.list'):
                 sudo('apt-key adv --keyserver keyserver.ubuntu.com '
                      '--recv 7F0CEB10')
@@ -794,7 +794,7 @@ def db_mysql(remote_configuration=None):
     pkg.pkg_add('mysql' if remote_configuration.is_osx else 'mysql-server')
 
 
-@task
+@task(aliases=('db_memcached', ))
 @with_remote_configuration
 def db_memcache(remote_configuration=None):
     """ Memcache key-value volatile store. """
