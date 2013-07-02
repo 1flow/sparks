@@ -806,14 +806,9 @@ def requirements(fast=False, upgrade=False):
 
                 dev_req = os.path.join(env.root, env.dev_requirements_file)
 
-                # exists(): we are looking for a remote file!
-                if not exists(dev_req):
-                    dev_req = os.path.join(os.path.dirname(__file__),
-                                           'dev-requirements.txt')
-                    #TODO: "put" it there !!
-
-                run("{command} --requirement {requirements_file}".format(
-                    command=command, requirements_file=dev_req))
+                if exists(dev_req):
+                    run("{command} --requirement {requirements_file}".format(
+                        command=command, requirements_file=dev_req))
 
             else:
                 role_name = getattr(env.host_string, 'role', None
@@ -836,14 +831,9 @@ def requirements(fast=False, upgrade=False):
 
             req = os.path.join(env.root, env.requirements_file)
 
-            # exists(): we are looking for a remote file!
-            if not exists(req):
-                req = os.path.join(os.path.dirname(__file__),
-                                   'requirements.txt')
-                #TODO: "put" it on the remote side !!
-
-            run("{command} --requirement {requirements_file}".format(
-                command=command, requirements_file=req))
+            if exists(req):
+                run("{command} --requirement {requirements_file}".format(
+                    command=command, requirements_file=req))
 
             if not is_development_environment() and has_custom_script:
                 LOGGER.info('Running custom requirements script (install)…')
