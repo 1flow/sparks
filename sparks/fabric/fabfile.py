@@ -770,7 +770,8 @@ def db_redis(remote_configuration=None):
             quiet=True)
 
     else:
-        if remote_configuration.lsb.RELEASE.startswith('12'):
+        if remote_configuration.lsb.RELEASE.startswith('12') \
+                or remote_configuration.lsb.RELEASE.startswith('13'):
             if not exists('/etc/apt/sources.list.d/'
                           'chris-lea-redis-server-{0}.list'.format(
                           remote_configuration.lsb.CODENAME)):
