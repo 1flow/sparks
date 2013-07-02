@@ -66,10 +66,10 @@ CREATE_DB   = BASE_CMD.format(pg_env='{pg_env}',
 @with_remote_configuration
 def get_admin_user(remote_configuration=None):
 
-    environ_user = os.environ.get('SPARKS_PG_SUPERUSER', None)
+    environ_user = os.environ.get('SPARKS_PG_SUDO_USER', None)
 
     if environ_user is not None:
-        LOGGER.info('Using environment variable SPARKS_PG_SUPERUSER.')
+        LOGGER.info('Using environment variable SPARKS_PG_SUDO_USER.')
         return environ_user
 
     if is_local_environment():
