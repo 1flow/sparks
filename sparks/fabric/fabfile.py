@@ -758,6 +758,35 @@ def db_sqlite(remote_configuration=None):
 
 @task
 @with_remote_configuration
+def db_redis(remote_configuration=None):
+    """ Redis server. """
+
+    if remote_configuration.is_osx:
+        pkg.brew_add(('redis', ))
+
+        run('ln -sfv /usr/local/opt/redis/*.plist ~/Library/LaunchAgents',
+            quiet=True)
+        run('launchctl load ~/Library/LaunchAgents/homebrew.*.redis.plist',
+            quiet=True)
+
+    else:
+        if remote_configuration.lsb.RELEASE.startswith('12'):
+            if not exists('/etc/apt/sources.list.d/'
+                          'chris-lea-redis-server-{0}.list'.format(
+                          remote_configuration.lsb.CODENAME)):
+                pkg.apt.ppa('ppa:chris-lea/redis-server')
+
+                if exists('/usr/bin/redis-cli'):
+                    pkg.apt.upgrade()
+
+                else:
+                    pkg.apt_add('redis-server')
+        else:
+            pkg.apt_add('redis-server')
+
+
+@task
+@with_remote_configuration
 def db_mysql(remote_configuration=None):
     """ MySQL database server. """
 
@@ -1137,6 +1166,7 @@ def lxc_base(remote_configuration=None):
     # install a dev env.
     dev()
 
+
 @task
 @with_remote_configuration
 def lxc_purge(remote_configuration=None):
@@ -1150,6 +1180,7 @@ def lxc_purge(remote_configuration=None):
     pkg.apt_del(('man-db', 'ureadahead', 'dbus', ))
 
     sudo('apt-get autoremove --purge --yes --force-yes')
+
 
 @task
 @with_remote_configuration
