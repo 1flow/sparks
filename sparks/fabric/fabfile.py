@@ -96,7 +96,7 @@ def install_bitcoin(remote_configuration=None):
             pkg.apt.ppa('ppa:bitcoin/bitcoin')
 
             if exists('/usr/bin/bitcoind'):
-                pkg.apt.upgrade()
+                pkg.apt_upgrade()
                 LOGGER.warning('You probably need to upgrade your wallet '
                                'with -upgradewallet option.')
 
@@ -777,7 +777,7 @@ def db_redis(remote_configuration=None):
                 pkg.apt.ppa('ppa:chris-lea/redis-server')
 
                 if exists('/usr/bin/redis-cli'):
-                    pkg.apt.upgrade()
+                    pkg.apt_upgrade()
 
                 else:
                     pkg.apt_add('redis-server')
