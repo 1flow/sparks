@@ -542,10 +542,7 @@ def install_components(remote_configuration=None, upgrade=False):
         LOGGER.warning('Considering a development environment, '
                        'installing everything on OSX.')
 
-        # We use redis for Celery queues.
-        # 'rabbitmq',
-
-        brew.brew_add(('nginx', 'redis', 'memcached', 'libmemcached', ))
+        brew.brew_add(('nginx', ))
 
         # If you want to host pages on your local machine to the wider network
         # you can change the port to 80 in: /usr/local/etc/nginx/nginx.conf
@@ -556,19 +553,15 @@ def install_components(remote_configuration=None, upgrade=False):
         run('launchctl load ~/Library/LaunchAgents/homebrew.mxcl.nginx.plist',
             quiet=QUIET)
 
-        run('ln -sfv /usr/local/opt/redis/*.plist ~/Library/LaunchAgents',
-            quiet=QUIET)
-        run('launchctl load ~/Library/LaunchAgents/homebrew.*.redis.plist',
-            quiet=QUIET)
-
-        run('ln -sfv /usr/local/opt/memcached/*.plist ~/Library/LaunchAgents',
-            quiet=QUIET)
-        run('launchctl load ~/Library/LaunchAgents/homebrew.*.memcached.plist',
-            quiet=QUIET)
-
+        fabfile.db_redis()
         fabfile.db_postgresql()
         fabfile.db_mongodb()
+        fabfile.db_memcached()
 
+        # Already done in dev_django_full()
+        #fabfile.dev_memcache()
+
+        # 'rabbitmq'
         # run('ln -sfv /usr/local/opt/rabbitmq/*.plist ~/Library/LaunchAgents',
         #     quiet=QUIET)
         # run('launchctl load ~/Library/LaunchAgents/homebrew.*.rabbitmq.plist',
@@ -593,8 +586,7 @@ def install_components(remote_configuration=None, upgrade=False):
             apt.apt_add(('nginx-full', ))
 
             fabfile.db_redis()
-
-            apt.apt_add(('memcached', ))
+            fabfile.db_memcached()
             fabfile.db_postgresql()
             fabfile.db_mongodb()
 
