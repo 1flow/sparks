@@ -1255,14 +1255,16 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
         pg_env = []
 
     else:
-        pg_env = ['PGUSER={0}'.format(env.pg_superuser)
-                  if hasattr(env, 'pg_superuser') else '',
-                  'PGPASSWORD={0}'.format(env.pg_superpass)
-                  if hasattr(env, 'pg_superpass') else '']
+        SPARKS_PG_SUPERUSER = os.environ.get('SPARKS_PG_SUPERUSER', None)
+        SPARKS_PG_SUPERPASS = os.environ.get('SPARKS_PG_SUPERPASS', None)
+        SPARKS_PG_TMPL_DB   = os.environ.get('SPARKS_PG_TMPL_DB',   None)
 
-    pg_env.append('PGDATABASE={0}'.format(env.pg_superdb
-                  if hasattr(env, 'pg_superdb')
-                  else 'template1'))
+        pg_env = ['PGUSER={0}'.format(SPARKS_PG_SUPERUSER)
+                  if SPARKS_PG_SUPERUSER else '',
+                  'PGPASSWORD={0}'.format(SPARKS_PG_SUPERPASS)
+                  if SPARKS_PG_SUPERPASS else '']
+
+    pg_env.append('PGDATABASE={0}'.format(SPARKS_PG_TMPL_DB or 'template1'))
 
     djsettings = getattr(remote_configuration, 'django_settings', None)
 
@@ -1302,10 +1304,11 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
             else:
                 raise RuntimeError('Your remote system lacks a dedicated '
                                    'PostgreSQL administrator account. Did '
-                                   'you create one? You can specify it either '
-                                   'via SPARKS_PG_SUPERUSER and '
-                                   'SPARKS_PG_SUPERPASS or in your fabfile via '
-                                   'env.pg_super{user,pass}.')
+                                   'you create one? You can specify it via '
+                                   'environment variables $SPARKS_PG_SUPERUSER '
+                                   ' and $SPARKS_PG_SUPERPASS. You can also '
+                                   'specify $SPARKS_PG_TMPL_DB (defaults to '
+                                   '“template1” if unset, which is safe).')
 
         if db_user_result.strip() in ('', 'Password:'):
             sudo(pg.CREATE_USER.format(
