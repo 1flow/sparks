@@ -845,6 +845,78 @@ def requirements(fast=False, upgrade=False):
             LOGGER.info('Done checking requirements.')
 
 
+def push_environment_task(project_envs_dir):
+
+    role_name = getattr(env.host_string, 'role', None
+                        ) or env.sparks_current_role
+
+    for env_file_candidate in (
+        '{0}.env'.format(env.host_string.lower()),
+        '{0}_{0}.env'.format(role_name, env.environment),
+        '{0}.env'.format(env.environment),
+            'default.env', ):
+        candidate_fullpath = os.path.join(project_envs_dir, env_file_candidate)
+
+        if os.path.exists(candidate_fullpath):
+            put(candidate_fullpath, '.env')
+            return
+
+    raise RuntimeError('$SPARKS_ENV_DIR is defined but no environment file '
+                       'matched {0} in {1}!'.format(env.hostname,
+                       project_envs_dir))
+
+
+@task(task_class=DjangoTask)
+def push_environment():
+    """ Copy any environment file to the remote server in ``~/.env``,
+        ready to be loaded by the shell when the user does anything.
+
+        Environment files are shell scripts, they should be loaded
+        via ``. ~/.env`` on the remote host.
+
+        Master environment dir is indicated to :program:`sparks` via
+        the environment variable ``SPARKS_ENV_DIR``. In this directory,
+        sparks will look for a subdirectory named after
+        Fabric's ``env.project``.
+
+        In the project directory, *sparks* will lookup, in this order of
+        preferences:
+
+        - ``<remote_hostname_in_lowercase>.env`` (eg. ``1flow.io.env``)
+        - ``<remote_host_role>_<env.environment>.env``
+          (eg. ``web_production.env``)
+        - ``<env.environment>.env`` (eg. ``production.env``)
+        - ``default.env`` (in case you have only one environment file)
+
+        The first that matches is the one that will be pushed.
+
+        There is no kind of inclusion nor concatenation mechanism for now.
+
+        .. versionadded:: 3.0
+
+    """
+
+    envs_dir = os.environ.get('SPARKS_ENV_DIR', None)
+
+    if envs_dir is None:
+        LOGGER.warning('$SPARKS_ENV_DIR is not defined, will not push any '
+                       'environment file to any remote host.')
+        return
+
+    project_envs_dir = os.path.join(envs_dir, env.project)
+
+    if not os.path.exists(project_envs_dir):
+        LOGGER.warning('$SPARKS_ENV_DIR/{0} does not exist. Will not push any '
+                       'environment file to any remote host.'.format(
+                       env.project))
+        return
+
+    # re-wrap the internal task via execute() to catch roledefs.
+    execute_or_not(push_environment_task, project_envs_dir,
+                   sparks_roles=('web', 'db', 'worker',
+                   'worker_low', 'worker_medium', 'worker_high'))
+
+
 @task(alias='update')
 def git_update():
     """ Push latest code from local to origin, checkout branch on remote. """
@@ -1456,6 +1528,8 @@ def runable(fast=False, upgrade=False):
     local('git upa || git up || git pa || git push')
 
     if not is_local_environment():
+        push_environment()  # already wraps execute_or_not()
+
         execute_or_not(git_update, sparks_roles=('web', 'worker',
                        'worker_low', 'worker_medium', 'worker_high'))
 
