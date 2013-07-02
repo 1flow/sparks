@@ -862,7 +862,7 @@ def push_environment_task(project_envs_dir):
             return
 
     raise RuntimeError('$SPARKS_ENV_DIR is defined but no environment file '
-                       'matched {0} in {1}!'.format(env.hostname,
+                       'matched {0} in {1}!'.format(env.host_string,
                        project_envs_dir))
 
 
