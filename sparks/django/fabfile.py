@@ -592,7 +592,9 @@ def install_components(remote_configuration=None, upgrade=False):
             # manually set to localhost in fabfile, which I do myself.
             apt.apt_add(('nginx-full', ))
 
-            apt.apt_add(('redis-server', 'memcached', ))
+            fabfile.db_redis()
+
+            apt.apt_add(('memcached', ))
             fabfile.db_postgresql()
             fabfile.db_mongodb()
 
