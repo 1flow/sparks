@@ -806,14 +806,9 @@ def requirements(fast=False, upgrade=False):
 
                 dev_req = os.path.join(env.root, env.dev_requirements_file)
 
-                # exists(): we are looking for a remote file!
-                if not exists(dev_req):
-                    dev_req = os.path.join(os.path.dirname(__file__),
-                                           'dev-requirements.txt')
-                    #TODO: "put" it there !!
-
-                run("{command} --requirement {requirements_file}".format(
-                    command=command, requirements_file=dev_req))
+                if exists(dev_req):
+                    run("{command} --requirement {requirements_file}".format(
+                        command=command, requirements_file=dev_req))
 
             else:
                 role_name = getattr(env.host_string, 'role', None
@@ -836,14 +831,9 @@ def requirements(fast=False, upgrade=False):
 
             req = os.path.join(env.root, env.requirements_file)
 
-            # exists(): we are looking for a remote file!
-            if not exists(req):
-                req = os.path.join(os.path.dirname(__file__),
-                                   'requirements.txt')
-                #TODO: "put" it on the remote side !!
-
-            run("{command} --requirement {requirements_file}".format(
-                command=command, requirements_file=req))
+            if exists(req):
+                run("{command} --requirement {requirements_file}".format(
+                    command=command, requirements_file=req))
 
             if not is_development_environment() and has_custom_script:
                 LOGGER.info('Running custom requirements script (install)…')
@@ -853,6 +843,78 @@ def requirements(fast=False, upgrade=False):
                     role_name, env.host_string))
 
             LOGGER.info('Done checking requirements.')
+
+
+def push_environment_task(project_envs_dir):
+
+    role_name = getattr(env.host_string, 'role', None
+                        ) or env.sparks_current_role
+
+    for env_file_candidate in (
+        '{0}.env'.format(env.host_string.lower()),
+        '{0}_{0}.env'.format(role_name, env.environment),
+        '{0}.env'.format(env.environment),
+            'default.env', ):
+        candidate_fullpath = os.path.join(project_envs_dir, env_file_candidate)
+
+        if os.path.exists(candidate_fullpath):
+            put(candidate_fullpath, '.env')
+            return
+
+    raise RuntimeError('$SPARKS_ENV_DIR is defined but no environment file '
+                       'matched {0} in {1}!'.format(env.host_string,
+                       project_envs_dir))
+
+
+@task(task_class=DjangoTask)
+def push_environment():
+    """ Copy any environment file to the remote server in ``~/.env``,
+        ready to be loaded by the shell when the user does anything.
+
+        Environment files are shell scripts, they should be loaded
+        via ``. ~/.env`` on the remote host.
+
+        Master environment dir is indicated to :program:`sparks` via
+        the environment variable ``SPARKS_ENV_DIR``. In this directory,
+        sparks will look for a subdirectory named after
+        Fabric's ``env.project``.
+
+        In the project directory, *sparks* will lookup, in this order of
+        preferences:
+
+        - ``<remote_hostname_in_lowercase>.env`` (eg. ``1flow.io.env``)
+        - ``<remote_host_role>_<env.environment>.env``
+          (eg. ``web_production.env``)
+        - ``<env.environment>.env`` (eg. ``production.env``)
+        - ``default.env`` (in case you have only one environment file)
+
+        The first that matches is the one that will be pushed.
+
+        There is no kind of inclusion nor concatenation mechanism for now.
+
+        .. versionadded:: 3.0
+
+    """
+
+    envs_dir = os.environ.get('SPARKS_ENV_DIR', None)
+
+    if envs_dir is None:
+        LOGGER.warning('$SPARKS_ENV_DIR is not defined, will not push any '
+                       'environment file to any remote host.')
+        return
+
+    project_envs_dir = os.path.join(envs_dir, env.project)
+
+    if not os.path.exists(project_envs_dir):
+        LOGGER.warning('$SPARKS_ENV_DIR/{0} does not exist. Will not push any '
+                       'environment file to any remote host.'.format(
+                       env.project))
+        return
+
+    # re-wrap the internal task via execute() to catch roledefs.
+    execute_or_not(push_environment_task, project_envs_dir,
+                   sparks_roles=('web', 'db', 'worker',
+                   'worker_low', 'worker_medium', 'worker_high'))
 
 
 @task(alias='update')
@@ -1193,14 +1255,16 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
         pg_env = []
 
     else:
-        pg_env = ['PGUSER={0}'.format(env.pg_superuser)
-                  if hasattr(env, 'pg_superuser') else '',
-                  'PGPASSWORD={0}'.format(env.pg_superpass)
-                  if hasattr(env, 'pg_superpass') else '']
+        SPARKS_PG_SUPERUSER = os.environ.get('SPARKS_PG_SUPERUSER', None)
+        SPARKS_PG_SUPERPASS = os.environ.get('SPARKS_PG_SUPERPASS', None)
+        SPARKS_PG_TMPL_DB   = os.environ.get('SPARKS_PG_TMPL_DB',   None)
 
-    pg_env.append('PGDATABASE={0}'.format(env.pg_superdb
-                  if hasattr(env, 'pg_superdb')
-                  else 'template1'))
+        pg_env = ['PGUSER={0}'.format(SPARKS_PG_SUPERUSER)
+                  if SPARKS_PG_SUPERUSER else '',
+                  'PGPASSWORD={0}'.format(SPARKS_PG_SUPERPASS)
+                  if SPARKS_PG_SUPERPASS else '']
+
+    pg_env.append('PGDATABASE={0}'.format(SPARKS_PG_TMPL_DB or 'template1'))
 
     djsettings = getattr(remote_configuration, 'django_settings', None)
 
@@ -1240,10 +1304,11 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
             else:
                 raise RuntimeError('Your remote system lacks a dedicated '
                                    'PostgreSQL administrator account. Did '
-                                   'you create one? You can specify it either '
-                                   'via SPARKS_PG_SUPERUSER and '
-                                   'SPARKS_PG_SUPERPASS or in your fabfile via '
-                                   'env.pg_super{user,pass}.')
+                                   'you create one? You can specify it via '
+                                   'environment variables $SPARKS_PG_SUPERUSER '
+                                   ' and $SPARKS_PG_SUPERPASS. You can also '
+                                   'specify $SPARKS_PG_TMPL_DB (defaults to '
+                                   '“template1” if unset, which is safe).')
 
         if db_user_result.strip() in ('', 'Password:'):
             sudo(pg.CREATE_USER.format(
@@ -1466,6 +1531,8 @@ def runable(fast=False, upgrade=False):
     local('git upa || git up || git pa || git push')
 
     if not is_local_environment():
+        push_environment()  # already wraps execute_or_not()
+
         execute_or_not(git_update, sparks_roles=('web', 'worker',
                        'worker_low', 'worker_medium', 'worker_high'))
 

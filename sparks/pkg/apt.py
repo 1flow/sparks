@@ -7,6 +7,9 @@ from .common import is_installed, search
 
 # ---------------------------------------------- APT package management
 
+APT_CMD = ("DEBIAN_PRIORITY=critical DEBIAN_FRONTEND=noninteractive "
+           "apt-get -o Dpkg::Options::='--force-confold'")
+
 
 @with_remote_configuration
 def apt_usable(remote_configuration=None):
@@ -31,19 +34,22 @@ def apt_update():
 def apt_upgrade():
     """ Upgrade outdated Debian packages. """
 
-    sudo('apt-get -u dist-upgrade -q --yes --force-yes')
+    # create a line "force-confold" in `/etc/dpkg/dpkg.cfg`.
+    # Or, just:
+
+    sudo(APT_CMD + ' -q -u dist-upgrade --yes --force-yes')
 
 
 def apt_add(pkgs):
     for pkg in list_or_split(pkgs):
         if not apt_is_installed(pkg):
-            sudo('apt-get -q install --yes --force-yes %s' % pkg)
+            sudo(APT_CMD + ' -q install --yes --force-yes %s' % pkg)
 
 
 def apt_del(pkgs):
     for pkg in list_or_split(pkgs):
         if apt_is_installed(pkg):
-            sudo('apt-get -q remove --purge --yes --force-yes %s' % pkg)
+            sudo(APT_CMD + ' -q remove --purge --yes --force-yes %s' % pkg)
 
 
 def ppa(src):
