@@ -614,8 +614,8 @@ def dev_memcache(remote_configuration=None):
 
     LOGGER.info('Checking dev_memcache() components…')
 
-    if not remote_configuration.is_osx:
-        pkg.pkg_add(('libmemcached-dev', ))
+    pkg.pkg_add(('libmemcached' if remote_configuration.is_osx
+                else 'libmemcached-dev', ))
 
 
 @task
@@ -792,6 +792,20 @@ def db_mysql(remote_configuration=None):
     """ MySQL database server. """
 
     pkg.pkg_add('mysql' if remote_configuration.is_osx else 'mysql-server')
+
+
+@task
+@with_remote_configuration
+def db_memcache(remote_configuration=None):
+    """ Memcache key-value volatile store. """
+
+    pkg.pkg_add('memcached')
+
+    if remote_configuration.is_osx:
+        run('ln -sfv /usr/local/opt/memcached/*.plist ~/Library/LaunchAgents',
+            quiet=True)
+        run('launchctl load ~/Library/LaunchAgents/homebrew.*.memcached.plist',
+            quiet=True)
 
 
 @task(aliases=('db_postgres', ))
