@@ -605,6 +605,7 @@ def dev_django_full(remote_configuration=None):
 
     dev_postgresql()
     dev_memcache()
+    dev_python_deps()
 
 
 @task
@@ -616,6 +617,20 @@ def dev_memcache(remote_configuration=None):
 
     pkg.pkg_add(('libmemcached' if remote_configuration.is_osx
                 else 'libmemcached-dev', ))
+
+
+@task
+@with_remote_configuration
+def dev_python_deps(remote_configuration=None):
+    """ Other non-Python development packages (for python packages build). """
+
+    LOGGER.info('Checking dev_memcache() components…')
+
+    if remote_configuration.is_osx:
+        pass
+
+    else:
+       pkg.pkg_add(('libxml2-dev', 'libxslt-dev', ))
 
 
 @task
