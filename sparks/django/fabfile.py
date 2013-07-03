@@ -268,7 +268,7 @@ class ServiceRunner(SimpleObject):
 
             if self.restart:
                 if self.service_handler == 'upstart':
-                    sudo("restart {0}".format(self.program_name))
+                    sudo("restart {0} || start {0}".format(self.program_name))
 
                 else:
                     sudo("supervisorctl restart {0}".format(self.program_name))
@@ -277,7 +277,7 @@ class ServiceRunner(SimpleObject):
             # In any case, we restart the process during a {fast}deploy,
             # to reload the Django code even if configuration hasn't changed.
             if self.service_handler == 'upstart':
-                sudo("restart {0}".format(self.program_name))
+                sudo("restart {0} || start {0}".format(self.program_name))
             else:
                 sudo("supervisorctl restart {0}".format(self.program_name))
 
