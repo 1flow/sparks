@@ -845,7 +845,7 @@ def requirements(fast=False, upgrade=False):
                     run("{command} --requirement {requirements_file}".format(
                         command=command, requirements_file=dev_req))
 
-            else:
+            if not is_local_environment():
                 role_name = getattr(env.host_string, 'role', None
                                     ) or env.sparks_current_role
 
@@ -870,7 +870,7 @@ def requirements(fast=False, upgrade=False):
                 run("{command} --requirement {requirements_file}".format(
                     command=command, requirements_file=req))
 
-            if not is_development_environment() and has_custom_script:
+            if not is_local_environment() and has_custom_script:
                 LOGGER.info('Running custom requirements script (install)…')
 
                 run('bash "{0}" install "{1}" "{2}" "{3}" "{4}"'.format(
