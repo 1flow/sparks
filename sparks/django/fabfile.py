@@ -815,13 +815,56 @@ def init_environment():
         run('mkvirtualenv {0}'.format(env.virtualenv))
 
 
-@task(alias='req')
-def requirements(fast=False, upgrade=False):
-    """ Install PIP requirements (and dev-requirements).
+@task
+def pre_requirements_task(fast=False, upgrade=False):
 
-        .. note:: :param:`fast` is not used yet, but exists for consistency
-            with other fab tasks which handle it.
-    """
+    if is_local_environment():
+        return
+
+    role_name = getattr(env.host_string, 'role', None
+                        ) or env.sparks_current_role
+
+    custom_script = os.path.join(env.root, env.requirements_dir,
+                                 role_name + '.sh')
+
+    has_custom_script = exists(custom_script)
+
+    if has_custom_script:
+        LOGGER.info('Running custom requirements script '
+                    '(preinstall)…')
+
+        run('bash "{0}" preinstall "{1}" "{2}" "{3}" "{4}"'.format(
+            custom_script, env.environment, env.virtualenv,
+            role_name, env.host_string))
+
+
+@task
+def post_requirements_task(fast=False, upgrade=False):
+
+    #
+    # TODO: factorize role_name and exists() with pre_requirements_task
+    #
+
+    if is_local_environment():
+        return
+
+    role_name = getattr(env.host_string, 'role', None
+                        ) or env.sparks_current_role
+
+    custom_script = os.path.join(env.root, env.requirements_dir,
+                                 role_name + '.sh')
+
+    has_custom_script = exists(custom_script)
+
+    if has_custom_script:
+        LOGGER.info('Running custom requirements script (install)…')
+
+        run('bash "{0}" install "{1}" "{2}" "{3}" "{4}"'.format(
+            custom_script, env.environment, env.virtualenv,
+            role_name, env.host_string))
+
+
+def requirements_task(fast=False, upgrade=False):
 
     # Thanks http://stackoverflow.com/a/9362082/654755
     if upgrade:
@@ -845,23 +888,6 @@ def requirements(fast=False, upgrade=False):
                     run("{command} --requirement {requirements_file}".format(
                         command=command, requirements_file=dev_req))
 
-            if not is_local_environment():
-                role_name = getattr(env.host_string, 'role', None
-                                    ) or env.sparks_current_role
-
-                custom_script = os.path.join(env.root, env.requirements_dir,
-                                             role_name + '.sh')
-
-                has_custom_script = exists(custom_script)
-
-                if has_custom_script:
-                    LOGGER.info('Running custom requirements script '
-                                '(preinstall)…')
-
-                    run('bash "{0}" preinstall "{1}" "{2}" "{3}" "{4}"'.format(
-                        custom_script, env.environment, env.virtualenv,
-                        role_name, env.host_string))
-
             LOGGER.info('Checking requirements…')
 
             req = os.path.join(env.root, env.requirements_file)
@@ -870,14 +896,31 @@ def requirements(fast=False, upgrade=False):
                 run("{command} --requirement {requirements_file}".format(
                     command=command, requirements_file=req))
 
-            if not is_local_environment() and has_custom_script:
-                LOGGER.info('Running custom requirements script (install)…')
-
-                run('bash "{0}" install "{1}" "{2}" "{3}" "{4}"'.format(
-                    custom_script, env.environment, env.virtualenv,
-                    role_name, env.host_string))
-
             LOGGER.info('Done checking requirements.')
+
+
+@task(alias='req')
+def requirements(fast=False, upgrade=False):
+    """ Install PIP requirements (and dev-requirements).
+
+        .. note:: :param:`fast` is not used yet, but exists for consistency
+            with other fab tasks which handle it.
+    """
+
+    roles_to_run = ('web', 'db', 'worker',
+                    'worker_low', 'worker_medium', 'worker_high')
+
+    for role in roles_to_run:
+        execute_or_not(pre_requirements_task, fast=fast,
+                       upgrade=upgrade, sparks_roles=(role, ))
+
+    # re-wrap the internal task via execute() to catch roledefs.
+    execute_or_not(requirements_task, fast, upgrade,
+                   sparks_roles=roles_to_run)
+
+    for role in roles_to_run:
+        execute_or_not(post_requirements_task, fast=fast,
+                       upgrade=upgrade, sparks_roles=(role, ))
 
 
 def push_environment_task(project_envs_dir):
@@ -1570,9 +1613,7 @@ def runable(fast=False, upgrade=False):
     execute_or_not(git_clean, sparks_roles=('web', 'worker',
                    'worker_low', 'worker_medium', 'worker_high'))
 
-    execute_or_not(requirements, fast=fast, upgrade=upgrade,
-                   sparks_roles=('web', 'worker',
-                   'worker_low', 'worker_medium', 'worker_high'))
+    requirements(fast=fast, upgrade=upgrade)  # already wraps execute_or_not()
 
     execute_or_not(compilemessages, sparks_roles=('web', 'worker',
                    'worker_low', 'worker_medium', 'worker_high'))
