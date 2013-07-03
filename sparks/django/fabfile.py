@@ -107,8 +107,13 @@ class DjangoTask(Task):
         return self(*args, **kwargs)
 
 
-class SupervisorHelper(SimpleObject):
-    """ Handle the supervisor configuration and restart/reload dirty work.
+class ServiceRunner(SimpleObject):
+    """ Handle all the supervisor/upstart configuration and the
+        restart/reload dirty work.
+
+        .. versionchanged:: in 3.0, this class was renamed
+            from ``SupervisorHelper`` to ``ServiceRunner`` with the
+            added :program:`upstart` support.
 
         .. versionadded:: in sparks 2.0, all ``supervisor_*`` functions
             were merged into this controller, and support for Fabric's
@@ -122,6 +127,14 @@ class SupervisorHelper(SimpleObject):
 
         self.update  = False
         self.restart = False
+
+        if exists('/usr/bin/supervisorctl'):
+            # testing exists('/etc/supervisor') isn't accurate: the
+            # directory could still be there on a Debian/Ubuntu system,
+            # even after a "remove --purge" (observed on obi.1flow.io).
+            self.service_handler = 'supervisor'
+        else:
+            self.service_handler = 'upstart'
 
     @classmethod
     def build_program_name(cls, service=None):
@@ -216,7 +229,7 @@ class SupervisorHelper(SimpleObject):
                 on which sparks will run.
 
             .. note:: for ``remote_configuration`` to be passed; you need to
-                pass it as an argument to the SupervisorHelper constructor.
+                pass it as an argument to the ServiceRunner constructor.
                 See the celery handling part for an example.
 
             .. versionadded:: 2.6
@@ -241,18 +254,32 @@ class SupervisorHelper(SimpleObject):
         context['command_post_args'] = temp_context['command_post_args']
 
     def restart_or_reload(self):
+        """
+
+            .. versionchanged:: in 3.0, support :program:`upstart`.
+        """
        # cf. http://stackoverflow.com/a/9310434/654755
 
         if self.update:
-            sudo("supervisorctl update")
+            if self.service_handler == 'upstart':
+                sudo("initctl reload-configuration")
+            else:
+                sudo("supervisorctl update")
 
             if self.restart:
-                sudo("supervisorctl restart {0}".format(self.program_name))
+                if self.service_handler == 'upstart':
+                    sudo("restart {0} || start {0}".format(self.program_name))
+
+                else:
+                    sudo("supervisorctl restart {0}".format(self.program_name))
 
         else:
             # In any case, we restart the process during a {fast}deploy,
             # to reload the Django code even if configuration hasn't changed.
-            sudo("supervisorctl restart {0}".format(self.program_name))
+            if self.service_handler == 'upstart':
+                sudo("restart {0} || start {0}".format(self.program_name))
+            else:
+                sudo("supervisorctl restart {0}".format(self.program_name))
 
     def find_configuration_or_template(self, service_name=None):
         """ Return a tuple of candidate configuration files or templates
@@ -261,7 +288,7 @@ class SupervisorHelper(SimpleObject):
         """
 
         if service_name is None:
-            service_name = 'supervisor'
+            service_name = self.service_handler
 
         role_name = getattr(env.host_string, 'role', None
                             ) or env.sparks_current_role
@@ -303,21 +330,24 @@ class SupervisorHelper(SimpleObject):
 
         return superconf
 
-    def configure_program(self, remote_configuration):
-        """ Upload an environment-specific supervisor configuration file.
-            The file is re-generated at each call in case configuration
-            changed in the source repository.
+    def configure_service(self, remote_configuration):
+        """ Upload an environment-specific :program:`upstart`
+            or :program:`supervisor` configuration file (depending on
+            the ``remote_configuration`` parameter). The file is
+            re-generated at each call in case configuration changed in
+            the source repository.
 
-            Supervisor will be automatically restarted if configuration changed.
+            Upstart/Supervisor will be automatically restarted if
+            configuration changed.
 
             Given ``root = remote_configuration.django_settings.BASE_ROOT``,
             this method will look for all these candidates (in order,
             first-match wins) for a given service:
 
-                ${root}/config/supervisor/${program_name}.conf
-                ${root}/config/supervisor/${role}.template
-                ${root}/config/supervisor/${role}.conf
-                ${sparks_data_dir}/supervisor/${role}.template
+                ${root}/config/${service}/${program_name}.conf
+                ${root}/config/${service}/${role}.template
+                ${root}/config/${service}/${role}.conf
+                ${sparks_data_dir}/${service}/${role}.template
 
             The service template can end with either ``.conf`` or ``.template``.
             This is just for convenience: ``.template`` is more meaningful,
@@ -356,6 +386,10 @@ class SupervisorHelper(SimpleObject):
                 supervisor configuration files
                 to :file:`/etc/supervisor/conf.d/`.
 
+            .. versionchanged:: Added :program:`upstart` support in version
+                3.1. Prior to version 3.x, this method was named
+                after ``configure_program``.
+
             .. versionchanged:: in version 2.6, the ``command_{pre,post}_args``
                 were added, notably to handle installing more than one celery
                 worker on the same machine.
@@ -366,8 +400,9 @@ class SupervisorHelper(SimpleObject):
 
         # XXX/TODO: rename templates in sparks, create worker template.
 
-        destination = '/etc/supervisor/conf.d/{0}.conf'.format(
-            self.program_name)
+        destination = '/etc/{0}/{1}.conf'.format(
+            'init' if self.service_handler == 'upstart'
+            else 'supervisor/conf.d', self.program_name)
 
         # NOTE: update docstring if you change this.
         context = {
@@ -1017,16 +1052,8 @@ def restart_nginx(fast=False):
     if not exists('/etc/nginx'):
         return
 
-    # Nothing more for now, the remaining is disabled.
+    # Nothing implemented yet.
     return
-
-    if not exists('/etc/nginx/sites-available/beau-dimanche.com'):
-        #put('config/nginx-site.conf', '')
-        pass
-
-    if not exists('/etc/nginx/sites-enabled/beau-dimanche.com'):
-        with cd('/etc/nginx/sites-enabled/'):
-            sudo('ln -sf ../sites-available/beau-dimanche.com')
 
 
 @task(task_class=DjangoTask, alias='gunicorn')
@@ -1040,20 +1067,18 @@ def restart_webserver_gunicorn(remote_configuration=None, fast=False):
 
     """
 
-    if exists('/etc/supervisor'):
+    has_djsettings, program_name = ServiceRunner.build_program_name()
 
-        has_djsettings, program_name = SupervisorHelper.build_program_name()
+    service_runner = ServiceRunner(from_dict={
+                                   'has_djsettings': has_djsettings,
+                                   'program_name': program_name
+                                   })
 
-        supervisor = SupervisorHelper(from_dict={
-                                      'has_djsettings': has_djsettings,
-                                      'program_name': program_name
-                                      })
+    if not fast:
+        service_runner.configure_service(remote_configuration)
+        service_runner.handle_gunicorn_config()
 
-        if not fast:
-            supervisor.configure_program(remote_configuration)
-            supervisor.handle_gunicorn_config()
-
-        supervisor.restart_or_reload()
+    service_runner.restart_or_reload()
 
 
 def worker_options(context, has_djsettings, remote_configuration):
@@ -1124,24 +1149,22 @@ def restart_worker_celery(remote_configuration=None, fast=False):
 
     """
 
-    if exists('/etc/supervisor'):
+    has_djsettings, program_name = ServiceRunner.build_program_name()
 
-        has_djsettings, program_name = SupervisorHelper.build_program_name()
+    service_runner = ServiceRunner(from_dict={
+                                   'has_djsettings': has_djsettings,
+                                   'program_name': program_name,
+                                   'custom_context_handler': worker_options,
+                                   'remote_configuration':
+                                   remote_configuration,
+                                   })
 
-        supervisor = SupervisorHelper(from_dict={
-                                      'has_djsettings': has_djsettings,
-                                      'program_name': program_name,
-                                      'custom_context_handler': worker_options,
-                                      'remote_configuration':
-                                      remote_configuration,
-                                      })
+    if not fast:
+        service_runner.configure_service(remote_configuration)
+        # NO need:
+        #   service_runner.handle_celery_config(<role>)
 
-        if not fast:
-            supervisor.configure_program(remote_configuration)
-            # NO need:
-            #   supervisor.handle_celery_config(supervisor)
-
-        supervisor.restart_or_reload()
+    service_runner.restart_or_reload()
 
 
 # •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Django tasks
