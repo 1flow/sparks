@@ -1,11 +1,11 @@
 #
-# Upstart file for %(project)s %(environment) web server
+# Upstart file for %(project)s %(env)s web server
 #
 # This template has been processed by sparks
 # https://github.com/Karmak23/sparks
 #
 
-description "%(project)s %(environment) web server"
+description "%(project)s %(env)s web server"
 
 start on (started network-interface
           or started network-manager
@@ -18,19 +18,18 @@ stop on (stopping network-interface
 respawn
 respawn limit 5 10
 setuid %(user)s
+chdir %(root)s
 
 # NOTE: pre-start script overwrites log. This is intentional, for now we don't
 # use logrotate and have only this bare way of limiting log size.
 pre-start script
-    cd
     mkdir -p logs
     echo "———————— `date`: $UPSTART_JOB started ————————" > logs/%(program)s.log
 end script
 
 script
-    . ~/.env
-    cd %(root)s
-    exec %(command_pre_args)s %(user_home)s/.virtualenvs/%(virtualenv)s/bin/gunicorn_django -c %(root)s/config/gunicorn/%(program)s.conf --settings "%(project)s.settings" --pythonpath %(root)s %(command_post_args)s >> logs/%(program)s.log 2>&1'
+    . %(user_home)s/.env
+    exec %(command_pre_args)s %(user_home)s/.virtualenvs/%(virtualenv)s/bin/gunicorn_django -c %(root)s/config/gunicorn/%(program)s.conf --settings "%(project)s.settings" --pythonpath %(root)s %(command_post_args)s >> logs/%(program)s.log 2>&1
 end script
 
 post-stop script
