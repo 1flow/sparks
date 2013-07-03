@@ -23,15 +23,15 @@ chdir %(root)s
 # NOTE: pre-start script overwrites log. This is intentional, for now we don't
 # use logrotate and have only this bare way of limiting log size.
 pre-start script
-    mkdir -p logs
-    echo "———————— `date`: $UPSTART_JOB started ————————" > logs/%(program)s.log
+    mkdir -p %(user_home)s/logs
+    echo "———————— `date`: $UPSTART_JOB started ————————" > %(user_home)s/logs/%(program)s.log
 end script
 
 script
     . %(user_home)s/.env
-    exec %(command_pre_args)s %(user_home)s/.virtualenvs/%(virtualenv)s/bin/gunicorn_django -c %(root)s/config/gunicorn/%(program)s.conf --settings "%(project)s.settings" --pythonpath %(root)s %(command_post_args)s >> logs/%(program)s.log 2>&1
+    exec %(command_pre_args)s %(user_home)s/.virtualenvs/%(virtualenv)s/bin/gunicorn_django -c %(root)s/config/gunicorn/%(program)s.conf --settings "%(project)s.settings" --pythonpath %(root)s %(command_post_args)s >> %(user_home)s/logs/%(program)s.log 2>&1
 end script
 
 post-stop script
-    echo "———————— `date`: $UPSTART_JOB stopped ————————" >> logs/%(program)s.log
+    echo "———————— `date`: $UPSTART_JOB stopped ————————" >> %(user_home)s/logs/%(program)s.log
 end script
