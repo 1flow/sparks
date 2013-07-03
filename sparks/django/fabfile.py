@@ -1170,15 +1170,19 @@ def worker_options(context, has_djsettings, remote_configuration):
         # TODO: '2' should be 'if remote_configuration.is_lxc'
         # but we don't have this configuration attribute yet.
 
-        command_post_args += ' -c {0}'.format(
-            worker_concurrency.get(env.host_string, 2))
+        my_concurrency = worker_concurrency.get(env.host_string, 2)
 
-        max_tasks_per_child = sparks_options.get('max_tasks_per_child', {})
+        if my_concurrency < 30:
+            command_post_args += ' -c {0}'.format(my_concurrency)
 
-        command_post_args += ' --maxtasksperchild={0}'.format(
-            max_tasks_per_child.get(env.host_string,
-                                    max_tasks_per_child.get(
-                                    '__all__', 30)))
+            max_tasks_per_child = sparks_options.get('max_tasks_per_child', {})
+
+            command_post_args += ' --maxtasksperchild={0}'.format(
+                max_tasks_per_child.get(env.host_string,
+                                        max_tasks_per_child.get(
+                                        '__all__', 30)))
+        else:
+            command_post_args += ' -P eventlet -c {0}'.format(my_concurrency)
 
     context.update({
         'command_pre_args': command_pre_args,
