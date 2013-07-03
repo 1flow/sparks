@@ -829,13 +829,16 @@ def pre_requirements_task(fast=False, upgrade=False):
 
     has_custom_script = exists(custom_script)
 
-    if has_custom_script:
-        LOGGER.info('Running custom requirements script '
-                    '(preinstall)…')
+    if not has_custom_script:
+        return
 
-        run('bash "{0}" preinstall "{1}" "{2}" "{3}" "{4}"'.format(
-            custom_script, env.environment, env.virtualenv,
-            role_name, env.host_string))
+    LOGGER.info('Running custom requirements script (preinstall)…')
+
+    with cd(env.root):
+        with activate_venv():
+            run('bash "{0}" preinstall "{1}" "{2}" "{3}" "{4}"'.format(
+                custom_script, env.environment, env.virtualenv,
+                role_name, env.host_string))
 
 
 @task
@@ -856,12 +859,16 @@ def post_requirements_task(fast=False, upgrade=False):
 
     has_custom_script = exists(custom_script)
 
-    if has_custom_script:
-        LOGGER.info('Running custom requirements script (install)…')
+    if not has_custom_script:
+        return
 
-        run('bash "{0}" install "{1}" "{2}" "{3}" "{4}"'.format(
-            custom_script, env.environment, env.virtualenv,
-            role_name, env.host_string))
+    LOGGER.info('Running custom requirements script (install)…')
+
+    with cd(env.root):
+        with activate_venv():
+            run('bash "{0}" install "{1}" "{2}" "{3}" "{4}"'.format(
+                custom_script, env.environment, env.virtualenv,
+                role_name, env.host_string))
 
 
 def requirements_task(fast=False, upgrade=False):
