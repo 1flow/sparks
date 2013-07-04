@@ -595,6 +595,11 @@ def dev_mini(remote_configuration=None):
 
     dev_tildesources()
 
+    if remote_configuration.is_osx:
+        return
+
+    pkg.pkg_add(('make', ))
+
 
 @task
 @with_remote_configuration
@@ -1176,13 +1181,11 @@ def mybootstrap(remote_configuration=None):
 @task
 @with_remote_configuration
 def lxc_base(remote_configuration=None):
-    """ Base packages for an LXC guest (base+LANG+dev). """
+    """ Base packages for an LXC guest (LANG, mailx). """
 
     if remote_configuration.is_osx:
         info('Skipped lxc_base (not on LSB).')
         return
-
-    base()
 
     # install the locale before everything, else DPKG borks.
     pkg.apt_add(('language-pack-fr', 'language-pack-en', ))
@@ -1193,7 +1196,18 @@ def lxc_base(remote_configuration=None):
     # TODO: nullmailer, cf. my LXC documentation.
     pkg.apt_add(('bsd-mailx', ))
 
-    # install a dev env.
+
+@task
+@with_remote_configuration
+def lxc_base_and_dev(remote_configuration=None):
+    """ lxc_base + base + dev """
+
+    if remote_configuration.is_osx:
+        info('Skipped lxc_base (not on LSB).')
+        return
+
+    base()
+    lxc_base()
     dev()
 
 
