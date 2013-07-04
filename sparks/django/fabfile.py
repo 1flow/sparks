@@ -1177,7 +1177,7 @@ def worker_options(context, has_djsettings, remote_configuration):
 
         my_concurrency = worker_concurrency.get(role_name, 3)
 
-        if my_concurrency < 30:
+        if my_concurrency < 10:
             command_post_args += ' -c {0}'.format(my_concurrency)
 
             max_tasks_per_child = sparks_options.get('max_tasks_per_child', {})
