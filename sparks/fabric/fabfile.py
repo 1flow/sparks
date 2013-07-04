@@ -222,7 +222,7 @@ def test(remote_configuration=None):
     """ Just run `uname -a; uptime` remotely, to test the connection
         or sparks core libs. """
 
-    run('uname -a; uptime; cat /etc/lsb-release || true')
+    run('uname -a; uptime; cat /etc/lsb-release 2>/dev/null; echo $USER — $PWD')
 
 
 @task
@@ -230,7 +230,7 @@ def test(remote_configuration=None):
 def sys_easy_sudo(remote_configuration=None):
     """ Allow sudo to run without password for @sudo members. """
 
-    LOGGER.info('Checking sys_easy_sudo() components…')
+    LOGGER.info('Installing sys_easy_sudo()…')
 
     if remote_configuration.is_osx:
         # GNU sed is needed for fabric `sed` command to succeed.
