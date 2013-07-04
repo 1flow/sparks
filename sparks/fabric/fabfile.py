@@ -877,7 +877,7 @@ def db_mongodb(remote_configuration=None):
 
 @task
 @with_remote_configuration
-def base(remote_configuration=None):
+def base(remote_configuration=None, upgrade=True):
     """ sys_* + brew (on OSX) + byobu, bash-completion, htop. """
 
     LOGGER.info('Checking base() components…')
@@ -886,8 +886,9 @@ def base(remote_configuration=None):
 
     install_homebrew()
 
-    pkg.pkg_update()
-    pkg.pkg_upgrade()
+    if upgrade:
+        pkg.pkg_update()
+        pkg.pkg_upgrade()
 
     sys_unattended()
     sys_del_useless()
