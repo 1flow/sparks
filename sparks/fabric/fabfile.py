@@ -910,9 +910,9 @@ def deployment(remote_configuration=None):
     pkg.pip2_add(('fabric', ))
 
 
-@task
+@task(aliases=('lxc', ))
 @with_remote_configuration
-def lxc(remote_configuration=None):
+def lxc_host(remote_configuration=None):
     """ LXC local runner (guests manager). """
 
     if remote_configuration.is_osx:
@@ -1215,7 +1215,15 @@ def lxc_purge(remote_configuration=None):
 @task
 @with_remote_configuration
 def lxc_server(remote_configuration=None):
-    """ LXC base + server packages (Pg). """
+    """ LXC base + server packages (Pg/Mongo/Redis/Memcache). """
 
     lxc_base()
+    lxc_host()
+
+    db_redis()
+    db_mongodb()
+    db_memcache()
     db_postgresql()
+
+    if not exists('/etc/nginx'):
+        LOGGER.warning('Install NGINX now :-)')
