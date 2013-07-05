@@ -18,7 +18,7 @@ def npm_is_installed(pkg):
 def npm_add(pkgs):
     for pkg in list_or_split(pkgs):
         if not npm_is_installed(pkg):
-            sudo('npm install %s' % pkg)
+            sudo('npm install -g %s' % pkg)
 
 
 def npm_search(pkgs):

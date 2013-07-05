@@ -162,7 +162,13 @@ def execute_or_not(task, *args, **kwargs):
             if should_run:
                 # If the user manually specified a host string / list,
                 # we must not add superfluous roles / machines.
-                return execute(task, *args, **kwargs)
+
+                # LOGGER.info(u'Multi-run mode: execute(%s, *%s, **%s) '
+                #             u'with %s, %s and %s.', task, args, kwargs,
+                #             env.host_string, env.hosts, env.roles)
+
+                # NOTE: don't use Fabric's execute(), it duplicates tasks.
+                return task(*args, **kwargs)
 
             else:
                 LOGGER.warning('Not executing %s(%s, %s): host %s not '
@@ -177,6 +183,10 @@ def execute_or_not(task, *args, **kwargs):
     else:
         if non_empty:
             kwargs['roles'] = non_empty
+
+            # LOGGER.info('One-shot mode: execute(%s, *%s, **%s)',
+            #             task, args, kwargs)
+
             return execute(task, *args, **kwargs)
 
         else:

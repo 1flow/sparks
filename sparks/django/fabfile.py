@@ -281,6 +281,7 @@ class ServiceRunner(SimpleObject):
         else:
             # In any case, we restart the process during a {fast}deploy,
             # to reload the Django code even if configuration hasn't changed.
+
             if self.service_handler == 'upstart':
                 sudo("stop {0} ; start {0}".format(self.program_name))
             else:
@@ -1172,22 +1173,18 @@ def worker_options(context, has_djsettings, remote_configuration):
         sparks_options = getattr(env, 'sparks_options', {})
         worker_concurrency = sparks_options.get('worker_concurrency', {})
 
-        # TODO: '3' should be 'if remote_configuration.is_lxc'
+        # TODO: '5' should be 'if remote_configuration.is_lxc'
         # but we don't have this configuration attribute yet.
 
-        my_concurrency = worker_concurrency.get(role_name, 3)
+        command_post_args += ' -c {0}'.format(
+            worker_concurrency.get(role_name, 5))
 
-        if my_concurrency < 10:
-            command_post_args += ' -c {0}'.format(my_concurrency)
+        max_tasks_per_child = sparks_options.get('max_tasks_per_child', {})
 
-            max_tasks_per_child = sparks_options.get('max_tasks_per_child', {})
-
-            command_post_args += ' --maxtasksperchild={0}'.format(
-                max_tasks_per_child.get(role_name,
-                                        max_tasks_per_child.get(
-                                        '__all__', 100)))
-        else:
-            command_post_args += ' -P eventlet -c {0}'.format(my_concurrency)
+        command_post_args += ' --maxtasksperchild={0}'.format(
+            max_tasks_per_child.get(role_name,
+                                    max_tasks_per_child.get(
+                                    '__all__', 500)))
 
     context.update({
         'command_pre_args': command_pre_args,
