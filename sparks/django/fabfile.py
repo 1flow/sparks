@@ -13,6 +13,8 @@
       simple ``worker`` too, for fine grained scheduling on
       small architectures),
     - ``flower``: a flower (celery monitoring) service,
+    - ``shell``: an iPython notebooks shell service (on 127.0.0.1; up to
+      you to get access to it via an SSH tunnel),
 
     For more information, jump to :class:`DjangoTask`.
 
@@ -1583,7 +1585,7 @@ def restart_services(fast=False):
                         'worker_low', 'worker_medium', 'worker_high', )
 
     if not fast:
-        roles_to_restart += ('flower', )
+        roles_to_restart += ('flower', 'shell', )
 
     # Run this multiple time, for each role:
     # each of them has a dedicated supervisor configuration,

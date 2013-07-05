@@ -1,11 +1,11 @@
 #
-# Upstart file for %(project)s %(env)s high-priority worker
+# Upstart file for %(project)s %(env)s low-priority worker
 #
 # This template has been processed by sparks
 # https://github.com/Karmak23/sparks
 #
 
-description "%(project)s %(env)s high-priority worker"
+description "%(project)s %(env)s low-priority worker"
 
 start on filesystem or runlevel [2345]
 stop on runlevel [!2345]
