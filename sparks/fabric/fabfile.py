@@ -883,6 +883,7 @@ def base(remote_configuration=None, upgrade=True):
     LOGGER.info('Checking base() components…')
 
     sys_easy_sudo()
+    sys_admin_pkgs()
 
     install_homebrew()
 
@@ -893,7 +894,6 @@ def base(remote_configuration=None, upgrade=True):
     sys_unattended()
     sys_del_useless()
     sys_default_services()
-    sys_admin_pkgs()
     sys_ssh_powerline()
 
     pkg.pkg_add(('byobu', 'bash-completion',
