@@ -355,7 +355,7 @@ def sys_ssh_powerline(remote_configuration=None):
         config     = '/etc/ssh/sshd_config'
         reload_ssh = 'reload ssh'
 
-    if not contains(config, 'AcceptEnv POWERLINE_SHELL', use_sudo=True):
+    if not contains(config, 'AcceptEnv.*POWERLINE_SHELL', use_sudo=True):
         append(config, 'AcceptEnv POWERLINE_SHELL', use_sudo=True)
         if reload_ssh:
             sudo(reload_ssh)
