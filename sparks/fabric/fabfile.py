@@ -664,7 +664,23 @@ def dev_web(remote_configuration=None):
 
     # NOTE: nodejs` PPA version already includes `npm`,
     # no need to install it via a separate package on Ubuntu.
-    pkg.pkg_add(('nodejs', ))
+    pkg.pkg_add(('nodejs',
+                # PySide build-deps, for Ghost.py text parsing.
+                'cmake', ))
+
+    # PySide build-deps (again), for Ghost.py text parsing.
+    if remote_configuration.is_osx and not exists('/opt'):
+
+        # Even this doesn't work, we need to official binary,
+        # else PySide won't find it…
+        #run('brew install qt --developer')
+
+        LOGGER.critical('You need to install PySide and Qt from '
+                        'http://qt-project.org/wiki/PySide_Binaries_MacOSX '
+                        '(eg. http://pyside.markus-ullmann.de/pyside-1.1.1-qt48-py27apple.pkg)') # NOQA
+
+    else:
+        pkg.pkg_add(('libqt4-dev', ))
 
     # But on OSX, we need NPM too.
     if remote_configuration.is_osx:
