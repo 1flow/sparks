@@ -575,9 +575,11 @@ def install_components(remote_configuration=None, upgrade=False):
 
     LOGGER.info('Checking installed components…')
 
-    fabfile.dev()
-    fabfile.dev_web()
-    fabfile.dev_django_full()
+    with activate_venv():
+        with cd(env.root):
+            fabfile.dev()
+            fabfile.dev_web()
+            fabfile.dev_django_full()
 
     # OSX == test environment == no nginx/supervisor/etc
     if remote_configuration.is_osx:
