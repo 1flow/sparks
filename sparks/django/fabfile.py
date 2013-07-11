@@ -575,9 +575,11 @@ def install_components(remote_configuration=None, upgrade=False):
 
     LOGGER.info('Checking installed components…')
 
-    fabfile.dev()
-    fabfile.dev_web()
-    fabfile.dev_django_full()
+    with activate_venv():
+        with cd(env.root):
+            fabfile.dev()
+            fabfile.dev_web()
+            fabfile.dev_django_full()
 
     # OSX == test environment == no nginx/supervisor/etc
     if remote_configuration.is_osx:
@@ -1602,10 +1604,10 @@ def runable(fast=False, upgrade=False):
     """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
 
     if not fast:
+        execute_or_not(init_environment, sparks_roles=('__any__', ))
+
         execute_or_not(install_components, upgrade=upgrade,
                        sparks_roles=('__any__', ))
-
-        execute_or_not(init_environment, sparks_roles=('__any__', ))
 
     # Push everything first.
     # Don't fail if local user doesn't have my aliases.
