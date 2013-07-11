@@ -635,7 +635,10 @@ def dev_python_deps(remote_configuration=None):
         pass
 
     else:
-        pkg.pkg_add(('cython', 'libxml2-dev', 'libxslt-dev', ))
+        pkg.pkg_add(('libxml2-dev', 'libxslt-dev', ))
+
+    # PIP version is probably more recent.
+    pkg.pip2_add(('cython', ))
 
 
 @task
