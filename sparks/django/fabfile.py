@@ -1185,10 +1185,11 @@ def worker_options(context, has_djsettings, remote_configuration):
 
         max_tasks_per_child = sparks_options.get('max_tasks_per_child', {})
 
-        command_post_args += ' --maxtasksperchild={0}'.format(
-            max_tasks_per_child.get(role_name,
-                                    max_tasks_per_child.get(
-                                    '__all__', 500)))
+        if max_tasks_per_child:
+            command_post_args += ' --maxtasksperchild={0}'.format(
+                max_tasks_per_child.get(role_name,
+                                        max_tasks_per_child.get(
+                                        '__all__', 500)))
 
     context.update({
         'command_pre_args': command_pre_args,
