@@ -271,23 +271,14 @@ class ServiceRunner(SimpleObject):
                 sudo("supervisorctl update")
 
             if self.restart:
-                if self.service_handler == 'upstart':
-                    # In case of configuration change, 'restart' just reboots
-                    # the previous configuration contents. We have to
-                    # stop/start.
-                    sudo("stop {0} ; start {0}".format(self.program_name))
-
-                else:
-                    sudo("supervisorctl restart {0}".format(self.program_name))
-
+                self.stop(warn_only=True)
+                self.start()
         else:
             # In any case, we restart the process during a {fast}deploy,
             # to reload the Django code even if configuration hasn't changed.
 
-            if self.service_handler == 'upstart':
-                sudo("stop {0} ; start {0}".format(self.program_name))
-            else:
-                sudo("supervisorctl restart {0}".format(self.program_name))
+            self.stop()
+            self.start()
 
     def find_configuration_or_template(self, service_name=None):
         """ Return a tuple of candidate configuration files or templates
@@ -337,6 +328,19 @@ class ServiceRunner(SimpleObject):
                                self.program_name, candidates))
 
         return superconf
+
+    def stop(self, warn_only=False):
+        if self.service_handler == 'upstart':
+            sudo("stop {0}".format(self.program_name), warn_only=warn_only)
+        else:
+            sudo("supervisorctl stop {0}".format(self.program_name),
+                 warn_only=warn_only)
+
+    def start(self):
+        if self.service_handler == 'upstart':
+            sudo("start {0}".format(self.program_name))
+        else:
+            sudo("supervisorctl start {0}".format(self.program_name))
 
     def configure_service(self, remote_configuration):
         """ Upload an environment-specific :program:`upstart`
@@ -438,6 +442,7 @@ class ServiceRunner(SimpleObject):
                 sudo('rm -f {0}.new'.format(destination))
 
             else:
+                self.stop()
                 sudo('mv {0}.new {0}'.format(destination))
                 self.update  = True
                 self.restart = True
