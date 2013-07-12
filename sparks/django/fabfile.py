@@ -853,7 +853,10 @@ def init_environment():
         run('mkdir -p "{0}"'.format(os.path.dirname(env.root)))
 
         if hasattr(env, 'repository'):
-            run("git clone {0} {1}".format(env.repository, env.root))
+            repositories  = env.get('sparks_options', {}).get('repository', {})
+            my_repository = repositories.get(env.host_string, env.repository)
+
+            run("git clone {0} {1}".format(my_repository, env.root))
 
         else:
             prompt(u'Please create the git repository in {0}:{1} and press '
