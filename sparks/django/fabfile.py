@@ -1111,8 +1111,10 @@ def push_translations(remote_configuration=None):
 
 
 @task(alias='nginx')
-def restart_nginx(fast=False):
+def service_action_nginx(fast=False, action=None):
     """ Restart the remote nginx (if installed), after having refreshed its configuration file. """ # NOQA
+    if action is None:
+        action = 'restart'
 
     if not exists('/etc/nginx'):
         return
@@ -1123,7 +1125,8 @@ def restart_nginx(fast=False):
 
 @task(task_class=DjangoTask, alias='gunicorn')
 @with_remote_configuration
-def restart_webserver_gunicorn(remote_configuration=None, fast=False):
+def service_action_webserver_gunicorn(remote_configuration=None, fast=False,
+                                      action=None):
     """ (Re-)upload configuration files and reload gunicorn via supervisor.
 
         This will reload only one service, even if supervisor handles more
@@ -1132,6 +1135,9 @@ def restart_webserver_gunicorn(remote_configuration=None, fast=False):
 
     """
 
+    if action is None:
+        action = 'restart'
+
     has_djsettings, program_name = ServiceRunner.build_program_name()
 
     service_runner = ServiceRunner(from_dict={
@@ -1139,11 +1145,11 @@ def restart_webserver_gunicorn(remote_configuration=None, fast=False):
                                    'program_name': program_name
                                    })
 
-    if not fast:
+    if action != "stop" and not fast:
         service_runner.configure_service(remote_configuration)
         service_runner.handle_gunicorn_config()
 
-    service_runner.restart_or_reload()
+    getattr(service_runner, action)()
 
 
 def worker_options(context, has_djsettings, remote_configuration):
@@ -1209,7 +1215,8 @@ def worker_options(context, has_djsettings, remote_configuration):
 
 @task(task_class=DjangoTask, alias='celery')
 @with_remote_configuration
-def restart_worker_celery(remote_configuration=None, fast=False):
+def service_action_worker_celery(remote_configuration=None, fast=False,
+                                 action=None):
     """ (Re-)upload configuration files and reload celery via supervisor.
 
         This will reload only one service, even if supervisor handles more
@@ -1217,6 +1224,8 @@ def restart_worker_celery(remote_configuration=None, fast=False):
         reload test :-)
 
     """
+    if action is None:
+        action = 'restart'
 
     has_djsettings, program_name = ServiceRunner.build_program_name()
 
@@ -1228,12 +1237,12 @@ def restart_worker_celery(remote_configuration=None, fast=False):
                                    remote_configuration,
                                    })
 
-    if not fast:
+    if action != "stop" and not fast:
         service_runner.configure_service(remote_configuration)
         # NO need:
         #   service_runner.handle_celery_config(<role>)
 
-    service_runner.restart_or_reload()
+    getattr(service_runner, action)()
 
 
 # •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Django tasks
@@ -1588,8 +1597,8 @@ def restart_services(fast=False):
                        'and should be managed via Honcho.')
         return
 
-    execute_or_not(restart_nginx, fast=fast, sparks_roles=('load', ))
-    execute_or_not(restart_webserver_gunicorn, fast=fast,
+    execute_or_not(service_action_nginx, fast=fast, sparks_roles=('load', ))
+    execute_or_not(service_action_webserver_gunicorn, fast=fast,
                    sparks_roles=('web', ))
 
     roles_to_restart = ('worker',
@@ -1605,7 +1614,70 @@ def restart_services(fast=False):
     # role for each host it will execute on. This is a limitation of the
     # the execute_or_not() function.
     for role in roles_to_restart:
-        execute_or_not(restart_worker_celery, fast=fast, sparks_roles=(role, ))
+        execute_or_not(service_action_worker_celery,
+                       fast=fast, sparks_roles=(role, ))
+
+
+@task(alias='stop')
+def stop_services(fast=False):
+    """ stop all remote services (nginx, gunicorn, celery…) in one task. """
+
+    if is_local_environment():
+        LOGGER.warning('Not restarting services, this is a local environment '
+                       'and should be managed via Honcho.')
+        return
+
+    execute_or_not(service_action_nginx, fast=fast, sparks_roles=('load', ),
+                   action = 'stop')
+    execute_or_not(service_action_webserver_gunicorn, fast=fast,
+                   sparks_roles=('web', ), action = 'stop')
+
+    roles_to_stop = ('worker',
+                     'worker_low', 'worker_medium', 'worker_high', )
+
+    if not fast:
+        roles_to_stop += ('flower', 'shell', )
+
+    # Run this multiple time, for each role:
+    # each of them has a dedicated supervisor configuration,
+    # even when running on the same machine.
+    # Degrouping role execution ensures execute_or_not() gets an unique
+    # role for each host it will execute on. This is a limitation of the
+    # the execute_or_not() function.
+    for role in roles_to_stop:
+        execute_or_not(service_action_worker_celery,
+                       fast=fast, sparks_roles=(role, ), action = 'stop')
+
+
+@task(alias='start')
+def start_services(fast=False):
+    """ start all remote services (nginx, gunicorn, celery…) in one task. """
+
+    if is_local_environment():
+        LOGGER.warning('Not restarting services, this is a local environment '
+                       'and should be managed via Honcho.')
+        return
+
+    execute_or_not(service_action_nginx, fast=fast, sparks_roles=('load', ),
+                   action = 'start')
+    execute_or_not(service_action_webserver_gunicorn, fast=fast,
+                   sparks_roles=('web', ), action = 'start')
+
+    roles_to_start = ('worker',
+                      'worker_low', 'worker_medium', 'worker_high', )
+
+    if not fast:
+        roles_to_start += ('flower', 'shell', )
+
+    # Run this multiple time, for each role:
+    # each of them has a dedicated supervisor configuration,
+    # even when running on the same machine.
+    # Degrouping role execution ensures execute_or_not() gets an unique
+    # role for each host it will execute on. This is a limitation of the
+    # the execute_or_not() function.
+    for role in roles_to_start:
+        execute_or_not(service_action_worker_celery,
+                       fast=fast, sparks_roles=(role, ), action = 'start')
 
 
 @task(aliases=('initial', ))
