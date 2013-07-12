@@ -118,16 +118,16 @@ for worker_type, worker_name, worker_queues in (
     ('worker_partners', 'Partner',          None),
     ('worker_users',    'User processes',   None),
         ('worker_cluster',  'Cluster',          None),):
-    for sub_name in (worker_type,
-                     worker_type + '_low',
-                     worker_type + '_medium',
-                     worker_type + '_high'):
+    for sub_name, priority in (
+        (worker_type,               ''),
+        (worker_type + '_low',      'Low-priority '),
+        (worker_type + '_medium',   'Medium-priority '),
+            (worker_type + '_high', 'High-priority ')):
         all_roles.append(sub_name)
+
         worker_information.update({
-            worker_type: {
-                'name': worker_name,
-                'queues': worker_queues or worker_type[7:],
-            },
+            sub_name: (priority + worker_name + ' worker',
+                       worker_queues or sub_name[7:])
         })
 
 worker_roles = [r for r in all_roles if r.startswith('worker')]
@@ -157,7 +157,9 @@ def execute_or_not(task, *args, **kwargs):
     roles = kwargs.pop('sparks_roles', ['__any__'])
     non_empty = [role for role in roles if env.roledefs.get(role, []) != []]
 
-    #LOGGER.warning('ROLES/NON_EMPTY: %s %s', roles, non_empty)
+    #LOGGER.warning('roledefs: %s', env.roledefs)
+    #LOGGER.warning('roles: %s, current_context:%s, matching: %s',
+    #               roles, non_empty, env.roledefs.get(roles[0], []))
 
     # Reset in case. The role should be found preferably in
     # env.host_string.role, but in ONE case (when running sparks
