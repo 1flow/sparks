@@ -1143,13 +1143,20 @@ def service_action_nginx(fast=False, action=None):
     """ Restart the remote nginx (if installed), after having refreshed its configuration file. """ # NOQA
 
     if action is None:
-        action = 'restart'
+        action = 'status'
 
     if not exists('/etc/nginx'):
         return
 
     # Nothing implemented yet.
     return
+
+    # if action == 'restart':
+    #     service_runner.stop()
+    #     service_runner.start()
+
+    # else:
+    #     getattr(service_runner, action)()
 
 
 @task(task_class=DjangoTask, alias='gunicorn')
@@ -1165,7 +1172,7 @@ def service_action_webserver_gunicorn(remote_configuration=None, fast=False,
     """
 
     if action is None:
-        action = 'restart'
+        action = 'status'
 
     has_djsettings, program_name = ServiceRunner.build_program_name()
 
@@ -1178,7 +1185,12 @@ def service_action_webserver_gunicorn(remote_configuration=None, fast=False,
         service_runner.configure_service(remote_configuration)
         service_runner.handle_gunicorn_config()
 
-    getattr(service_runner, action)()
+    if action == 'restart':
+        service_runner.stop()
+        service_runner.start()
+
+    else:
+        getattr(service_runner, action)()
 
 
 def worker_options(context, has_djsettings, remote_configuration):
@@ -1271,7 +1283,12 @@ def service_action_worker_celery(remote_configuration=None, fast=False,
         # NO need:
         #   service_runner.handle_celery_config(<role>)
 
-    getattr(service_runner, action)()
+    if action == 'restart':
+        service_runner.stop()
+        service_runner.start()
+
+    else:
+        getattr(service_runner, action)()
 
 
 # •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Django tasks
@@ -1629,10 +1646,10 @@ def services_action(fast=False, action=None):
         action = 'status'
 
     execute_or_not(service_action_nginx, fast=fast,
-                   sparks_roles=('load', ), action=action)
+                   action=action, sparks_roles=('load', ))
 
-    execute_or_not(service_action_webserver_gunicorn,
-                   fast=fast, sparks_roles=('web', ), action=action)
+    execute_or_not(service_action_webserver_gunicorn, fast=fast,
+                   action=action, sparks_roles=('web', ))
 
     roles_to_act_on = worker_roles[:] + ['beat', 'flower', 'shell']
 
@@ -1643,8 +1660,8 @@ def services_action(fast=False, action=None):
     # role for each host it will execute on. This is a limitation of the
     # the execute_or_not() function.
     for role in roles_to_act_on:
-        execute_or_not(service_action_worker_celery,
-                       fast=fast, sparks_roles=(role, ), action=action)
+        execute_or_not(service_action_worker_celery, fast=fast,
+                       action=action, sparks_roles=(role, ))
 
 
 @task(alias='restart')
@@ -1654,21 +1671,21 @@ def restart_services(fast=False):
 
 
 @task(alias='stop')
-def stop_services(fast=False):
+def stop_services(fast=True):
     """ stop all remote services (nginx, gunicorn, celery…) in one task. """
 
     services_action(fast=fast, action='stop')
 
 
 @task(alias='start')
-def start_services(fast=False):
+def start_services(fast=True):
     """ start all remote services (nginx, gunicorn, celery…) in one task. """
 
     services_action(fast=fast, action='start')
 
 
 @task(alias='status')
-def status_services(fast=False):
+def status_services(fast=True):
     """ Get all remote services status (nginx, gunicorn, celery…) at once. """
 
     services_action(fast=fast, action='status')
