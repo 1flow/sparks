@@ -1,5 +1,5 @@
 #
-# Upstart file for %(project)s %(env)s %s(worker_name)s
+# Upstart file for %(project)s %(env)s %(worker_name)s
 #
 # This template has been processed by sparks
 # https://github.com/Karmak23/sparks
