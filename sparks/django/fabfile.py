@@ -7,16 +7,23 @@
     Supported roles names:
 
     - ``web``: a gunicorn web server,
-    - ``worker``: a simple celery worker (all queues),
+    - ``worker``: a simple celery worker that operate on the default queue,
     - ``worker_{low,medium,high}``: a combination
       of two or three celery workers (can be combined with
       simple ``worker`` too, for fine grained scheduling on
       small architectures),
+    - ``worker_{io,net,…}`` and all their ``_{low,medium,high}`` variants:
+      same idea as above, but with even more fine-graining to suit your need.
+    - ``worker_{solo,duo,trio,swarm}`` and their ``_{low,medium,high}``
+      variants: do you get the idea? All these worker classes are completely
+      configurable in terms of concurrency and max-tasks-per-child.
     - ``flower``: a flower (celery monitoring) service,
+    - ``beat``: the Celery **beat** service,
     - ``shell``: an iPython notebooks shell service (on 127.0.0.1; up to
       you to get access to it via an SSH tunnel),
 
-    For more information, jump to :class:`DjangoTask`.
+    For more information, jump to :class:`DjangoTask` and see ``all_roles``
+    definition in :file:`sparks/fabric/__init__.py`.
 
 """
 
@@ -37,12 +44,14 @@ except ImportError:
     print('>>> FABRIC IS NOT INSTALLED !!!')
     raise
 
-from ..fabric import (fabfile, with_remote_configuration,
+from ..fabric import (fabfile, worker_roles,
+                      with_remote_configuration,
                       local_configuration as platform,
                       is_local_environment,
                       is_development_environment,
                       is_production_environment,
-                      execute_or_not, QUIET)
+                      execute_or_not, get_current_role,
+                      worker_information_from_role, QUIET)
 from ..pkg import brew, apt
 from ..foundations import postgresql as pg
 from ..foundations.classes import SimpleObject
@@ -157,8 +166,7 @@ class ServiceRunner(SimpleObject):
 
         """
 
-        role_name = getattr(env.host_string, 'role', None
-                            ) or env.sparks_current_role
+        role_name = get_current_role()
 
         if role_name is None:
             # This shouldn't happen, in fact. Either Fabric should have
@@ -289,8 +297,7 @@ class ServiceRunner(SimpleObject):
         if service_name is None:
             service_name = self.service_handler
 
-        role_name = getattr(env.host_string, 'role', None
-                            ) or env.sparks_current_role
+        role_name = get_current_role()
 
         candidates = (
             os.path.join(platform.django_settings.BASE_ROOT,
@@ -310,6 +317,12 @@ class ServiceRunner(SimpleObject):
                          'templates', service_name,
                          '{0}.template'.format(role_name))
         )
+
+        # Last resort #2: if role is a worker, we have a meta-template.
+        if role_name in worker_roles:
+            candidates += (os.path.join(os.path.dirname(__file__),
+                           'templates', service_name,
+                           'worker.template'), )
 
         superconf = None
 
@@ -332,6 +345,7 @@ class ServiceRunner(SimpleObject):
     def stop(self, warn_only=False):
         if self.service_handler == 'upstart':
             sudo("stop {0}".format(self.program_name), warn_only=warn_only)
+
         else:
             sudo("supervisorctl stop {0}".format(self.program_name),
                  warn_only=warn_only)
@@ -373,14 +387,22 @@ class ServiceRunner(SimpleObject):
                     'env': env.environment,
                     'root': env.root,
                     'user': env.user,
+                    'role': <current-role-name>, (sparks specific)
                     'branch': env.branch,
                     'project': env.project,
                     'program': self.program_name,
+                    'hostname': env.host_string,
                     'user_home': env.user_home
                         if hasattr(env, 'user_home')
                         else remote_configuration.tilde,
                     'virtualenv': env.virtualenv,
+                    'worker_name': <the-friendly-worker-name> or '',
+                    'worker_queues': <celery-queues-name> or '',
                 }
+
+            .. note:: ``worker_name`` and ``worker_queues`` are filled by
+                sparks and are internal values. If the current role is not
+                worker related, the 2 fields will be ``''`` (empty string).
 
             Some **environment variables** can be added too
             (see :class:`add_environment_to_context` for details).
@@ -416,18 +438,25 @@ class ServiceRunner(SimpleObject):
             'init' if self.service_handler == 'upstart'
             else 'supervisor/conf.d', self.program_name)
 
+        role_name = get_current_role()
+        worker_name, worker_queues = worker_information_from_role(role_name)
+
         # NOTE: update docstring if you change this.
         context = {
             'env': env.environment,
             'root': env.root,
+            'role': role_name,
             'user': env.user,
             'branch': env.branch,
             'project': env.project,
             'program': self.program_name,
+            'hostname': env.host_string,
             'user_home': env.user_home
                 if hasattr(env, 'user_home')
                 else remote_configuration.tilde,
             'virtualenv': env.virtualenv,
+            'worker_name': worker_name,
+            'worker_queues': worker_queues,
         }
 
         self.add_environment_to_context(context, self.has_djsettings)
@@ -618,14 +647,10 @@ def install_components(remote_configuration=None, upgrade=False):
         #     quiet=QUIET)
 
     else:
-        current_role = getattr(env.host_string, 'role', None
-                               ) or env.sparks_current_role
-
-        if current_role.startswith('worker'):
-            apt.apt_add(('supervisor', ))
+        current_role = get_current_role()
 
         if current_role == 'web':
-            apt.apt_add(('supervisor', 'nginx-full', ))
+            apt.apt_add(('nginx-full', ))
 
         if is_local_environment():
             LOGGER.info('Installing all services for a local development '
@@ -836,8 +861,7 @@ def pre_requirements_task(fast=False, upgrade=False):
     if is_local_environment():
         return
 
-    role_name = getattr(env.host_string, 'role', None
-                        ) or env.sparks_current_role
+    role_name = get_current_role()
 
     custom_script = os.path.join(env.root, env.requirements_dir,
                                  role_name + '.sh')
@@ -866,8 +890,7 @@ def post_requirements_task(fast=False, upgrade=False):
     if is_local_environment():
         return
 
-    role_name = getattr(env.host_string, 'role', None
-                        ) or env.sparks_current_role
+    role_name = get_current_role()
 
     custom_script = os.path.join(env.root, env.requirements_dir,
                                  role_name + '.sh')
@@ -929,8 +952,7 @@ def requirements(fast=False, upgrade=False):
             with other fab tasks which handle it.
     """
 
-    roles_to_run = ('web', 'db', 'worker',
-                    'worker_low', 'worker_medium', 'worker_high')
+    roles_to_run = ['web', 'db'] + worker_roles[:]
 
     for role in roles_to_run:
         execute_or_not(pre_requirements_task, fast=fast,
@@ -947,8 +969,7 @@ def requirements(fast=False, upgrade=False):
 
 def push_environment_task(project_envs_dir):
 
-    role_name = getattr(env.host_string, 'role', None
-                        ) or env.sparks_current_role
+    role_name = get_current_role()
 
     for env_file_candidate in (
         '{0}.env'.format(env.host_string.lower()),
@@ -1013,8 +1034,7 @@ def push_environment():
 
     # re-wrap the internal task via execute() to catch roledefs.
     execute_or_not(push_environment_task, project_envs_dir,
-                   sparks_roles=('web', 'db', 'worker',
-                   'worker_low', 'worker_medium', 'worker_high'))
+                   sparks_roles=['web', 'db'] + worker_roles[:])
 
 
 @task(alias='update')
@@ -1156,7 +1176,7 @@ def worker_options(context, has_djsettings, remote_configuration):
         wcount   = 0
 
         for key, value in env.roledefs.items():
-            if key.startswith('worker'):
+            if key in worker_roles:
                 if hostname in value:
                     wcount += 1
                     if wcount > 1:
@@ -1167,8 +1187,7 @@ def worker_options(context, has_djsettings, remote_configuration):
     command_pre_args  = ''
     command_post_args = ''
 
-    role_name = getattr(env.host_string, 'role', None
-                        ) or env.sparks_current_role
+    role_name = get_current_role()
 
     # NOTE: the final '_' is intentional: exclude the simple 'worker' role.
     if role_name.startswith('worker_'):
@@ -1178,7 +1197,7 @@ def worker_options(context, has_djsettings, remote_configuration):
             )
 
     # NOTE: the void of '_' is intentional: all worker-related roles
-    if role_name.startswith('worker'):
+    if role_name in worker_roles:
         sparks_options = getattr(env, 'sparks_options', {})
         worker_concurrency = sparks_options.get('worker_concurrency', {})
 
@@ -1589,11 +1608,11 @@ def restart_services(fast=False):
         return
 
     execute_or_not(restart_nginx, fast=fast, sparks_roles=('load', ))
-    execute_or_not(restart_webserver_gunicorn, fast=fast,
-                   sparks_roles=('web', ))
 
-    roles_to_restart = ('worker',
-                        'worker_low', 'worker_medium', 'worker_high', )
+    execute_or_not(restart_webserver_gunicorn,
+                   fast=fast, sparks_roles=('web', ))
+
+    roles_to_restart = worker_roles[:] + ['beat']
 
     if not fast:
         roles_to_restart += ('flower', 'shell', )
@@ -1625,24 +1644,20 @@ def runable(fast=False, upgrade=False):
     if not is_local_environment():
         push_environment()  # already wraps execute_or_not()
 
-        execute_or_not(git_update, sparks_roles=('web', 'worker',
-                       'worker_low', 'worker_medium', 'worker_high'))
+        execute_or_not(git_update, sparks_roles=['web'] + worker_roles[:])
 
         if not is_production_environment():
             # fast or not, we must catch this one to
             # avoid source repository desynchronization.
             execute_or_not(push_translations, sparks_roles=('lang', ))
 
-        execute_or_not(git_pull, sparks_roles=('web', 'worker',
-                       'worker_low', 'worker_medium', 'worker_high'))
+        execute_or_not(git_pull, sparks_roles=['web'] + worker_roles[:])
 
-    execute_or_not(git_clean, sparks_roles=('web', 'worker',
-                   'worker_low', 'worker_medium', 'worker_high'))
+    execute_or_not(git_clean, sparks_roles=['web'] + worker_roles[:])
 
     requirements(fast=fast, upgrade=upgrade)  # already wraps execute_or_not()
 
-    execute_or_not(compilemessages, sparks_roles=('web', 'worker',
-                   'worker_low', 'worker_medium', 'worker_high'))
+    execute_or_not(compilemessages, sparks_roles=['web'] + worker_roles[:])
 
     execute_or_not(collectstatic, fast=fast, sparks_roles=('web', ))
 
@@ -1665,6 +1680,17 @@ def fast_deploy():
 @task(default=True, aliases=('fulldeploy', 'full_deploy', ))
 def deploy(fast=False, upgrade=False):
     """ Pull code, ensure runable, restart services. """
+
+    has_worker = False
+
+    for role in env.roledefs:
+        if role in worker_roles:
+            has_worker = True
+
+    if has_worker and (not 'beat' in env.roledefs
+                       or len(env.roledefs.get('beat', [])) == 0):
+        raise RuntimeError("You must define a 'beat' roledef if "
+                           "you plan to run any Celery worker.")
 
     # not our execute_or_not(), here we want Fabric
     # to handle its classic execution model.
