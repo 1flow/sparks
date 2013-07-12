@@ -177,8 +177,8 @@ def execute_or_not(task, *args, **kwargs):
                                env.host_string, ', '.join(roles))
         else:
             LOGGER.warning('Not executing %s(%s, %s): no role(s) “%s” in '
-                           'current context.', task.name, args, kwargs,
-                           ', '.join(roles))
+                           'current context.', getattr(task, 'name', str(task)),
+                           args, kwargs, ', '.join(roles))
 
     else:
         if non_empty:
