@@ -353,8 +353,16 @@ class ServiceRunner(SimpleObject):
     def start(self):
         if self.service_handler == 'upstart':
             sudo("start {0}".format(self.program_name))
+
         else:
             sudo("supervisorctl start {0}".format(self.program_name))
+
+    def status(self):
+        if self.service_handler == 'upstart':
+            sudo("status {0}".format(self.program_name))
+
+        else:
+            sudo("supervisorctl status {0}".format(self.program_name))
 
     def configure_service(self, remote_configuration):
         """ Upload an environment-specific :program:`upstart`
@@ -1131,8 +1139,11 @@ def push_translations(remote_configuration=None):
 
 
 @task(alias='nginx')
-def restart_nginx(fast=False):
+def service_action_nginx(fast=False, action=None):
     """ Restart the remote nginx (if installed), after having refreshed its configuration file. """ # NOQA
+
+    if action is None:
+        action = 'restart'
 
     if not exists('/etc/nginx'):
         return
@@ -1143,7 +1154,8 @@ def restart_nginx(fast=False):
 
 @task(task_class=DjangoTask, alias='gunicorn')
 @with_remote_configuration
-def restart_webserver_gunicorn(remote_configuration=None, fast=False):
+def service_action_webserver_gunicorn(remote_configuration=None, fast=False,
+                                      action=None):
     """ (Re-)upload configuration files and reload gunicorn via supervisor.
 
         This will reload only one service, even if supervisor handles more
@@ -1152,6 +1164,9 @@ def restart_webserver_gunicorn(remote_configuration=None, fast=False):
 
     """
 
+    if action is None:
+        action = 'restart'
+
     has_djsettings, program_name = ServiceRunner.build_program_name()
 
     service_runner = ServiceRunner(from_dict={
@@ -1159,11 +1174,11 @@ def restart_webserver_gunicorn(remote_configuration=None, fast=False):
                                    'program_name': program_name
                                    })
 
-    if not fast:
+    if action != "stop" and not fast:
         service_runner.configure_service(remote_configuration)
         service_runner.handle_gunicorn_config()
 
-    service_runner.restart_or_reload()
+    getattr(service_runner, action)()
 
 
 def worker_options(context, has_djsettings, remote_configuration):
@@ -1228,7 +1243,8 @@ def worker_options(context, has_djsettings, remote_configuration):
 
 @task(task_class=DjangoTask, alias='celery')
 @with_remote_configuration
-def restart_worker_celery(remote_configuration=None, fast=False):
+def service_action_worker_celery(remote_configuration=None, fast=False,
+                                 action=None):
     """ (Re-)upload configuration files and reload celery via supervisor.
 
         This will reload only one service, even if supervisor handles more
@@ -1236,6 +1252,9 @@ def restart_worker_celery(remote_configuration=None, fast=False):
         reload test :-)
 
     """
+
+    if action is None:
+        action = 'restart'
 
     has_djsettings, program_name = ServiceRunner.build_program_name()
 
@@ -1247,12 +1266,12 @@ def restart_worker_celery(remote_configuration=None, fast=False):
                                    remote_configuration,
                                    })
 
-    if not fast:
+    if action != "stop" and not fast:
         service_runner.configure_service(remote_configuration)
         # NO need:
         #   service_runner.handle_celery_config(<role>)
 
-    service_runner.restart_or_reload()
+    getattr(service_runner, action)()
 
 
 # •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Django tasks
@@ -1598,24 +1617,24 @@ def operational_mode_task(fast):
 # ••••••••••••••••••••••••••••••••••••••••••••••••••••••• Deployment meta-tasks
 
 
-@task(alias='restart')
-def restart_services(fast=False):
+def services_action(fast=False, action=None):
     """ Restart all remote services (nginx, gunicorn, celery…) in one task. """
 
     if is_local_environment():
-        LOGGER.warning('Not restarting services, this is a local environment '
+        LOGGER.warning('Not acting on services, this is a local environment '
                        'and should be managed via Honcho.')
         return
 
-    execute_or_not(restart_nginx, fast=fast, sparks_roles=('load', ))
+    if action is None:
+        action = 'status'
 
-    execute_or_not(restart_webserver_gunicorn,
-                   fast=fast, sparks_roles=('web', ))
+    execute_or_not(service_action_nginx, fast=fast,
+                   sparks_roles=('load', ), action=action)
 
-    roles_to_restart = worker_roles[:] + ['beat']
+    execute_or_not(service_action_webserver_gunicorn,
+                   fast=fast, sparks_roles=('web', ), action=action)
 
-    if not fast:
-        roles_to_restart += ('flower', 'shell', )
+    roles_to_act_on = worker_roles[:] + ['beat', 'flower', 'shell']
 
     # Run this multiple time, for each role:
     # each of them has a dedicated supervisor configuration,
@@ -1623,8 +1642,36 @@ def restart_services(fast=False):
     # Degrouping role execution ensures execute_or_not() gets an unique
     # role for each host it will execute on. This is a limitation of the
     # the execute_or_not() function.
-    for role in roles_to_restart:
-        execute_or_not(restart_worker_celery, fast=fast, sparks_roles=(role, ))
+    for role in roles_to_act_on:
+        execute_or_not(service_action_worker_celery,
+                       fast=fast, sparks_roles=(role, ), action=action)
+
+
+@task(alias='restart')
+def restart_services(fast=False):
+
+    services_action(fast=fast, action='restart')
+
+
+@task(alias='stop')
+def stop_services(fast=False):
+    """ stop all remote services (nginx, gunicorn, celery…) in one task. """
+
+    services_action(fast=fast, action='stop')
+
+
+@task(alias='start')
+def start_services(fast=False):
+    """ start all remote services (nginx, gunicorn, celery…) in one task. """
+
+    services_action(fast=fast, action='start')
+
+
+@task(alias='status')
+def status_services(fast=False):
+    """ Get all remote services status (nginx, gunicorn, celery…) at once. """
+
+    services_action(fast=fast, action='status')
 
 
 @task(aliases=('initial', ))
