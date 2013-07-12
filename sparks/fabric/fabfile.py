@@ -648,6 +648,10 @@ def dev_web(remote_configuration=None):
 
     dev_mini()
 
+    # This is needed when run from the Django tasks, else some
+    # packages could fail to install because of outdate indexes.
+    pkg.pkg_update()
+
     LOGGER.info('Checking dev_web() components…')
 
     if not remote_configuration.is_osx:
@@ -935,7 +939,7 @@ def deployment(remote_configuration=None):
     pkg.pip2_add(('fabric', ))
 
 
-@task(aliases=('lxc', ))
+@task(aliases=('lxc_runner', ))
 @with_remote_configuration
 def lxc_host(remote_configuration=None):
     """ LXC local runner (guests manager). """
@@ -1201,11 +1205,13 @@ def mybootstrap(remote_configuration=None):
 @task
 @with_remote_configuration
 def lxc_base(remote_configuration=None):
-    """ Base packages for an LXC guest (LANG, mailx). """
+    """ Base packages for an LXC container (LANG, mailx, nullmailer). """
 
     if remote_configuration.is_osx:
         info('Skipped lxc_base (not on LSB).')
         return
+
+    sys_easy_sudo()
 
     # install the locale before everything, else DPKG borks.
     pkg.apt_add(('language-pack-fr', 'language-pack-en', ))
@@ -1219,7 +1225,7 @@ def lxc_base(remote_configuration=None):
 @task
 @with_remote_configuration
 def lxc_base_and_dev(remote_configuration=None):
-    """ lxc_base + base + dev """
+    """ lxc_base + base + dev (for LXC guests containers) """
 
     if remote_configuration.is_osx:
         info('Skipped lxc_base (not on LSB).')
@@ -1240,7 +1246,8 @@ def lxc_purge(remote_configuration=None):
         return
 
     # Some other useless packages on LXCs…
-    pkg.apt_del(('man-db', 'ureadahead', 'dbus', ))
+    # NOTE: don't purge dbus, it's used by the upstart bash completer. Too bad.
+    pkg.apt_del(('man-db', 'ureadahead', ))  # 'dbus', ))
 
     sudo('apt-get autoremove --purge --yes --force-yes')
 
