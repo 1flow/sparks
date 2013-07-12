@@ -14,7 +14,7 @@ from fabric.context_managers import cd, lcd, settings, hide
 from fabric.colors           import yellow, cyan
 
 from .. import pkg
-from .utils import (with_remote_configuration, dsh_to_roledefs,
+from .utils import (with_remote_configuration,  # dsh_to_roledefs,
                     tilde, symlink, dotfiles)
 
 # ===================================================== Local variables
@@ -29,7 +29,7 @@ is_olive = pwd.getpwuid(os.getuid()).pw_name in ('olive', 'karmak23')
 env.use_ssh_config = True
 env.skip_bad_hosts = True
 env.pool_size      = 10
-env.roledefs.update(dsh_to_roledefs())
+#env.roledefs.update(dsh_to_roledefs())
 
 
 def info(text):

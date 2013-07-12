@@ -3,6 +3,7 @@ from __future__ import print_function
 
 import sys
 import os
+import re
 import ast
 import string
 import random
@@ -90,19 +91,46 @@ remote_configuration = None
 local_configuration  = None
 
 all_roles = [
-    'web', 'webserver',
-    'db', 'databases',
-    'pg', 'postgresql',
-    'mongo', 'mongodb',
-    'redis', 'redisdb',
-    'worker',
-    'worker_low', 'worker_medium', 'worker_high',
+    'web', 'proxy',
+    'db', 'memcache', 'mysql',
+    'pg', 'mongodb', 'redis',
     'load', 'ha', 'loadbalancer',
-    'monitoring',
-    'lang', 'i18n',
-    'flower',
-    'admin',
+    'monitoring', 'stats',
+    'lang', 'admin',
+    'beat', 'flower', 'shell',
 ]
+
+worker_information = {}
+
+for worker_type, worker_name, worker_queues in (
+    ('worker',          'Generic',         'celery'),
+    ('worker_io',       'I/O dedicated',    None),
+    ('worker_net',      'Network',          None),
+    ('worker_solo',     'Mono-process',     None),
+    ('worker_duo',      'Dual-process',     None),
+    ('worker_trio',     'Tri-process',      None),
+    ('worker_swarm',    'Swarm-processing', None),
+    ('worker_cleaner',  'Cleaner',          None),
+    ('worker_system',   'System',           None),
+    ('worker_client',   'Client',           None),
+    ('worker_server',   'Server',           None),
+    ('worker_social',   'Social',           None),
+    ('worker_partners', 'Partner',          None),
+    ('worker_users',    'User processes',   None),
+        ('worker_cluster',  'Cluster',          None),):
+    for sub_name, priority in (
+        (worker_type,               ''),
+        (worker_type + '_low',      'Low-priority '),
+        (worker_type + '_medium',   'Medium-priority '),
+            (worker_type + '_high', 'High-priority ')):
+        all_roles.append(sub_name)
+
+        worker_information.update({
+            sub_name: (priority + worker_name + ' worker',
+                       worker_queues or sub_name[7:])
+        })
+
+worker_roles = [r for r in all_roles if r.startswith('worker')]
 
 
 # ===================================================== Fabric helper functions
@@ -129,7 +157,9 @@ def execute_or_not(task, *args, **kwargs):
     roles = kwargs.pop('sparks_roles', ['__any__'])
     non_empty = [role for role in roles if env.roledefs.get(role, []) != []]
 
-    #LOGGER.warning('ROLES/NON_EMPTY: %s %s', roles, non_empty)
+    #LOGGER.warning('roledefs: %s', env.roledefs)
+    #LOGGER.warning('roles: %s, current_context:%s, matching: %s',
+    #               roles, non_empty, env.roledefs.get(roles[0], []))
 
     # Reset in case. The role should be found preferably in
     # env.host_string.role, but in ONE case (when running sparks
@@ -173,12 +203,12 @@ def execute_or_not(task, *args, **kwargs):
             else:
                 LOGGER.warning('Not executing %s(%s, %s): host %s not '
                                'in current role(s) “%s”.',
-                               task.name, args, kwargs,
+                               getattr(task, 'name', str(task)), args, kwargs,
                                env.host_string, ', '.join(roles))
         else:
             LOGGER.warning('Not executing %s(%s, %s): no role(s) “%s” in '
-                           'current context.', task.name, args, kwargs,
-                           ', '.join(roles))
+                           'current context.', getattr(task, 'name', str(task)),
+                           args, kwargs, ', '.join(roles))
 
     else:
         if non_empty:
@@ -191,8 +221,8 @@ def execute_or_not(task, *args, **kwargs):
 
         else:
             LOGGER.warning('Not executing %s(%s, %s): no role(s) “%s” in '
-                           'current context.', task.name, args, kwargs,
-                           ', '.join(roles))
+                           'current context.', getattr(task, 'name', str(task)),
+                           args, kwargs, ', '.join(roles))
 
 
 def merge_roles_hosts():
@@ -281,6 +311,44 @@ def generate_random_name():
             + string.digits
             + string.ascii_lowercase
         ) for x in range(10))
+
+
+def get_current_role():
+    """ Return the current role of the current host. Can be ``None`` if
+        there is no role in current context. """
+
+    return getattr(env.host_string, 'role', None) or env.sparks_current_role
+
+
+def worker_information_from_role(role):
+    """ Return a tuple of two strings ``(worker_name, worker_queues)``, given
+        the parameter :param:`role`. The tuple is simply taken from a
+        corresponding table that you can customize
+        in ``env.sparks_options['worker_information']``. If the role is not
+        a worker one, 2 empty strings will be returned, eg. ``('', '')``.
+
+        .. note:: be respectful when customizing, the current way of doing
+            things is kind of weak. It works but it's not rock solid.
+
+        .. versionadded:: 3.4
+    """
+
+    if role in worker_roles:
+        sparks_information = worker_information.copy()
+        custom_information = env.sparks_options.get('worker_information', {})
+
+        sparks_information.update(custom_information)
+
+        info = sparks_information.get(role, None)
+
+        if info is None:
+            return role.title(), re.sub('[^\w_]+', '',
+                                        role.lower().replace('-', '_'))
+
+        return info
+
+    return '', ''
+
 
 # ================================================ general-purpose Fabric tasks
 
