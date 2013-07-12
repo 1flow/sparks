@@ -1,11 +1,11 @@
 #
-# Upstart file for %(project)s %(env)s all-queues worker
+# Upstart file for %(project)s %(env)s %s(worker_name)s
 #
 # This template has been processed by sparks
 # https://github.com/Karmak23/sparks
 #
 
-description "%(project)s %(env)s all-queues worker"
+description "%(project)s %(env)s %(worker_name)s"
 
 start on filesystem or runlevel [2345]
 stop on runlevel [!2345]
@@ -24,7 +24,7 @@ end script
 
 script
     . %(user_home)s/.env
-    exec nice -n 19 ionice -c 3 %(command_pre_args)s %(user_home)s/.virtualenvs/%(virtualenv)s/bin/python %(root)s/manage.py celery worker -B -E --loglevel=info %(command_post_args)s >> %(user_home)s/logs/%(program)s.log 2>&1
+    exec %(command_pre_args)s %(user_home)s/.virtualenvs/%(virtualenv)s/bin/python %(root)s/manage.py celery worker -E --loglevel=info --queues %(worker_queues)s %(command_post_args)s >> %(user_home)s/logs/%(program)s.log 2>&1
 end script
 
 post-stop script
