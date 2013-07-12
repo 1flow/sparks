@@ -342,9 +342,12 @@ class ServiceRunner(SimpleObject):
 
         return superconf
 
-    def stop(self, warn_only=False):
+    def stop(self, warn_only=True):
         if self.service_handler == 'upstart':
-            sudo("stop {0}".format(self.program_name), warn_only=warn_only)
+            res = sudo("stop {0}".format(self.program_name),
+                       warn_only=warn_only)
+            if res.failed and res != 'stop: Unknown instance:':
+                raise RuntimeError('Job failed to stop!')
 
         else:
             sudo("supervisorctl stop {0}".format(self.program_name),
