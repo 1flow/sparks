@@ -201,14 +201,14 @@ def execute_or_not(task, *args, **kwargs):
                 return task(*args, **kwargs)
 
             else:
-                LOGGER.warning('Not executing %s(%s, %s): host %s not '
-                               'in current role(s) “%s”.',
-                               getattr(task, 'name', str(task)), args, kwargs,
-                               env.host_string, ', '.join(roles))
+                LOGGER.debug('Not executing %s(%s, %s): host %s not '
+                             'in current role(s) “%s”.',
+                             getattr(task, 'name', str(task)), args, kwargs,
+                             env.host_string, ', '.join(roles))
         else:
-            LOGGER.warning('Not executing %s(%s, %s): no role(s) “%s” in '
-                           'current context.', getattr(task, 'name', str(task)),
-                           args, kwargs, ', '.join(roles))
+            LOGGER.debug('Not executing %s(%s, %s): no role(s) “%s” in '
+                         'current context.', getattr(task, 'name', str(task)),
+                         args, kwargs, ', '.join(roles))
 
     else:
         if non_empty:
@@ -220,9 +220,9 @@ def execute_or_not(task, *args, **kwargs):
             return execute(task, *args, **kwargs)
 
         else:
-            LOGGER.warning('Not executing %s(%s, %s): no role(s) “%s” in '
-                           'current context.', getattr(task, 'name', str(task)),
-                           args, kwargs, ', '.join(roles))
+            LOGGER.debug('Not executing %s(%s, %s): no role(s) “%s” in '
+                         'current context.', getattr(task, 'name', str(task)),
+                         args, kwargs, ', '.join(roles))
 
 
 def merge_roles_hosts():
