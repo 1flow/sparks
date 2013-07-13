@@ -1276,35 +1276,22 @@ def service_action_webserver_gunicorn(remote_configuration=None, fast=False,
 def worker_options(context, has_djsettings, remote_configuration):
     """ This is the celery custom context handler. It will add
         the ``--hostname`` argument to the celery command line, as suggested
-        at http://docs.celeryproject.org/en/latest/userguide/workers.html#starting-the-worker """ # NOQA
-
-    def many_workers_on_same_host():
-        hostname = env.host_string
-        wcount   = 0
-
-        for key, value in env.roledefs.items():
-            if key in worker_roles:
-                if hostname in value:
-                    wcount += 1
-                    if wcount > 1:
-                        return True
-
-        return wcount > 1
+        at http://docs.celeryproject.org/
+            en/latest/userguide/workers.html#starting-the-worker
+        Inconditionnaly, to allow live manipulations of workers in
+        running clusters.
+    """
 
     command_pre_args  = ''
     command_post_args = ''
 
     role_name = get_current_role()
 
-    # NOTE: the final '_' is intentional: exclude the simple 'worker' role.
-    if role_name.startswith('worker_'):
-        if many_workers_on_same_host():
-            command_post_args += '--hostname {0}.{1}'.format(
-                # strip 'worker_', eg. display only 'net_medium' or 'io_low'.
-                role_name[7:], env.host_string)
-
-    # NOTE: the void of '_' is intentional: all worker-related roles
     if role_name in worker_roles:
+        command_post_args += '--hostname {0}.{1}'.format(
+            # strip 'worker_', eg. display only 'net_medium' or 'io_low'.
+            role_name[7:], env.host_string)
+
         sparks_options = getattr(env, 'sparks_options', {})
         worker_concurrency = sparks_options.get('worker_concurrency', {})
 
@@ -1884,11 +1871,12 @@ def role(*roles):
 
     """
 
-    # Don't use 'in env.roledefs' or only if you want to hit
+    # Don't use 'in env.roledefs', or only if you want to hit
     # 'RuntimeError: dictionary changed size during iteration'
     for role in env.roledefs.keys():
         if role in roles:
             continue
+
         del env.roledefs[role]
 
     # This special case requires a special patch ;-)
