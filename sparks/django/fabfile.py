@@ -1238,18 +1238,26 @@ def worker_options(context, has_djsettings, remote_configuration):
         # but we don't have this configuration attribute yet.
 
         command_post_args += ' -c {0}'.format(
-            worker_concurrency.get(env.host_string,
+            worker_concurrency.get('%s@%s' % (role_name, env.host_string),
+                                   worker_concurrency.get(
+                                   '%s@%s' % (role_name[7:] or 'worker',
+                                              env.host_string),
+                                   worker_concurrency.get(env.host_string,
                                    worker_concurrency.get(role_name,
-                                   worker_concurrency.get('__all__', 5))))
+                                   worker_concurrency.get('__all__', 5))))))
 
         max_tasks_per_child = sparks_options.get('max_tasks_per_child', {})
 
         if max_tasks_per_child:
             command_post_args += ' --maxtasksperchild={0}'.format(
-                max_tasks_per_child.get(env.host_string,
-                                        max_tasks_per_child.get(role_name,
+                max_tasks_per_child.get('%s@%s' % (role_name, env.host_string),
                                         max_tasks_per_child.get(
-                                        '__all__', 500))))
+                                        '%s@%s' % (role_name[7:] or 'worker',
+                                                   env.host_string),
+                                        max_tasks_per_child.get(env.host_string,
+                                        max_tasks_per_child.get(role_name,
+                                        max_tasks_per_child.get('__all__',
+                                                                500))))))
 
     context.update({
         'command_pre_args': command_pre_args,
