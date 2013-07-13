@@ -344,8 +344,8 @@ class ServiceRunner(SimpleObject):
 
     def stop(self, warn_only=True):
         if self.service_handler == 'upstart':
-            res = sudo("stop {0}".format(self.program_name),
-                       warn_only=warn_only)
+            res = sudo("status {0} | grep 'stop/waiting' || stop {0}".format(
+                       self.program_name), warn_only=warn_only)
             if res.failed and res != 'stop: Unknown instance:':
                 raise RuntimeError('Job failed to stop!')
 
