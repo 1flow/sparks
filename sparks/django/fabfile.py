@@ -1772,7 +1772,7 @@ def deploy(fast=False, upgrade=False):
     execute(restart_services, fast=fast)
 
 
-@task(aliases=('cherry-pick', 'select'))
+@task(aliases=('cherry-pick', 'select', 'hosts', 'H'))
 def pick(*machines):
     """ clean the current roledefs to keep only the machines picked here,
         to be able to deploy them one by one without disturbing the others.
@@ -1790,6 +1790,14 @@ def pick(*machines):
             work as expected. `Fabric` will empty ``env.roledefs`` if
             you use ``-H``. I don't known if it's a bug of a feature,
             but anyway this tasks justs solves this problem.
+
+        .. versionadded:: 3.5
+
+        .. versionchanged:: in 3.5.1, the ``H`` task alias was added,
+            to be able to write ``fab prod H:my_worker deploy``, which
+            ressembles enough to ``fab prod -H my_worker deploy`` for
+            ``@bitprophet`` not to notice this current workaround task
+            if he reads too fast. Jeff, I just **loooove** ``Fabric`` ;-)
     """
 
     #old_roledefs = env.roledefs.copy()
