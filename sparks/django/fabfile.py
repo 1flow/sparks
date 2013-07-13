@@ -1226,8 +1226,8 @@ def worker_options(context, has_djsettings, remote_configuration):
     if role_name.startswith('worker_'):
         if many_workers_on_same_host():
             command_post_args += '--hostname {0}.{1}'.format(
-                role_name, env.host_string
-            )
+                # strip 'worker_', eg. display only 'net_medium' or 'io_low'.
+                role_name[7:], env.host_string)
 
     # NOTE: the void of '_' is intentional: all worker-related roles
     if role_name in worker_roles:
