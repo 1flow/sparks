@@ -271,12 +271,7 @@ class ServiceRunner(SimpleObject):
        # cf. http://stackoverflow.com/a/9310434/654755
 
         if self.update:
-            if self.service_handler == 'upstart':
-                sudo("initctl reload {0} "
-                     "|| initctl reload-configuration".format(
-                     self.program_name))
-            else:
-                sudo("supervisorctl update")
+            self.reload()
 
             if self.restart:
                 self.stop(warn_only=True)
@@ -342,30 +337,103 @@ class ServiceRunner(SimpleObject):
 
         return superconf
 
-    def stop(self, warn_only=True):
-        if self.service_handler == 'upstart':
-            res = sudo("status {0} | grep 'stop/waiting' || stop {0}".format(
-                       self.program_name), warn_only=warn_only)
-            if res.failed and res != 'stop: Unknown instance:':
-                raise RuntimeError('Job failed to stop!')
+    def reload(self, check_installed=True):
+        """ Reload the service manager configuration. """
 
+        if not check_installed or (check_installed and self.installed):
+            if self.service_handler == 'upstart':
+                sudo("initctl reload {0} "
+                     "|| initctl reload-configuration".format(
+                     self.program_name))
+            else:
+                sudo("supervisorctl update")
         else:
-            sudo("supervisorctl stop {0}".format(self.program_name),
-                 warn_only=warn_only)
+            LOGGER.warning('Service configuration file {0} not '
+                           'installed.'.format(self.program_name))
+
+    def stop(self, warn_only=True, check_installed=True):
+        if not check_installed or (check_installed and self.installed):
+            if self.service_handler == 'upstart':
+                res = sudo("status {0} | grep 'stop/waiting' "
+                           "|| stop {0}".format(self.program_name),
+                           warn_only=warn_only)
+                if res.failed and res != 'stop: Unknown instance:' \
+                        and not warn_only:
+                    raise RuntimeError('Job failed to stop!')
+
+            else:
+                sudo("supervisorctl stop {0}".format(self.program_name),
+                     warn_only=warn_only)
+        else:
+            LOGGER.warning('Service configuration file {0} not '
+                           'installed.'.format(self.program_name))
 
     def start(self):
-        if self.service_handler == 'upstart':
-            sudo("start {0}".format(self.program_name))
+        if self.installed:
+            if self.service_handler == 'upstart':
+                sudo("start {0}".format(self.program_name))
 
+            else:
+                sudo("supervisorctl start {0}".format(self.program_name))
         else:
-            sudo("supervisorctl start {0}".format(self.program_name))
+            LOGGER.warning('Service configuration file {0} not '
+                           'installed.'.format(self.program_name))
+
+    @property
+    def installed(self):
+
+        try:
+            return self.__service_configuration_installed
+
+        except:
+            if self.service_handler == 'upstart':
+                filename = '/etc/init/{0}.conf'.format(self.program_name)
+            else:
+                filename = '/etc/supervisor/conf.d/{0}.conf'.format(
+                    self.program_name)
+
+            self.__service_configuration_installed = exists(filename)
+
+            return self.__service_configuration_installed
 
     def status(self):
-        if self.service_handler == 'upstart':
-            sudo("status {0}".format(self.program_name))
+        if self.installed:
+            if self.service_handler == 'upstart':
+                sudo('status {0}'.format(self.program_name))
 
+            else:
+                sudo('supervisorctl status {0}'.format(self.program_name))
         else:
-            sudo("supervisorctl status {0}".format(self.program_name))
+            LOGGER.warning('Service configuration file {0} not '
+                           'installed.'.format(self.program_name))
+
+    def remove(self):
+        """ Stop the service, remove the configuration file, and reload the
+            services manager (either :program:`upstart`
+            or :program:`supervisor`).
+        """
+
+        if self.installed:
+            self.stop(warn_only=True)
+
+            if self.service_handler == 'upstart':
+                sudo("rm /etc/init/{0}.conf".format(self.program_name))
+
+            else:
+                sudo("rm /etc/supervisor/conf.d/{0}.conf".format(
+                     self.program_name))
+            # NO need for self.reload(check_installed=False),
+            # the property has still the cached value.
+            self.reload()
+
+            # Now every next call will notice the file doesn't exist.
+            # There is no chance of desynchronization between real-life
+            # file status and the cached property because the current
+            # object is re-instanciated at every call.
+            self.__service_configuration_installed = False
+        else:
+            LOGGER.warning('Service configuration file {0} not '
+                           'installed.'.format(self.program_name))
 
     def configure_service(self, remote_configuration):
         """ Upload an environment-specific :program:`upstart`
@@ -494,6 +562,12 @@ class ServiceRunner(SimpleObject):
             # add the new program and start it
             # automatically, thanks to supervisor.
             self.update = True
+
+            # We installed the file, be sure to update the cached property.
+            # There is no chance of desynchronization between real-life
+            # file status and the cached property because the current
+            # object is re-instanciated at every call.
+            self.__service_configuration_installed = True
 
     def handle_gunicorn_config(self):
         """ Upload a gunicorn configuration file to the server. Principle
@@ -1238,18 +1312,26 @@ def worker_options(context, has_djsettings, remote_configuration):
         # but we don't have this configuration attribute yet.
 
         command_post_args += ' -c {0}'.format(
-            worker_concurrency.get(env.host_string,
+            worker_concurrency.get('%s@%s' % (role_name, env.host_string),
+                                   worker_concurrency.get(
+                                   '%s@%s' % (role_name[7:] or 'worker',
+                                              env.host_string),
+                                   worker_concurrency.get(env.host_string,
                                    worker_concurrency.get(role_name,
-                                   worker_concurrency.get('__all__', 5))))
+                                   worker_concurrency.get('__all__', 5))))))
 
         max_tasks_per_child = sparks_options.get('max_tasks_per_child', {})
 
         if max_tasks_per_child:
             command_post_args += ' --maxtasksperchild={0}'.format(
-                max_tasks_per_child.get(env.host_string,
-                                        max_tasks_per_child.get(role_name,
+                max_tasks_per_child.get('%s@%s' % (role_name, env.host_string),
                                         max_tasks_per_child.get(
-                                        '__all__', 500))))
+                                        '%s@%s' % (role_name[7:] or 'worker',
+                                                   env.host_string),
+                                        max_tasks_per_child.get(env.host_string,
+                                        max_tasks_per_child.get(role_name,
+                                        max_tasks_per_child.get('__all__',
+                                                                500))))))
 
     context.update({
         'command_pre_args': command_pre_args,
@@ -1697,6 +1779,13 @@ def status_services(fast=True):
     services_action(fast=fast, action='status')
 
 
+@task(alias='remove')
+def remove_services(fast=True):
+    """ remove all services files configuration in one task. """
+
+    services_action(fast=fast, action='remove')
+
+
 @task(aliases=('initial', ))
 def runable(fast=False, upgrade=False):
     """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
@@ -1772,6 +1861,41 @@ def deploy(fast=False, upgrade=False):
     execute(restart_services, fast=fast)
 
 
+@task(aliases=('roles', 'cherry-pick-role', 'cherry-pick-roles',
+      'pick-role', 'pick-roles', 'R'))
+def role(*roles):
+    """ clean the current roledefs to keep only the role(s) picked here,
+        to be able to deploy them one by one without disturbing the others.
+        Eg, to remove a queue from only 2 workers (out of any number)::
+
+            fab production role:worker_role pick:w01.domain,w02.domain remove
+
+
+        .. warning:: use with caution and at your own risk!
+
+        .. this task exists because the
+            plain ``fab production -R worker_role -H … …`` won't
+            work as expected. `Fabric` will not pick the ``env.roledefs``
+            set by the ``production`` task to select ``-R`` from. I don't
+            known if it's a bug of a feature, but anyway this tasks justs
+            solves this problem.
+
+        .. versionadded:: 3.6
+
+    """
+
+    # Don't use 'in env.roledefs' or only if you want to hit
+    # 'RuntimeError: dictionary changed size during iteration'
+    for role in env.roledefs.keys():
+        if role in roles:
+            continue
+        del env.roledefs[role]
+
+    # This special case requires a special patch ;-)
+    if len(env.roledefs.get('beat', [])) == 0:
+        env.sparks_options['no_warn_for_missing_beat'] = True
+
+
 @task(aliases=('cherry-pick', 'select', 'hosts', 'H'))
 def pick(*machines):
     """ clean the current roledefs to keep only the machines picked here,
@@ -1800,7 +1924,10 @@ def pick(*machines):
             if he reads too fast. Jeff, I just **loooove** ``Fabric`` ;-)
     """
 
-    #old_roledefs = env.roledefs.copy()
+    if len(machines) == 1:
+        # Avoid messing with my fabfile switching
+        # this on and off everytime something fails.
+        env.parallel = False
 
     for role, hosts in env.roledefs.items():
         new_hosts_for_role = []
