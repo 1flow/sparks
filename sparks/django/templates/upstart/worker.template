@@ -24,7 +24,7 @@ end script
 
 script
     . %(user_home)s/.env
-    exec %(command_pre_args)s %(user_home)s/.virtualenvs/%(virtualenv)s/bin/python %(root)s/manage.py celery worker -E --loglevel=info --queues %(worker_queues)s %(command_post_args)s >> %(user_home)s/logs/%(program)s.log 2>&1
+    exec nice -n 10 ionice -c 3 %(command_pre_args)s %(user_home)s/.virtualenvs/%(virtualenv)s/bin/python %(root)s/manage.py celery worker -E --loglevel=info --queues %(worker_queues)s %(command_post_args)s >> %(user_home)s/logs/%(program)s.log 2>&1
 end script
 
 post-stop script
