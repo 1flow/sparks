@@ -1861,6 +1861,41 @@ def deploy(fast=False, upgrade=False):
     execute(restart_services, fast=fast)
 
 
+@task(aliases=('roles', 'cherry-pick-role', 'cherry-pick-roles',
+      'pick-role', 'pick-roles', 'R'))
+def role(*roles):
+    """ clean the current roledefs to keep only the role(s) picked here,
+        to be able to deploy them one by one without disturbing the others.
+        Eg, to remove a queue from only 2 workers (out of any number)::
+
+            fab production role:worker_role pick:w01.domain,w02.domain remove
+
+
+        .. warning:: use with caution and at your own risk!
+
+        .. this task exists because the
+            plain ``fab production -R worker_role -H … …`` won't
+            work as expected. `Fabric` will not pick the ``env.roledefs``
+            set by the ``production`` task to select ``-R`` from. I don't
+            known if it's a bug of a feature, but anyway this tasks justs
+            solves this problem.
+
+        .. versionadded:: 3.6
+
+    """
+
+    # Don't use 'in env.roledefs' or only if you want to hit
+    # 'RuntimeError: dictionary changed size during iteration'
+    for role in env.roledefs.keys():
+        if role in roles:
+            continue
+        del env.roledefs[role]
+
+    # This special case requires a special patch ;-)
+    if len(env.roledefs.get('beat', [])) == 0:
+        env.sparks_options['no_warn_for_missing_beat'] = True
+
+
 @task(aliases=('cherry-pick', 'select', 'hosts', 'H'))
 def pick(*machines):
     """ clean the current roledefs to keep only the machines picked here,
