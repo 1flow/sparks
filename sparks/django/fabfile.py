@@ -1884,12 +1884,25 @@ def role(*roles):
 
     """
 
-    # Don't use 'in env.roledefs' or only if you want to hit
+    deleted_roles = {}
+    kept_hosts    = set()
+
+    # Don't use 'in env.roledefs', or only if you want to hit
     # 'RuntimeError: dictionary changed size during iteration'
     for role in env.roledefs.keys():
         if role in roles:
+            kept_hosts |= set(env.roledefs[role])
             continue
+
+        deleted_roles[role] = env.roledefs[role]
         del env.roledefs[role]
+
+    # In case we have workers that run more than one queue,
+    # We need to keep these other roles, but only with the
+    # machines contained in the original picked roles.
+
+    for role, hosts in deleted_roles.items():
+        env.roledefs[role] = [host for host in hosts if host in kept_hosts]
 
     # This special case requires a special patch ;-)
     if len(env.roledefs.get('beat', [])) == 0:
