@@ -102,22 +102,22 @@ all_roles = [
 
 worker_information = {}
 
-for worker_type, worker_name, worker_queues in (
-    ('worker',          'Generic',         'celery'),
-    ('worker_io',       'I/O dedicated',    None),
-    ('worker_net',      'Network',          None),
-    ('worker_solo',     'Mono-process',     None),
-    ('worker_duo',      'Dual-process',     None),
-    ('worker_trio',     'Tri-process',      None),
-    ('worker_swarm',    'Swarm-processing', None),
-    ('worker_cleaner',  'Cleaner',          None),
-    ('worker_system',   'System',           None),
-    ('worker_client',   'Client',           None),
-    ('worker_server',   'Server',           None),
-    ('worker_social',   'Social',           None),
-    ('worker_partners', 'Partner',          None),
-    ('worker_users',    'User processes',   None),
-        ('worker_cluster',  'Cluster',          None),):
+for worker_type, worker_name in (
+    ('worker',          'Generic'),
+    ('worker_io',       'I/O dedicated'),
+    ('worker_net',      'Network'),
+    ('worker_solo',     'Mono-process'),
+    ('worker_duo',      'Dual-process'),
+    ('worker_trio',     'Tri-process'),
+    ('worker_swarm',    'Swarm-processing'),
+    ('worker_cleaner',  'Cleaner'),
+    ('worker_system',   'System'),
+    ('worker_client',   'Client'),
+    ('worker_server',   'Server'),
+    ('worker_social',   'Social'),
+    ('worker_partners', 'Partner'),
+    ('worker_users',    'User processes'),
+        ('worker_cluster',  'Cluster')):
     for sub_name, priority in (
         (worker_type,               ''),
         (worker_type + '_low',      'Low-priority '),
@@ -127,7 +127,7 @@ for worker_type, worker_name, worker_queues in (
 
         worker_information.update({
             sub_name: (priority + worker_name + ' worker',
-                       worker_queues or sub_name[7:])
+                       sub_name[7:] or 'celery')
         })
 
 worker_roles = [r for r in all_roles if r.startswith('worker')]
