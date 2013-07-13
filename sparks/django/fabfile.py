@@ -271,12 +271,7 @@ class ServiceRunner(SimpleObject):
        # cf. http://stackoverflow.com/a/9310434/654755
 
         if self.update:
-            if self.service_handler == 'upstart':
-                sudo("initctl reload {0} "
-                     "|| initctl reload-configuration".format(
-                     self.program_name))
-            else:
-                sudo("supervisorctl update")
+            self.reload()
 
             if self.restart:
                 self.stop(warn_only=True)
@@ -342,30 +337,103 @@ class ServiceRunner(SimpleObject):
 
         return superconf
 
-    def stop(self, warn_only=True):
-        if self.service_handler == 'upstart':
-            res = sudo("status {0} | grep 'stop/waiting' || stop {0}".format(
-                       self.program_name), warn_only=warn_only)
-            if res.failed and res != 'stop: Unknown instance:':
-                raise RuntimeError('Job failed to stop!')
+    def reload(self, check_installed=True):
+        """ Reload the service manager configuration. """
 
+        if not check_installed or (check_installed and self.installed):
+            if self.service_handler == 'upstart':
+                sudo("initctl reload {0} "
+                     "|| initctl reload-configuration".format(
+                     self.program_name))
+            else:
+                sudo("supervisorctl update")
         else:
-            sudo("supervisorctl stop {0}".format(self.program_name),
-                 warn_only=warn_only)
+            LOGGER.warning('Service configuration file {0} not '
+                           'installed.'.format(self.program_name))
+
+    def stop(self, warn_only=True, check_installed=True):
+        if not check_installed or (check_installed and self.installed):
+            if self.service_handler == 'upstart':
+                res = sudo("status {0} | grep 'stop/waiting' "
+                           "|| stop {0}".format(self.program_name),
+                           warn_only=warn_only)
+                if res.failed and res != 'stop: Unknown instance:' \
+                        and not warn_only:
+                    raise RuntimeError('Job failed to stop!')
+
+            else:
+                sudo("supervisorctl stop {0}".format(self.program_name),
+                     warn_only=warn_only)
+        else:
+            LOGGER.warning('Service configuration file {0} not '
+                           'installed.'.format(self.program_name))
 
     def start(self):
-        if self.service_handler == 'upstart':
-            sudo("start {0}".format(self.program_name))
+        if self.installed:
+            if self.service_handler == 'upstart':
+                sudo("start {0}".format(self.program_name))
 
+            else:
+                sudo("supervisorctl start {0}".format(self.program_name))
         else:
-            sudo("supervisorctl start {0}".format(self.program_name))
+            LOGGER.warning('Service configuration file {0} not '
+                           'installed.'.format(self.program_name))
+
+    @property
+    def installed(self):
+
+        try:
+            return self.__service_configuration_installed
+
+        except:
+            if self.service_handler == 'upstart':
+                filename = '/etc/init/{0}.conf'.format(self.program_name)
+            else:
+                filename = '/etc/supervisor/conf.d/{0}.conf'.format(
+                    self.program_name)
+
+            self.__service_configuration_installed = exists(filename)
+
+            return self.__service_configuration_installed
 
     def status(self):
-        if self.service_handler == 'upstart':
-            sudo("status {0}".format(self.program_name))
+        if self.installed:
+            if self.service_handler == 'upstart':
+                sudo('status {0}'.format(self.program_name))
 
+            else:
+                sudo('supervisorctl status {0}'.format(self.program_name))
         else:
-            sudo("supervisorctl status {0}".format(self.program_name))
+            LOGGER.warning('Service configuration file {0} not '
+                           'installed.'.format(self.program_name))
+
+    def remove(self):
+        """ Stop the service, remove the configuration file, and reload the
+            services manager (either :program:`upstart`
+            or :program:`supervisor`).
+        """
+
+        if self.installed:
+            self.stop(warn_only=True)
+
+            if self.service_handler == 'upstart':
+                sudo("rm /etc/init/{0}.conf".format(self.program_name))
+
+            else:
+                sudo("rm /etc/supervisor/conf.d/{0}.conf".format(
+                     self.program_name))
+            # NO need for self.reload(check_installed=False),
+            # the property has still the cached value.
+            self.reload()
+
+            # Now every next call will notice the file doesn't exist.
+            # There is no chance of desynchronization between real-life
+            # file status and the cached property because the current
+            # object is re-instanciated at every call.
+            self.__service_configuration_installed = False
+        else:
+            LOGGER.warning('Service configuration file {0} not '
+                           'installed.'.format(self.program_name))
 
     def configure_service(self, remote_configuration):
         """ Upload an environment-specific :program:`upstart`
@@ -494,6 +562,12 @@ class ServiceRunner(SimpleObject):
             # add the new program and start it
             # automatically, thanks to supervisor.
             self.update = True
+
+            # We installed the file, be sure to update the cached property.
+            # There is no chance of desynchronization between real-life
+            # file status and the cached property because the current
+            # object is re-instanciated at every call.
+            self.__service_configuration_installed = True
 
     def handle_gunicorn_config(self):
         """ Upload a gunicorn configuration file to the server. Principle
@@ -1703,6 +1777,13 @@ def status_services(fast=True):
     """ Get all remote services status (nginx, gunicorn, celery…) at once. """
 
     services_action(fast=fast, action='status')
+
+
+@task(alias='remove')
+def remove_services(fast=True):
+    """ remove all services files configuration in one task. """
+
+    services_action(fast=fast, action='remove')
 
 
 @task(aliases=('initial', ))
