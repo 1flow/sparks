@@ -1757,8 +1757,9 @@ def deploy(fast=False, upgrade=False):
         if role in worker_roles:
             has_worker = True
 
-    if has_worker and (not 'beat' in env.roledefs
-                       or len(env.roledefs.get('beat', [])) == 0):
+    if (has_worker and len(env.roledefs.get('beat', [])) == 0
+        ) and not env.get('sparks_options', {}).get(
+            'no_warn_for_missing_beat', False):
         raise RuntimeError("You must define a 'beat' roledef if "
                            "you plan to run any Celery worker.")
 
@@ -1769,3 +1770,37 @@ def deploy(fast=False, upgrade=False):
     # not our execute_or_not(), here we want Fabric
     # to handle its classic execution model.
     execute(restart_services, fast=fast)
+
+
+@task(aliases=('cherry-pick', 'select'))
+def pick(*machines):
+    """ clean the current roledefs to keep only the machines picked here,
+        to be able to deploy them one by one without disturbing the others.
+        Eg, to add 2 new workers to an already running set of machines::
+
+            fab production pick:new_worker.domain,other_new.domain deploy
+
+
+        .. warning:: use with caution and at your own risk! You should
+            deploy exactly the same version of your code on the picked
+            machines. But if you use this task, you already know this.
+
+        .. this task exists because the
+            plain ``fab production -H new_worker.domain deploy`` won't
+            work as expected. `Fabric` will empty ``env.roledefs`` if
+            you use ``-H``. I don't known if it's a bug of a feature,
+            but anyway this tasks justs solves this problem.
+    """
+
+    #old_roledefs = env.roledefs.copy()
+
+    for role, hosts in env.roledefs.items():
+        new_hosts_for_role = []
+        for machine in hosts:
+            if machine in machines:
+                new_hosts_for_role.append(machine)
+        env.roledefs[role] = new_hosts_for_role
+
+    # This special case requires a special patch ;-)
+    if len(env.roledefs.get('beat', [])) == 0:
+        env.sparks_options['no_warn_for_missing_beat'] = True
