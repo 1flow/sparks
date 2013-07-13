@@ -1800,7 +1800,10 @@ def pick(*machines):
             if he reads too fast. Jeff, I just **loooove** ``Fabric`` ;-)
     """
 
-    #old_roledefs = env.roledefs.copy()
+    if len(machines) == 1:
+        # Avoid messing with my fabfile switching
+        # this on and off everytime something fails.
+        env.parallel = False
 
     for role, hosts in env.roledefs.items():
         new_hosts_for_role = []
