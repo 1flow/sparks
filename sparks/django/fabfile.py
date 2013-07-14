@@ -1792,19 +1792,19 @@ def runable(fast=False, upgrade=False):
     if not is_local_environment():
         push_environment()  # already wraps execute_or_not()
 
-        execute_or_not(git_update, sparks_roles=['web'] + worker_roles[:] +
-                       ['beat', 'flower', 'shell'])
+        execute_or_not(git_update, sparks_roles=['web'] + worker_roles[:]
+                       + ['beat', 'flower', 'shell'])
 
         if not is_production_environment():
             # fast or not, we must catch this one to
             # avoid source repository desynchronization.
             execute_or_not(push_translations, sparks_roles=('lang', ))
 
-        execute_or_not(git_pull, sparks_roles=['web'] + worker_roles[:])
-                       # NO NEED: + ['beat', 'flower', 'shell'])
+        execute_or_not(git_pull, sparks_roles=['web'] + worker_roles[:]
+                       + ['beat', 'flower', 'shell'])
 
-    execute_or_not(git_clean, sparks_roles=['web'] + worker_roles[:])
-                   # NO NEED: + ['beat', 'flower', 'shell'])
+    execute_or_not(git_clean, sparks_roles=['web'] + worker_roles[:]
+                   + ['beat', 'flower', 'shell'])
 
     requirements(fast=fast, upgrade=upgrade)  # already wraps execute_or_not()
 
