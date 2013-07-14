@@ -349,7 +349,8 @@ class ServiceRunner(SimpleObject):
                 sudo("supervisorctl update")
         else:
             LOGGER.warning('Service configuration file {0} not '
-                           'installed.'.format(self.program_name))
+                           'installed on {1}.'.format(self.program_name,
+                                                      env.host_string))
 
     def stop(self, warn_only=True, check_installed=True):
         if not check_installed or (check_installed and self.installed):
