@@ -44,7 +44,7 @@ except ImportError:
     print('>>> FABRIC IS NOT INSTALLED !!!')
     raise
 
-from ..fabric import (fabfile, worker_roles,
+from ..fabric import (fabfile, all_roles, worker_roles,
                       with_remote_configuration,
                       local_configuration as platform,
                       is_local_environment,
@@ -1041,7 +1041,7 @@ def requirements(fast=False, upgrade=False):
             with other fab tasks which handle it.
     """
 
-    roles_to_run = ['web', 'db'] + worker_roles[:]
+    roles_to_run = all_roles
 
     for role in roles_to_run:
         execute_or_not(pre_requirements_task, fast=fast,
@@ -1123,7 +1123,7 @@ def push_environment():
 
     # re-wrap the internal task via execute() to catch roledefs.
     execute_or_not(push_environment_task, project_envs_dir,
-                   sparks_roles=['web', 'db'] + worker_roles[:])
+                   sparks_roles=all_roles)
 
 
 @task(alias='update')
@@ -1727,6 +1727,7 @@ def services_action(fast=False, action=None):
     execute_or_not(service_action_webserver_gunicorn, fast=fast,
                    action=action, sparks_roles=('web', ))
 
+    # NOTE: 'web' is already done (just before)
     roles_to_act_on = worker_roles[:] + ['beat', 'flower', 'shell']
 
     # Run this multiple time, for each role:
@@ -1791,7 +1792,8 @@ def runable(fast=False, upgrade=False):
     if not is_local_environment():
         push_environment()  # already wraps execute_or_not()
 
-        execute_or_not(git_update, sparks_roles=['web'] + worker_roles[:])
+        execute_or_not(git_update, sparks_roles=['web'] + worker_roles[:] +
+                       ['beat', 'flower', 'shell'])
 
         if not is_production_environment():
             # fast or not, we must catch this one to
@@ -1799,14 +1801,21 @@ def runable(fast=False, upgrade=False):
             execute_or_not(push_translations, sparks_roles=('lang', ))
 
         execute_or_not(git_pull, sparks_roles=['web'] + worker_roles[:])
+                       # NO NEED: + ['beat', 'flower', 'shell'])
 
     execute_or_not(git_clean, sparks_roles=['web'] + worker_roles[:])
+                   # NO NEED: + ['beat', 'flower', 'shell'])
 
     requirements(fast=fast, upgrade=upgrade)  # already wraps execute_or_not()
 
     execute_or_not(compilemessages, sparks_roles=['web'] + worker_roles[:])
+                   # NO NEED: + ['beat', 'flower', 'shell'])
 
     execute_or_not(collectstatic, fast=fast, sparks_roles=('web', ))
+
+    #
+    # TODO: add 'mysql' and others.
+    #
 
     if not fast:
         execute_or_not(createdb, sparks_roles=('db', 'pg', ))
