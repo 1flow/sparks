@@ -1176,7 +1176,7 @@ def git_clean():
     """
 
     with cd(env.root):
-        run("find . -name '*.pyc' -or -name '*.pyo' -print0 "
+        run("find . \( -name '*.pyc' -or -name '*.pyo' \) -print0 "
             " | xargs -0 rm -f", warn_only=True)
 
 
