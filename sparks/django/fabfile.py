@@ -521,6 +521,19 @@ class ServiceRunner(SimpleObject):
         role_name = get_current_role()
         worker_name, worker_queues = worker_information_from_role(role_name)
 
+        sparks_options = getattr(env, 'sparks_options', {})
+        worker_queues_options = sparks_options.get('worker_queues', {})
+
+        custom_queues = worker_queues_options.get(
+            '%s@%s' % (role_name, env.host_string),
+            worker_queues_options.get(
+            '%s@%s' % (role_name[7:] or 'worker', env.host_string),
+            worker_queues_options.get(env.host_string,
+            worker_queues_options.get(role_name, None))))
+
+        if custom_queues:
+            worker_queues = custom_queues
+
         # NOTE: update docstring if you change this.
         context = {
             'env': env.environment,
@@ -1295,31 +1308,64 @@ def worker_options(context, has_djsettings, remote_configuration):
 
         sparks_options = getattr(env, 'sparks_options', {})
         worker_concurrency = sparks_options.get('worker_concurrency', {})
+        worker_pool = sparks_options.get('worker_pool', {})
+        worker_time_limit = sparks_options.get('worker_time_limit', {})
+        worker_soft_time = sparks_options.get('worker_soft_time_limit', {})
+        worker_max_tpc = sparks_options.get('max_tasks_per_child', {})
 
         # TODO: '5' should be 'if remote_configuration.is_lxc'
         # but we don't have this configuration attribute yet.
 
-        command_post_args += ' -c {0}'.format(
-            worker_concurrency.get('%s@%s' % (role_name, env.host_string),
-                                   worker_concurrency.get(
+        custom_pool = worker_pool.get('%s@%s' % (role_name, env.host_string),
+                                      worker_pool.get(
+                                      '%s@%s' % (role_name[7:] or 'worker',
+                                                 env.host_string),
+                                      worker_pool.get(env.host_string,
+                                      worker_pool.get(role_name, None))))
+        if custom_pool:
+            command_post_args += ' -P {0}'.format(custom_pool)
+
+        tli = worker_time_limit.get('%s@%s' % (role_name, env.host_string),
+                                    worker_time_limit.get(
+                                    '%s@%s' % (role_name[7:] or 'worker',
+                                               env.host_string),
+                                    worker_time_limit.get(env.host_string,
+                                    worker_time_limit.get(role_name, None))))
+
+        if tli:
+            command_post_args += ' --time-limit {0}'.format(tli)
+
+        stl = worker_soft_time.get('%s@%s' % (role_name, env.host_string),
+                                   worker_soft_time.get(
                                    '%s@%s' % (role_name[7:] or 'worker',
                                               env.host_string),
-                                   worker_concurrency.get(env.host_string,
-                                   worker_concurrency.get(role_name,
-                                   worker_concurrency.get('__all__', 5))))))
+                                   worker_soft_time.get(env.host_string,
+                                   worker_soft_time.get(role_name,
+                                   worker_soft_time.get('__all__', None)))))
 
-        max_tasks_per_child = sparks_options.get('max_tasks_per_child', {})
+        if stl:
+            command_post_args += ' --soft-time-limit {0}'.format(
+                stl)
 
-        if max_tasks_per_child:
-            command_post_args += ' --maxtasksperchild={0}'.format(
-                max_tasks_per_child.get('%s@%s' % (role_name, env.host_string),
-                                        max_tasks_per_child.get(
-                                        '%s@%s' % (role_name[7:] or 'worker',
-                                                   env.host_string),
-                                        max_tasks_per_child.get(env.host_string,
-                                        max_tasks_per_child.get(role_name,
-                                        max_tasks_per_child.get('__all__',
-                                                                500))))))
+        wc = worker_concurrency.get('%s@%s' % (role_name, env.host_string),
+                                    worker_concurrency.get(
+                                    '%s@%s' % (role_name[7:] or 'worker',
+                                               env.host_string),
+                                    worker_concurrency.get(env.host_string,
+                                    worker_concurrency.get(role_name,
+                                    worker_concurrency.get('__all__', None)))))
+        if wc:
+            command_post_args += ' -c {0}'.format(wc)
+
+        wmtpc = worker_max_tpc.get('%s@%s' % (role_name, env.host_string),
+                                   worker_max_tpc.get(
+                                   '%s@%s' % (role_name[7:] or 'worker',
+                                              env.host_string),
+                                   worker_max_tpc.get(env.host_string,
+                                   worker_max_tpc.get(role_name,
+                                   worker_max_tpc.get('__all__', None)))))
+        if wmtpc:
+            command_post_args += ' --maxtasksperchild={0}'.format(wmtpc)
 
     context.update({
         'command_pre_args': command_pre_args,
