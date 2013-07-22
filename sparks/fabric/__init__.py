@@ -530,28 +530,51 @@ class RemoteConfiguration(object):
                       "print lsb_release.get_lsb_information()'",
                       quiet=not DEBUG, combine_stderr=False)
 
+        self.lsb = None
+
         try:
-            self.lsb    = SimpleObject(from_dict=ast.literal_eval(out))
-            self.is_osx = False
+            # Try to avoid pollution lines that comes before python output,
+            # like: “/home/olive/.profile: line 23: /usr/bin/byobu-launch:
+            # No such file or directory”. This should not be kept by Fabric
+            # thanks to combine_stderr=False, but in this particular case
+            # it just doesn't work…
+            for line in out.splitlines():
+                if line.startswith("{'"):
+                    self.lsb = SimpleObject(from_dict=ast.literal_eval(line))
+                    break
 
         except SyntaxError:
-            self.lsb    = None
             self.is_osx = True
+            self.mac    = None
 
             # Be sure we don't get stuck in a virtualenv for free.
             with prefix('deactivate >/dev/null 2>&1 || true'):
                 out = run("python -c 'import platform; "
                           "print platform.mac_ver()'", quiet=not DEBUG,
                           combine_stderr=False)
+
             try:
-                self.mac = SimpleObject(from_dict=dict(zip(
-                                    ('release', 'version', 'machine'),
-                                    ast.literal_eval(out))))
+                for line in out.splitlines():
+                    if line.startswith("('"):
+                        self.mac = SimpleObject(from_dict=dict(zip(
+                                                ('release', 'version',
+                                                 'machine'),
+                                                ast.literal_eval(line))))
+                        break
+
             except SyntaxError:
                 # something went very wrong,
                 # none of the detection methods worked.
-                raise RuntimeError(
-                    'cannot determine platform of {0}'.format(self.host_string))
+                raise RuntimeError(u'cannot determine platform of {0}, '
+                                   u'platform.mac_ver() reported nothing '
+                                   u'usable:\n{1}'.format(self.host_string,
+                                   out))
+            else:
+                if self.mac is None:
+                    raise RuntimeError(u'cannot determine platform of {0}, '
+                                       u'platform.mac_ver() reported nothing '
+                                       u'usable:\n{1}'.format(self.host_string,
+                                       out))
 
     def get_uname(self):
         # Be sure we don't get stuck in a virtualenv for free.
@@ -559,10 +582,20 @@ class RemoteConfiguration(object):
             out = run("python -c 'import os; print os.uname()'",
                       quiet=not DEBUG, combine_stderr=False)
 
-        self.uname = SimpleObject(from_dict=dict(zip(
-                                  ('sysname', 'nodename', 'release',
-                                  'version', 'machine'),
-                                  ast.literal_eval(out))))
+        self.uname = None
+
+        for line in out.splitlines():
+            if line.startswith("('"):
+                self.uname = SimpleObject(from_dict=dict(zip(
+                                          ('sysname', 'nodename', 'release',
+                                          'version', 'machine'),
+                                          ast.literal_eval(line))))
+                break
+
+        if self.uname is None:
+            raise RuntimeError(u'cannot determine uname of {0}, '
+                               u'os.uname() reported nothing usable:\n'
+                               u'{1}'.format(self.host_string, out))
 
         self.hostname = self.uname.nodename
 
