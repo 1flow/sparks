@@ -284,8 +284,16 @@ def send_mail_html_from_template(template, subject, recipients,
     if prefix == u'[Django] ':
         prefix = None
 
-    if prefix is not None:
-        subject = u'[{0}] {1}'.format(prefix, subject)
+    if prefix is not None and getattr(settings,
+                                      'EMAIL_SUBJECT_PREFIX_TO_USERS', False):
+        if subject.startswith('['):
+            # We assume the prefix includes the trailing space,
+            # like advised in Django's documentation.
+            subject = u'{0}{1}'.format(prefix, subject)
+
+        else:
+            # We assume no [] and no space.
+            subject = u'[{0}] {1}'.format(prefix, subject)
 
     stemplate = Template(subject)
 
