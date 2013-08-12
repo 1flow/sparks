@@ -824,7 +824,7 @@ class activate_venv(object):
                                                           '.project')
                 activate_venv.has_project  = exists(activate_venv.project_file)
 
-        self.my_prefix = prefix('true') \
+        self.my_prefix = prefix('source {0}/venv/activate'.format(env.root)) \
             if activate_venv.use_jenkins \
             else prefix('workon %s' % env.virtualenv)
 
