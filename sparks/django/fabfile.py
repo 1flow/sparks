@@ -1558,7 +1558,7 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
                   'PGPASSWORD={0}'.format(SPARKS_PG_SUPERPASS)
                   if SPARKS_PG_SUPERPASS else '']
 
-    pg_env.append('PGDATABASE={0}'.format(SPARKS_PG_TMPL_DB or 'template1'))
+        pg_env.append('PGDATABASE={0}'.format(SPARKS_PG_TMPL_DB or 'template1'))
 
     djsettings = getattr(remote_configuration, 'django_settings', None)
 
