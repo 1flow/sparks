@@ -805,19 +805,27 @@ class activate_venv(object):
     # Keep them as class objects, they never change…
     project_file = None
     has_project  = None
+    use_jenkins  = None
 
     def __init__(self):
 
         if activate_venv.has_project is None:
-            workon_home = run('echo $WORKON_HOME', quiet=QUIET).strip() \
-                or '${HOME}/.virtualenvs'
 
-            activate_venv.project_file = os.path.join(workon_home,
-                                                      env.virtualenv,
-                                                      '.project')
-            activate_venv.has_project  = exists(activate_venv.project_file)
+            activate_venv.use_jenkins = bool(os.environ.get(
+                                             'SPARKS_JENKINS', False))
 
-        self.my_prefix = prefix('workon %s' % env.virtualenv)
+            if not activate_venv.use_jenkins:
+
+                workon_home = run('echo $WORKON_HOME', quiet=QUIET).strip() \
+                    or '${HOME}/.virtualenvs'
+
+                activate_venv.project_file = os.path.join(workon_home,
+                                                          env.virtualenv,
+                                                          '.project')
+                activate_venv.has_project  = exists(activate_venv.project_file)
+
+        self.my_prefix = prefix('') if activate_venv.use_jenkins \
+            else prefix('workon %s' % env.virtualenv)
 
     def __call__(self, *args, **kwargs):
         return self
@@ -1069,9 +1077,11 @@ def requirements(fast=False, upgrade=False):
                        upgrade=upgrade, sparks_roles=(role, ))
 
 
-def push_environment_task(project_envs_dir):
+def push_environment_task(project_envs_dir, fast=False, force=False):
 
     role_name = get_current_role()
+
+    not_found = True
 
     for env_file_candidate in (
         '{0}.env'.format(env.host_string.lower()),
@@ -1082,15 +1092,28 @@ def push_environment_task(project_envs_dir):
 
         if os.path.exists(candidate_fullpath):
             put(candidate_fullpath, '.env')
-            return
+            not_found = False
+            break
 
-    raise RuntimeError('$SPARKS_ENV_DIR is defined but no environment file '
-                       'matched {0} in {1}!'.format(env.host_string,
-                       project_envs_dir))
+    if not_found:
+        raise RuntimeError(u'$SPARKS_ENV_DIR is defined but no environment '
+                           u'file matched {0} in {1}!'.format(env.host_string,
+                           project_envs_dir))
+
+    # Push a global SSH key too, to be able to execute remote
+    # tasks (eg. from cron jobs) from any machine to any other.
+    env_ssh_path = os.path.join(project_envs_dir, 'ssh/id_dsa')
+
+    # if os.path.exists(env_ssh_path):
+    #     if force or not exists('.ssh/id_dsa'):
+    #         put(env_ssh_path, '.ssh/id_dsa')
+    #         put(env_ssh_path + '.pub', '.ssh/id_dsa.pub')
+
+    # XXX: append SSH key only if not already appended.
 
 
 @task(task_class=DjangoTask)
-def push_environment():
+def push_environment(fast=False, force=False):
     """ Copy any environment file to the remote server in ``~/.env``,
         ready to be loaded by the shell when the user does anything.
 
@@ -1135,8 +1158,8 @@ def push_environment():
         return
 
     # re-wrap the internal task via execute() to catch roledefs.
-    execute_or_not(push_environment_task, project_envs_dir,
-                   sparks_roles=all_roles)
+    execute_or_not(push_environment_task, project_envs_dir, fast=fast,
+                   force=force, sparks_roles=all_roles)
 
 
 @task(alias='update')
@@ -1234,7 +1257,8 @@ def push_translations(remote_configuration=None):
 
 @task(alias='nginx')
 def service_action_nginx(fast=False, action=None):
-    """ Restart the remote nginx (if installed), after having refreshed its configuration file. """ # NOQA
+    """ Restart the remote nginx (if installed),
+        after having refreshed its configuration file. """
 
     if action is None:
         action = 'status'
