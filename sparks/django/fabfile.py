@@ -805,19 +805,27 @@ class activate_venv(object):
     # Keep them as class objects, they never change…
     project_file = None
     has_project  = None
+    use_jenkins  = None
 
     def __init__(self):
 
         if activate_venv.has_project is None:
-            workon_home = run('echo $WORKON_HOME', quiet=QUIET).strip() \
-                or '${HOME}/.virtualenvs'
 
-            activate_venv.project_file = os.path.join(workon_home,
-                                                      env.virtualenv,
-                                                      '.project')
-            activate_venv.has_project  = exists(activate_venv.project_file)
+            activate_venv.use_jenkins = bool(os.environ.get(
+                                             'SPARKS_JENKINS', False))
 
-        self.my_prefix = prefix('workon %s' % env.virtualenv)
+            if not activate_venv.use_jenkins:
+
+                workon_home = run('echo $WORKON_HOME', quiet=QUIET).strip() \
+                    or '${HOME}/.virtualenvs'
+
+                activate_venv.project_file = os.path.join(workon_home,
+                                                          env.virtualenv,
+                                                          '.project')
+                activate_venv.has_project  = exists(activate_venv.project_file)
+
+        self.my_prefix = prefix('') if activate_venv.use_jenkins \
+            else prefix('workon %s' % env.virtualenv)
 
     def __call__(self, *args, **kwargs):
         return self
