@@ -824,7 +824,8 @@ class activate_venv(object):
                                                           '.project')
                 activate_venv.has_project  = exists(activate_venv.project_file)
 
-        self.my_prefix = prefix('source {0}/venv/bin/activate'.format(env.root)) \
+        self.my_prefix = prefix(
+            'source {0}/venv/bin/activate'.format(env.root)) \
             if activate_venv.use_jenkins \
             else prefix('workon %s' % env.virtualenv)
 
@@ -1952,6 +1953,8 @@ def role(*roles):
 
     """
 
+    #LOGGER.info('before role-picking: %s %s', env.roledefs.keys(), roles)
+
     # Don't use 'in env.roledefs', or only if you want to hit
     # 'RuntimeError: dictionary changed size during iteration'
     for role in env.roledefs.keys():
@@ -1963,6 +1966,8 @@ def role(*roles):
     # This special case requires a special patch ;-)
     if len(env.roledefs.get('beat', [])) == 0:
         env.sparks_options['no_warn_for_missing_beat'] = True
+
+    #LOGGER.info('after role-picking: %s %s', env.roledefs.keys())
 
 
 @task(aliases=('cherry-pick', 'select', 'hosts', 'H'))

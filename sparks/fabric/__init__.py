@@ -218,8 +218,8 @@ def execute_or_not(task, *args, **kwargs):
         if non_empty:
             kwargs['roles'] = non_empty
 
-            # LOGGER.info('One-shot mode: execute(%s, *%s, **%s)',
-            #             task, args, kwargs)
+            #LOGGER.info('One-shot mode: execute(%s, *%s, **%s)',
+            #            task, args, kwargs)
 
             return execute(task, *args, **kwargs)
 
