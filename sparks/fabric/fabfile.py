@@ -837,9 +837,9 @@ def db_mysql(remote_configuration=None):
     pkg.pkg_add('mysql' if remote_configuration.is_osx else 'mysql-server')
 
 
-@task(aliases=('db_memcached', ))
+@task(aliases=('db_memcache', ))
 @with_remote_configuration
-def db_memcache(remote_configuration=None):
+def db_memcached(remote_configuration=None):
     """ Memcache key-value volatile store. """
 
     pkg.pkg_add('memcached')
