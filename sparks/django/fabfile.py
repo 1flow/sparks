@@ -335,7 +335,7 @@ class ServiceRunner(SimpleObject):
         if superconf is None:
             raise RuntimeError('Could not find any configuration or '
                                'template for {0}. Searched {1}.'.format(
-                               self.program_name, candidates))
+                                   self.program_name, candidates))
 
         return superconf
 
@@ -346,7 +346,7 @@ class ServiceRunner(SimpleObject):
             if self.service_handler == 'upstart':
                 sudo("initctl reload {0} "
                      "|| initctl reload-configuration".format(
-                     self.program_name))
+                         self.program_name))
             else:
                 sudo("supervisorctl update")
         else:
@@ -529,9 +529,10 @@ class ServiceRunner(SimpleObject):
         custom_queues = worker_queues_options.get(
             '%s@%s' % (role_name, env.host_string),
             worker_queues_options.get(
-            '%s@%s' % (role_name[7:] or 'worker', env.host_string),
-            worker_queues_options.get(env.host_string,
-            worker_queues_options.get(role_name, None))))
+                '%s@%s' % (role_name[7:] or 'worker', env.host_string),
+                worker_queues_options.get(
+                    env.host_string,
+                    worker_queues_options.get(role_name, None))))
 
         if custom_queues:
             worker_queues = custom_queues
@@ -1102,11 +1103,11 @@ def push_environment_task(project_envs_dir, fast=False, force=False):
     if not_found:
         raise RuntimeError(u'$SPARKS_ENV_DIR is defined but no environment '
                            u'file matched {0} in {1}!'.format(env.host_string,
-                           project_envs_dir))
+                                                              project_envs_dir))
 
     # Push a global SSH key too, to be able to execute remote
     # tasks (eg. from cron jobs) from any machine to any other.
-    env_ssh_path = os.path.join(project_envs_dir, 'ssh/id_dsa')
+    #env_ssh_path = os.path.join(project_envs_dir, 'ssh/id_dsa')
 
     # if os.path.exists(env_ssh_path):
     #     if force or not exists('.ssh/id_dsa'):
@@ -1158,7 +1159,7 @@ def push_environment(fast=False, force=False):
     if not os.path.exists(project_envs_dir):
         LOGGER.warning('$SPARKS_ENV_DIR/{0} does not exist. Will not push any '
                        'environment file to any remote host.'.format(
-                       env.project))
+                           env.project))
         return
 
     # re-wrap the internal task via execute() to catch roledefs.
