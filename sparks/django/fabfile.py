@@ -253,9 +253,11 @@ class ServiceRunner(SimpleObject):
         })
 
         custom_handler = getattr(self, 'custom_context_handler', None)
-        remote_configuration = getattr(self, 'remote_configuration', None)
+
         if custom_handler is None:
             return
+
+        remote_configuration = getattr(self, 'remote_configuration', None)
 
         temp_context = custom_handler(context.copy(), has_djsettings,
                                       remote_configuration)
