@@ -1393,6 +1393,22 @@ def worker_options(context, has_djsettings, remote_configuration):
         if wmtpc:
             command_post_args += ' --maxtasksperchild={0}'.format(wmtpc)
 
+    if role_name == 'flower':
+        try:
+            broker = remote_configuration.django_settings.BROKER_URL
+
+        except:
+            LOGGER.warning('Could not get BROKER_URL in remote Django settings')
+            broker = ''
+
+        if broker.startswith('redis://'):
+            # As advised in https://github.com/mher/flower/issues/114#issuecomment-22213390 # NOQA
+            # We patch the flower template to make the redis broker inspection
+            # work "again" as expected (as much as possible, because many
+            # columns are still empty, but at least we got the number of
+            # messages, which is better than nothing).
+            command_post_args += ' --broker_api={0}'.format(broker)
+
     context.update({
         'command_pre_args': command_pre_args,
         'command_post_args': command_post_args,
