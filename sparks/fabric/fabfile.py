@@ -661,7 +661,7 @@ def dev_web(remote_configuration=None):
         if major_distro_version >= 12 and major_distro_version <= 13:
             if not exists('/etc/apt/sources.list.d/'
                           'chris-lea-node_js-{0}.list'.format(
-                          remote_configuration.lsb.CODENAME)):
+                              remote_configuration.lsb.CODENAME)):
                 # Because of http://stackoverflow.com/q/7214474/654755
                 pkg.apt.ppa('ppa:chris-lea/node.js')
 
@@ -817,7 +817,7 @@ def db_redis(remote_configuration=None):
                 or remote_configuration.lsb.RELEASE.startswith('13'):
             if not exists('/etc/apt/sources.list.d/'
                           'chris-lea-redis-server-{0}.list'.format(
-                          remote_configuration.lsb.CODENAME)):
+                              remote_configuration.lsb.CODENAME)):
                 pkg.apt.ppa('ppa:chris-lea/redis-server')
 
                 if exists('/usr/bin/redis-cli'):
@@ -1262,7 +1262,7 @@ def lxc_server(remote_configuration=None):
 
     db_redis()
     db_mongodb()
-    db_memcache()
+    db_memcached()
     db_postgresql()
 
     if not exists('/etc/nginx'):
