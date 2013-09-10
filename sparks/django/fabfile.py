@@ -1662,7 +1662,21 @@ def migrate(remote_configuration=None, args=None):
             didn't stop.
     """
 
-    django_manage('migrate ' + (args or ''))
+    # Sometimes, we've got:
+    #
+    # [1flow.io] out: The following content types are stale and need to be deleted:
+    # [1flow.io] out:
+    # [1flow.io] out:     core | articlesstatistic
+    # [1flow.io] out:
+    # [1flow.io] out: Any objects related to these content types by a foreign key will also
+    # [1flow.io] out: be deleted. Are you sure you want to delete these content types?
+    # [1flow.io] out: If you're unsure, answer 'no'.
+    # [1flow.io] out:
+    #
+    # And this completely stops the migration process, because Fabric
+    # can't seem to get the terminal and I cannot type "yes" anywhere.
+
+    django_manage('migrate ' + (args or ''), prefix='yes yes | ')
 
     if 'transmeta' in remote_configuration.django_settings.INSTALLED_APPS:
         django_manage('sync_transmeta_db', prefix='yes | ')
