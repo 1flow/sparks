@@ -132,6 +132,17 @@ class ServiceRunner(SimpleObject):
 
     """
 
+    nice_defaults = {
+        'shell': '-n -7',
+        'flower': '-n 10',
+        'web': '-n -5',
+    }
+
+    ionice_defaults = {
+        'shell': '-c 2 -n 2',
+        'flower': '-c 3',
+    }
+
     def __init__(self, *args, **kwargs):
         # Too bad, SimpleObject is an old-style class (and must stay)
         SimpleObject.__init__(self, *args, **kwargs)
@@ -470,6 +481,8 @@ class ServiceRunner(SimpleObject):
                     'root': env.root,
                     'user': env.user,
                     'role': <current-role-name>, (sparks specific)
+                    'nice': <unix nice command> (default: ''),
+                    'ionice': <unix ionice command> (default: ''),
                     'branch': env.branch,
                     'project': env.project,
                     'program': self.program_name,
@@ -481,6 +494,25 @@ class ServiceRunner(SimpleObject):
                     'worker_name': <the-friendly-worker-name> or '',
                     'worker_queues': <celery-queues-name> or '',
                 }
+
+            Regarding :program:`nice` and :program:`ionice` defaults, `sparks`
+            Sets upsome of them:
+
+                nice_defaults = {
+                    'shell': '-n -7',
+                    'flower': '-n 10',
+                    'web': '-n -5',
+                }
+
+                ionice_defaults = {
+                    'shell': '-c 2 -n 2',
+                    'flower': '-c 3',
+                }
+
+            If you want NO defaults at all, just export the environment
+            variables ``SPARKS_NICE_NODEFAULTS``
+            and ``SPARKS_IONICE_NODEFAULTS`` to any value, and the defaults
+            will not be used.
 
             .. note:: ``worker_name`` and ``worker_queues`` are filled by
                 sparks and are internal values. If the current role is not
@@ -554,6 +586,45 @@ class ServiceRunner(SimpleObject):
             'worker_name': worker_name,
             'worker_queues': worker_queues,
         }
+
+        for nice, sparks_defaults, nice_env_variable in (
+            ('nice', ServiceRunner.nice_defaults, 'SPARKS_NICE_NODEFAULTS'),
+            ('ionice', ServiceRunner.ionice_defaults,
+             'SPARKS_IONICE_NODEFAULTS')):
+
+            niceargs = sparks_options.get(nice + '_arguments', {})
+
+            if os.environ.get(nice_env_variable, False):
+                LOGGER.warning(u'Not using sparks defaults for %s command '
+                               u'because %s variable is set.',
+                               nice, nice_env_variable)
+                defaults = {}
+            else:
+                defaults = sparks_defaults
+
+            #LOGGER.debug(niceargs)
+
+            my_niceargs = niceargs.get(
+                '%s@%s' % (role_name, env.host_string),
+                niceargs.get(
+                    '%s@%s' % (role_name[7:] or 'worker', env.host_string),
+                    niceargs.get(
+                        env.host_string,
+                        niceargs.get(role_name,
+                                     defaults.get(role_name,
+                                                  defaults.get('__all__',
+                                                               None))))))
+            #LOGGER.debug(my_niceargs)
+
+            if my_niceargs:
+                context[nice] = '%s %s' % (nice, my_niceargs)
+
+            else:
+                # Set an empty value to be sure the
+                # variable name is replaced in the template.
+                context[nice] = ''
+
+        #LOGGER.debug(context)
 
         self.add_environment_to_context(context, self.has_djsettings)
         self.add_command_pre_post_to_context(context, self.has_djsettings)
@@ -1662,7 +1733,21 @@ def migrate(remote_configuration=None, args=None):
             didn't stop.
     """
 
-    django_manage('migrate ' + (args or ''))
+    # Sometimes, we've got:
+    #
+    # [1flow.io] out: The following content types are stale and need to be deleted:
+    # [1flow.io] out:
+    # [1flow.io] out:     core | articlesstatistic
+    # [1flow.io] out:
+    # [1flow.io] out: Any objects related to these content types by a foreign key will also
+    # [1flow.io] out: be deleted. Are you sure you want to delete these content types?
+    # [1flow.io] out: If you're unsure, answer 'no'.
+    # [1flow.io] out:
+    #
+    # And this completely stops the migration process, because Fabric
+    # can't seem to get the terminal and I cannot type "yes" anywhere.
+
+    django_manage('migrate ' + (args or ''), prefix='yes yes | ')
 
     if 'transmeta' in remote_configuration.django_settings.INSTALLED_APPS:
         django_manage('sync_transmeta_db', prefix='yes | ')

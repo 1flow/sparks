@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from django import forms
-from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
+from django.template.defaultfilters import filesizeformat
+from django.utils.translation import ugettext_lazy as _
+
 
 from .models import EmailUser
 
@@ -82,3 +84,49 @@ class EmailUserChangeForm(forms.ModelForm):
         # This is done here, rather than on the field, because the
         # field does not have access to the initial value
         return self.initial["password"]
+
+
+class RestrictedFileField(forms.FileField):
+    """
+    Same as FileField, but you can specify:
+        * content_types - list containing allowed content_types.
+            Example: ['application/pdf', 'image/jpeg']
+        * max_upload_size - a number indicating the maximum file size
+            allowed for upload.
+            2.5MB - 2621440
+            5MB - 5242880
+            10MB - 10485760
+            20MB - 20971520
+            50MB - 5242880
+            100MB 104857600
+            250MB - 214958080
+            500MB - 429916160
+    """
+    def __init__(self, *args, **kwargs):
+        self.content_types   = kwargs.pop('content_types', None)
+        self.max_upload_size = kwargs.pop('max_upload_size', None)
+
+        super(RestrictedFileField, self).__init__(*args, **kwargs)
+
+    def clean(self, *args, **kwargs):
+        data = super(RestrictedFileField, self).clean(*args, **kwargs)
+
+        file = data.file
+        try:
+            content_type = file.content_type
+            if self.content_types and content_type in self.content_types:
+                if self.max_upload_size and file._size > self.max_upload_size:
+                    raise forms.ValidationError(_(u'File too big: currently {0}'
+                                                u', must be smaller than '
+                                                u'{1}.').format(
+                                                filesizeformat(file._size),
+                                                filesizeformat(
+                                                    self.max_upload_size)))
+            else:
+                raise forms.ValidationError(_(u'Filetype not supported. Valid '
+                                            u'ones are: %s') %
+                                            self.content_types)
+        except AttributeError:
+            pass
+
+        return data

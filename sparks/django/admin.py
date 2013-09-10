@@ -13,12 +13,10 @@ from django.db import transaction
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseRedirect, Http404
-from django.template.defaultfilters import slugify
 from django.shortcuts import get_object_or_404
 from django.contrib import admin
 from django.contrib import messages
 from django.template.response import TemplateResponse
-from django.contrib.admin.util import flatten_fieldsets
 from django.contrib.auth.forms import AdminPasswordChangeForm
 from django.utils.html import escape
 
@@ -59,7 +57,6 @@ def truncate_field(cls, field_name, truncate_length=None):
         field_name)[0].verbose_name
 
     return wrapped
-
 
 
 class UserAdmin(admin.ModelAdmin):
@@ -113,7 +110,7 @@ class UserAdmin(admin.ModelAdmin):
         from django.conf.urls import patterns
         return patterns('',
                         (r'^(\d+)/password/$',
-                        self.admin_site.admin_view(self.user_change_password))
+                         self.admin_site.admin_view(self.user_change_password))
                         ) + super(UserAdmin, self).get_urls()
 
     def lookup_allowed(self, lookup, value):
@@ -207,5 +204,3 @@ class UserAdmin(admin.ModelAdmin):
             request.POST['_continue'] = 1
         return super(UserAdmin, self).response_add(request, obj,
                                                    post_url_continue)
-
-
