@@ -230,7 +230,7 @@ def test(remote_configuration=None):
 def sys_easy_sudo(remote_configuration=None):
     """ Allow sudo to run without password for @sudo members. """
 
-    LOGGER.info('Installing sys_easy_sudo()…')
+    LOGGER.info('Checking sys_easy_sudo()…')
 
     if remote_configuration.is_osx:
         # GNU sed is needed for fabric `sed` command to succeed.
@@ -948,7 +948,7 @@ def lxc_host(remote_configuration=None):
         info("Skipped LXC host setup (not on LSB).")
         return
 
-    pkg.apt_add('lxc')
+    pkg.apt_add(('lxc', 'cgroup-lite', ))
 
 # ------------------------------------ Client or graphical applications
 
