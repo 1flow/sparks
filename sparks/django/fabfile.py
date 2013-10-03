@@ -1402,11 +1402,16 @@ def worker_options(context, has_djsettings, remote_configuration):
     role_name = get_current_role()
 
     if role_name in worker_roles:
-        command_post_args += '--hostname {1}-{0}'.format(
+        try:
+            short_hostname, domain_name = env.host_string.split('.', 1)
+        except:
+            short_hostname, domain_name = env.host_string, 'local'
+
+        command_post_args += '--hostname {0}-{1}.{2}'.format(
             # strip 'worker_', eg. display only 'net_medium' or
             # 'io_low'. Use a dash (and not a dot) so celery
             # displays [celeryd@hostname-queue…] in process lists.
-            role_name[7:], env.host_string)
+            short_hostname, role_name[7:], domain_name)
 
         sparks_options = getattr(env, 'sparks_options', {})
         worker_concurrency = sparks_options.get('worker_concurrency', {})
