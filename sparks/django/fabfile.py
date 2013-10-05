@@ -1188,7 +1188,7 @@ def push_environment_task(project_envs_dir, fast=False, force=False):
     # XXX: append SSH key only if not already appended.
 
 
-@task(task_class=DjangoTask)
+@task(task_class=DjangoTask, aliases=('env', 'environment', ))
 def push_environment(fast=False, force=False):
     """ Copy any environment file to the remote server in ``~/.env``,
         ready to be loaded by the shell when the user does anything.
