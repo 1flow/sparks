@@ -1249,7 +1249,7 @@ def git_update():
 
 @serial
 @task(alias='pull')
-def git_pull():
+def git_pull_task():
     """ Pull latest code from origin to remote,
         reload sparks settings if changes.
 
@@ -1274,6 +1274,15 @@ def git_pull():
                 LOGGER.exception('Cannot reload remote_settings! '
                                  '(you can safely ignore this warning on '
                                  'first deploy)')
+
+
+@task(task_class=DjangoTask, aliases=('pull', ))
+def git_pull(filename=None, confirm=True):
+
+    # re-wrap the internal task via execute() to catch roledefs.
+    # TODO: roles should be "__any__".except('db')
+    execute_or_not(git_pull_task, sparks_roles=['web'] + worker_roles[:]
+                       + ['beat', 'flower', 'shell'])
 
 
 @serial
