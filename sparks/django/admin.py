@@ -47,7 +47,7 @@ def truncate_field(cls, field_name, truncate_length=None):
         truncate_length = DEFAULT_TRUNCATE_LENGTH
 
     def wrapped(self, obj):
-        value = getattr(obj, field_name)
+        value = getattr(obj, field_name) or u'<NO_VALUE>'
 
         return value[:truncate_length] + (
             value[truncate_length:] and u'…')
