@@ -579,6 +579,13 @@ class ServiceRunner(SimpleObject):
             'project': env.project,
             'program': self.program_name,
             'hostname': env.host_string,
+            'set_python_encoding': ('''echo "import sys; sys.setdefaultencoding('%s')" ''' # NOQA
+                                    ''' > %s/.virtualenvs/%s/lib/python2.7/sitecustomize.py''' # NOQA
+                                    % (env.encoding, env.user_home
+                                           if hasattr(env, 'user_home')
+                                           else remote_configuration.tilde,
+                                       env.virtualenv))
+                if hasattr(env, 'encoding') else '',
             'user_home': env.user_home
                 if hasattr(env, 'user_home')
                 else remote_configuration.tilde,
@@ -1282,7 +1289,7 @@ def git_pull(filename=None, confirm=True):
     # re-wrap the internal task via execute() to catch roledefs.
     # TODO: roles should be "__any__".except('db')
     execute_or_not(git_pull_task, sparks_roles=['web'] + worker_roles[:]
-                       + ['beat', 'flower', 'shell'])
+                   + ['beat', 'flower', 'shell'])
 
 
 @serial
@@ -1694,7 +1701,7 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
                 raise RuntimeError('Is your local user account `{0}` a '
                                    'PostgreSQL administrator? it shoud be. '
                                    'To acheive it, please run:{1}'.format(
-                                   pwd.getpwuid(os.getuid()).pw_name, '''
+                                       pwd.getpwuid(os.getuid()).pw_name, '''
     sudo su - postgres
     USER=<your-username-here>
     PASS=<your-password-here>
@@ -1751,12 +1758,12 @@ def migrate(remote_configuration=None, args=None):
 
     # Sometimes, we've got:
     #
-    # [1flow.io] out: The following content types are stale and need to be deleted:
+    # [1flow.io] out: The following content types are stale and need to be deleted: # NOQA
     # [1flow.io] out:
     # [1flow.io] out:     core | articlesstatistic
     # [1flow.io] out:
-    # [1flow.io] out: Any objects related to these content types by a foreign key will also
-    # [1flow.io] out: be deleted. Are you sure you want to delete these content types?
+    # [1flow.io] out: Any objects related to these content types by a foreign key will also # NOQA
+    # [1flow.io] out: be deleted. Are you sure you want to delete these content types? # NOQA
     # [1flow.io] out: If you're unsure, answer 'no'.
     # [1flow.io] out:
     #
