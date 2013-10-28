@@ -579,6 +579,13 @@ class ServiceRunner(SimpleObject):
             'project': env.project,
             'program': self.program_name,
             'hostname': env.host_string,
+            'set_python_encoding': ('''echo "import sys; sys.setdefaultencoding('%s')" ''' # NOQA
+                                    ''' > %s/.virtualenvs/%s/lib/python2.7/sitecustomize.py''' # NOQA
+                                    % (env.encoding, env.user_home
+                                           if hasattr(env, 'user_home')
+                                           else remote_configuration.tilde,
+                                       env.virtualenv))
+                if hasattr(env, 'encoding') else '',
             'user_home': env.user_home
                 if hasattr(env, 'user_home')
                 else remote_configuration.tilde,

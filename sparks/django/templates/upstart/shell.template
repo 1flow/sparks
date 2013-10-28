@@ -24,6 +24,7 @@ end script
 
 script
     . %(user_home)s/.env
+    %(set_python_encoding)s
     exec %(nice)s %(ionice)s %(command_pre_args)s %(user_home)s/.virtualenvs/%(virtualenv)s/bin/python %(root)s/manage.py shell_ipynb %(command_post_args)s >> %(user_home)s/logs/%(program)s.log 2>&1
 end script
 
