@@ -579,12 +579,16 @@ class ServiceRunner(SimpleObject):
             'project': env.project,
             'program': self.program_name,
             'hostname': env.host_string,
-            'set_python_encoding': ('''echo "import sys; sys.setdefaultencoding('%s')" ''' # NOQA
-                                    ''' > %s/.virtualenvs/%s/lib/python2.7/sitecustomize.py''' # NOQA
-                                    % (env.encoding, env.user_home
-                                           if hasattr(env, 'user_home')
-                                           else remote_configuration.tilde,
-                                       env.virtualenv))
+            #
+            # MEGA HEADS UP: update this when we switch to Python 3…
+            #
+            'set_python_encoding': ('''echo "import sys; sys.setdefaultencoding('{0}')" ''' # NOQA
+                                    ''' > {1}/.virtualenvs/{2}/lib/python2.7/sitecustomize.py''').format( # NOQA
+                                    env.encoding,
+                                    env.user_home
+                                       if hasattr(env, 'user_home')
+                                       else remote_configuration.tilde,
+                                    env.virtualenv)
                 if hasattr(env, 'encoding') else '',
             'user_home': env.user_home
                 if hasattr(env, 'user_home')
