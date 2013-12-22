@@ -1016,8 +1016,16 @@ def graph(remote_configuration=None):
     elif remote_configuration.lsb.RELEASE == '12.04':
         pkg.apt.ppa_pkg('ppa:myunity/ppa', 'myunity', '/usr/bin/myunity')
 
-    pkg.apt.ppa_pkg('ppa:tiheum/equinox', ('faience-icon-theme',
-                    'faenza-icon-theme'), '/usr/share/icons/Faenza')
+    if remote_configuration.lsb.RELEASE == '13.10':
+    
+        if not exists('/usr/share/icons/Faenza'):
+            run(u'wget https://launchpad.net/~tiheum/+archive/equinox/+files/'
+                u'faenza-icon-theme_1.3.1_all.deb -O /tmp/faenza.deb && '
+                u'sudo dpkg -i /tmp/faenza.deb')
+    else:
+        pkg.apt.ppa_pkg('ppa:tiheum/equinox', ('faience-icon-theme',
+                        'faenza-icon-theme'), '/usr/share/icons/Faenza')
+                        
     pkg.apt.ppa_pkg('ppa:caffeine-developers/ppa',
                     'caffeine', '/usr/bin/caffeine')
     #pkg.apt.ppa_pkg('ppa:conscioususer/polly-unstable',
