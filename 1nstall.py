@@ -15,7 +15,13 @@ if __package__ is None:
     sys.path.append(os.path.expanduser('~/Dropbox'))
 
 from sparks import fabric as sf
+from sparks.fabric import utils
 
+
+# If we are running this script more than once, Fabric is likely to be 
+# installed at calls+1. We set `host_string` to localhost to avoid it
+# stopping the automatic installation for asking us the obvious answer.
+sf.env.host_string = 'localhost'
 DROPBOX_PATH = os.path.expanduser('~/Dropbox')
 
 
@@ -33,7 +39,7 @@ def main(remote_configuration=None):
                         pass
 
             for filename in ('bashrc', 'ssh'):
-                sf.nofabric.run('ln -sf %s ~/.%s' % (sf.dotfiles('dot.%s'
+                sf.nofabric.run('ln -sf %s ~/.%s' % (utils.dotfiles('dot.%s'
                                 % filename), filename))
 
         sf.nofabric.sudo('apt-get update')
