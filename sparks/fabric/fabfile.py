@@ -118,11 +118,11 @@ def install_sublime(remote_configuration=None, overwrite=False):
         if overwrite or not exists('/opt/sublime2'):
             if remote_configuration.uname.machine == 'x86_64':
                 url = 'http://c758482.r82.cf2.rackcdn.com/' \
-                      + 'Sublime%20Text%202.0.1%20x64.tar.bz2'
+                      + 'Sublime%20Text%202.0.2%20x64.tar.bz2'
 
             else:
                 url = 'http://c758482.r82.cf2.rackcdn.com/' \
-                      + 'Sublime%20Text%202.0.1.tar.bz2'
+                      + 'Sublime%20Text%202.0.2.tar.bz2'
 
             run('wget -q -O /var/tmp/sublime.tar.bz2 %s' % url)
 
