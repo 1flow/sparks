@@ -147,6 +147,28 @@ def install_sublime(remote_configuration=None, overwrite=False):
 
 @task
 @with_remote_configuration
+def install_spotify(remote_configuration=None, overwrite=False):
+    """ Install on Linux via the Labs repository. """
+
+    if remote_configuration.is_osx:
+        if not exists('/Applications/Spotify.app'):
+            info("Please install Spotify manually.")
+
+    else:
+        if overwrite or not exists('/usr/bin/spotify'):
+
+        sudo('apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 94558F59')
+        
+        append('/etc/apt/sources.list.d/spotify.list',
+               'deb http://repository.spotify.com stable non-free',
+               use_sudo=True)
+
+        pkg.apt_update()
+        pkg.apt_add('spotify-client')
+
+
+@task
+@with_remote_configuration
 def install_homebrew(remote_configuration=None):
     """ Install Homebrew on OSX from http://mxcl.github.com/homebrew/ """
 
@@ -1095,6 +1117,7 @@ def myapps(remote_configuration=None):
     if not remote_configuration.is_vm:
         # No need to pollute the VM with wine,
         # I already have 1Password installed under OSX.
+        install_spotify()
         install_1password()
 
 
