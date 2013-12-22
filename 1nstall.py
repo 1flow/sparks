@@ -9,6 +9,9 @@
 import sys
 import os
 import pwd
+import logging
+
+LOGGER = logging.getLogger(__name__)
 
 if __package__ is None:
     # See ./fabfile.py for explanations
@@ -54,17 +57,16 @@ def main(remote_configuration=None):
 
     sf.nofabric.sudo('pip install fabric')
 
-    if os.path.exists(DROPBOX_PATH):
-        cd_to = '~/Dropbox/configuration'
-    else:
-        cd_to = '.'
-
     if pwd.getpwuid(os.getuid()).pw_name in ('olive', 'karmak23'):
         task = 'myenv'
     else:
         task = 'dev'
 
-    os.system('cd "{0}"; fab -H localhost {1}'.format(cd_to, task))
+    command = 'cd ~/ ; fab -f "{0}/fabfile.py" -H localhost {1}'.format(
+        os.path.dirname(sys.argv[0]), task)
+
+    LOGGER.info(u'Now running "%s"', command)
+    os.system(command)
 
 if __name__ == '__main__':
     main()
