@@ -140,8 +140,8 @@ def install_sublime(remote_configuration=None, overwrite=False):
         run('chmod 755 %s' % executable, quiet=True)
 
         if overwrite or not exists('/usr/share/applications/sublime2.desktop'):
-            put(os.path.join('Dropbox', 'configuration', 'data',
-                'sublime2.desktop'),
+            put(os.path.join(os.path.expanduser('~'), 'Dropbox', 'configuration', 
+                'data', 'sublime2.desktop'),
                 '/usr/share/applications', use_sudo=True)
 
 
