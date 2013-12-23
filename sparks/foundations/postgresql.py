@@ -16,9 +16,9 @@
         # to avoid using the `postgres` system user.
         sudo su - postgres
         createuser --login --no-inherit \
-            --createdb --createrole --superuser `whoami`
+            --createdb --createrole --superuser MYUSERNAME
         psql
-            ALTER USER `whoami` WITH ENCRYPTED PASSWORD 'MAKE_ME_STRONG';
+            ALTER USER MYUSERNAME WITH ENCRYPTED PASSWORD 'MAKE_ME_STRONG';
         [exit]
 
         # Then, I create the other admin user which will handle all fabric
@@ -38,7 +38,7 @@
 import os
 import pwd
 import logging
-from fabric.api import env
+from fabric.api import env, sudo
 from ..fabric import with_remote_configuration, is_local_environment
 
 LOGGER = logging.getLogger(__name__)
@@ -61,6 +61,40 @@ SELECT_DB   = BASE_CMD.format(pg_env='{pg_env}',
                               "WHERE datname = '{db}';")
 CREATE_DB   = BASE_CMD.format(pg_env='{pg_env}',
                               sqlcmd="CREATE DATABASE {db} OWNER {user};")
+
+
+def wrapped_sudo(*args, **kwargs):
+    """ Avoid the nasty "Sessions still open" false-positive error on ecryptfs.
+        Eg.:
+
+        [localhost] sudo: PGHOST=127.0.0.1 psql -tc "ALTER USER ···"
+        [localhost] out:
+        [localhost] out: Sessions still open, not unmounting
+        [localhost] out:
+
+        Fatal error: sudo() received nonzero return code 1 while executing!
+
+        Thanks http://serverfault.com/q/415602/166356
+
+    """
+
+    original_must_fail = False
+
+    if not 'warn_only' in kwargs:
+        original_must_fail  = True
+        kwargs['warn_only'] = True
+
+    result = sudo(*args, **kwargs)
+
+    if result.failed:
+        if u'Sessions still open, not unmounting' in result.stdout:
+            result.failed    = False
+            result.succeeded = True
+
+        elif original_must_fail:
+            # Until Fabric 2.0, we have no exception class
+            # cf. https://github.com/fabric/fabric/issues/277
+            raise Exception('Command failed')
 
 
 @with_remote_configuration
