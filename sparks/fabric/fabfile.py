@@ -1147,8 +1147,9 @@ def mydevenv(remote_configuration=None):
     # Not yet ready
     #git_clone_or_update('1flow', 'dev.1flow.net:/home/groups/oneflow.git')
 
-    git_clone_or_update('licorn', 'dev.licorn.org:/home/groups/licorn.git')
-    git_clone_or_update('mylicorn', 'my.licorn.org:/home/groups/mylicorn.git')
+    LOGGER.warning(u'Licorn® repositories disabled.')
+    #git_clone_or_update('licorn', 'dev.licorn.org:/home/groups/licorn.git')
+    #git_clone_or_update('mylicorn', 'my.licorn.org:/home/groups/mylicorn.git')
 
 
 @task
