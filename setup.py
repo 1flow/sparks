@@ -22,7 +22,7 @@ setup(
     description="My Django project & cloud deployment library (Fabric based)",
     url="https://github.com/Karmak23/sparks",
     packages=find_packages(),
-    install_requires=['Fabric'],
+    install_requires=['Fabric', 'paramiko'],
     keywords=(
         'installation',
         'management',
