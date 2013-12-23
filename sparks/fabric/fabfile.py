@@ -157,14 +157,14 @@ def install_spotify(remote_configuration=None, overwrite=False):
     else:
         if overwrite or not exists('/usr/bin/spotify'):
 
-        sudo('apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 94558F59')
-        
-        append('/etc/apt/sources.list.d/spotify.list',
-               'deb http://repository.spotify.com stable non-free',
-               use_sudo=True)
+            sudo('apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 94558F59')
+            
+            append('/etc/apt/sources.list.d/spotify.list',
+                   'deb http://repository.spotify.com stable non-free',
+                   use_sudo=True)
 
-        pkg.apt_update()
-        pkg.apt_add('spotify-client')
+            pkg.apt_update()
+            pkg.apt_add('spotify-client')
 
 
 @task
