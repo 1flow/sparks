@@ -53,7 +53,7 @@ from ..fabric import (fabfile, all_roles, worker_roles,
                       execute_or_not, get_current_role,
                       worker_information_from_role, QUIET)
 from ..pkg import brew, apt
-from ..foundations import postgresql as pg, wrapped_sudo
+from ..foundations import postgresql as pg
 from ..foundations.classes import SimpleObject
 
 # Use this in case paramiko seems to go crazy. Trust me, it can do, especially
@@ -1713,7 +1713,7 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
     echo "ALTER USER ${USER} WITH ENCRYPTED PASSWORD '${PASS}';" | psql
     [exit]
 
-To avoid invisible password interactions via Fabric/psql, 
+To avoid invisible password interactions via Fabric/psql,
 you should also setup the following in /etc/···/pg_hba.conf:
 
 local    all    <MYUSERNAME>    trust
@@ -1729,15 +1729,16 @@ local    all    <MYUSERNAME>    trust
                                    '“template1” if unset, which is safe).')
 
         if db_user_result.strip() in ('', 'Password:'):
-            wrapped_sudo(pg.CREATE_USER.format(
-                 pg_env=pg_env, user=user, password=password))
+            pg.wrapped_sudo(pg.CREATE_USER.format(
+                pg_env=pg_env, user=user, password=password))
         else:
-            wrapped_sudo(pg.ALTER_USER.format(pg_env=pg_env,
-                         user=user, password=password))
+            pg.wrapped_sudo(pg.ALTER_USER.format(pg_env=pg_env,
+                            user=user, password=password))
 
-
-        if wrapped_sudo(pg.SELECT_DB.format(pg_env=pg_env, db=db)).strip() == '':
-            wrapped_sudo(pg.CREATE_DB.format(pg_env=pg_env, db=db, user=user))
+        if pg.wrapped_sudo(pg.SELECT_DB.format(pg_env=pg_env,
+                           db=db)).strip() == '':
+            pg.wrapped_sudo(pg.CREATE_DB.format(pg_env=pg_env,
+                            db=db, user=user))
 
     LOGGER.info('Done checking database setup.')
 
