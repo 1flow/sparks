@@ -87,7 +87,7 @@ def wrapped_sudo(*args, **kwargs):
     result = sudo(*args, **kwargs)
 
     if result.failed:
-        if u'Sessions still open, not unmounting' in result.stdout:
+        if u'Sessions still open, not unmounting' in result:
             result.failed    = False
             result.succeeded = True
 
@@ -95,6 +95,8 @@ def wrapped_sudo(*args, **kwargs):
             # Until Fabric 2.0, we have no exception class
             # cf. https://github.com/fabric/fabric/issues/277
             raise Exception('Command failed')
+
+    return result
 
 
 @with_remote_configuration
