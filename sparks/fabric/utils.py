@@ -1,10 +1,25 @@
 # -*- coing: utf-8 -*-
 
 import os
+import logging
 
 from . import with_remote_configuration, exists, local, run
 
+LOGGER = logging.getLogger(__name__)
+
+
 # ======================================================================= Utils
+
+
+SPARKS_DOTFILES_PATH = os.environ.get('DOTFILES', None)
+
+
+if SPARKS_DOTFILES_PATH is None:
+    LOGGER.info(u'SPARKS_DOTFILES_PATH is unset, using default value '
+                u'"~/Dropbox/configuration/dotfiles".')
+    SPARKS_DOTFILES_PATH = 'Dropbox/configuration/dotfiles'
+else:
+    LOGGER.info(u'Using SPARKS_DOTFILES_PATH="%s".', SPARKS_DOTFILES_PATH)
 
 
 def list_or_split(pkgs):
@@ -66,7 +81,7 @@ def dotfiles(filename):
 
         .. note:: use with :func:`tilde` to get full path.
             Eg. ``tilde(dotfiles('dot.bashrc'))`` =>
-            ``/home/olive/Dropbox/dotfiles/dot.bashrc``.
+            ``/home/olive/Dropbox/configuration/dotfiles/dot.bashrc``.
     """
 
-    return os.path.join('Dropbox/configuration/dotfiles', filename)
+    return os.path.join(SPARKS_DOTFILES_PATH, filename)

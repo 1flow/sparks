@@ -17,6 +17,7 @@ from ..foundations.classes import SimpleObject
 from ..contrib import lsb_release
 
 from . import nofabric
+# Cannot import "utils" here, circular loop.
 
 try:
     from fabric.api              import env, execute, task
@@ -78,9 +79,10 @@ except ImportError:
     # Everything will fail except the base system detection. We define the bare
     # minimum for it to work on a local Linux/OSX system.
 
-    run   = nofabric.run # NOQA
-    local = nofabric.local # NOQA
-    sudo  = nofabric.sudo # NOQA
+    run    = nofabric.run # NOQA
+    local  = nofabric.local # NOQA
+    sudo   = nofabric.sudo # NOQA
+    exists = nofabric.exists # NOQA
 
 
 # Global way to turn all of this module silent.

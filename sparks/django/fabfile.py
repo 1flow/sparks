@@ -1712,6 +1712,12 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
     createuser --login --no-inherit --createdb --createrole --superuser ${USER}
     echo "ALTER USER ${USER} WITH ENCRYPTED PASSWORD '${PASS}';" | psql
     [exit]
+
+To avoid invisible password interactions via Fabric/psql,
+you should also setup the following in /etc/···/pg_hba.conf:
+
+local    all    <MYUSERNAME>    trust
+
 '''))
             else:
                 raise RuntimeError('Your remote system lacks a dedicated '
@@ -1723,14 +1729,16 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
                                    '“template1” if unset, which is safe).')
 
         if db_user_result.strip() in ('', 'Password:'):
-            sudo(pg.CREATE_USER.format(
-                 pg_env=pg_env, user=user, password=password))
+            pg.wrapped_sudo(pg.CREATE_USER.format(
+                pg_env=pg_env, user=user, password=password))
         else:
-            sudo(pg.ALTER_USER.format(pg_env=pg_env,
-                 user=user, password=password))
+            pg.wrapped_sudo(pg.ALTER_USER.format(pg_env=pg_env,
+                            user=user, password=password))
 
-        if sudo(pg.SELECT_DB.format(pg_env=pg_env, db=db)).strip() == '':
-            sudo(pg.CREATE_DB.format(pg_env=pg_env, db=db, user=user))
+        if pg.wrapped_sudo(pg.SELECT_DB.format(pg_env=pg_env,
+                           db=db)).strip() == '':
+            pg.wrapped_sudo(pg.CREATE_DB.format(pg_env=pg_env,
+                            db=db, user=user))
 
     LOGGER.info('Done checking database setup.')
 

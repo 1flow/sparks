@@ -9,7 +9,10 @@ Used in :program:`1nstall` and when fabric is not available.
 
 """
 
+import logging
 import subprocess
+
+LOGGER = logging.getLogger(__name__)
 
 
 class _AttributeString(str):
@@ -18,7 +21,24 @@ class _AttributeString(str):
     @property
     def stdout(self):
         return str(self)
+        
+def exists(filename, *a, **kw):
 
+    try:
+        exists = os.path.exists(filename)
+      
+    except Exception as e:
+        output           = _AttributeString(e)
+        output.command   = command
+        output.failed    = True
+        output.succeeded = False
+
+    else:
+        output.command   = command
+        output.failed    = False
+        output.succeeded = True
+
+    return output
 
 def run(command, *a, **kw):
 

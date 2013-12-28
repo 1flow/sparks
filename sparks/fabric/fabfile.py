@@ -118,11 +118,11 @@ def install_sublime(remote_configuration=None, overwrite=False):
         if overwrite or not exists('/opt/sublime2'):
             if remote_configuration.uname.machine == 'x86_64':
                 url = 'http://c758482.r82.cf2.rackcdn.com/' \
-                      + 'Sublime%20Text%202.0.1%20x64.tar.bz2'
+                      + 'Sublime%20Text%202.0.2%20x64.tar.bz2'
 
             else:
                 url = 'http://c758482.r82.cf2.rackcdn.com/' \
-                      + 'Sublime%20Text%202.0.1.tar.bz2'
+                      + 'Sublime%20Text%202.0.2.tar.bz2'
 
             run('wget -q -O /var/tmp/sublime.tar.bz2 %s' % url)
 
@@ -140,9 +140,31 @@ def install_sublime(remote_configuration=None, overwrite=False):
         run('chmod 755 %s' % executable, quiet=True)
 
         if overwrite or not exists('/usr/share/applications/sublime2.desktop'):
-            put(os.path.join('Dropbox', 'configuration', 'data',
-                'sublime2.desktop'),
+            put(os.path.join(os.path.expanduser('~'), 'Dropbox', 'configuration', 
+                'data', 'sublime2.desktop'),
                 '/usr/share/applications', use_sudo=True)
+
+
+@task
+@with_remote_configuration
+def install_spotify(remote_configuration=None, overwrite=False):
+    """ Install on Linux via the Labs repository. """
+
+    if remote_configuration.is_osx:
+        if not exists('/Applications/Spotify.app'):
+            info("Please install Spotify manually.")
+
+    else:
+        if overwrite or not exists('/usr/bin/spotify'):
+
+            sudo('apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 94558F59')
+            
+            append('/etc/apt/sources.list.d/spotify.list',
+                   'deb http://repository.spotify.com stable non-free',
+                   use_sudo=True)
+
+            pkg.apt_update()
+            pkg.apt_add('spotify-client')
 
 
 @task
@@ -1016,8 +1038,16 @@ def graph(remote_configuration=None):
     elif remote_configuration.lsb.RELEASE == '12.04':
         pkg.apt.ppa_pkg('ppa:myunity/ppa', 'myunity', '/usr/bin/myunity')
 
-    pkg.apt.ppa_pkg('ppa:tiheum/equinox', ('faience-icon-theme',
-                    'faenza-icon-theme'), '/usr/share/icons/Faenza')
+    if remote_configuration.lsb.RELEASE == '13.10':
+    
+        if not exists('/usr/share/icons/Faenza'):
+            run(u'wget https://launchpad.net/~tiheum/+archive/equinox/+files/'
+                u'faenza-icon-theme_1.3.1_all.deb -O /tmp/faenza.deb && '
+                u'sudo dpkg -i /tmp/faenza.deb')
+    else:
+        pkg.apt.ppa_pkg('ppa:tiheum/equinox', ('faience-icon-theme',
+                        'faenza-icon-theme'), '/usr/share/icons/Faenza')
+                        
     pkg.apt.ppa_pkg('ppa:caffeine-developers/ppa',
                     'caffeine', '/usr/bin/caffeine')
     #pkg.apt.ppa_pkg('ppa:conscioususer/polly-unstable',
@@ -1087,6 +1117,7 @@ def myapps(remote_configuration=None):
     if not remote_configuration.is_vm:
         # No need to pollute the VM with wine,
         # I already have 1Password installed under OSX.
+        install_spotify()
         install_1password()
 
 
@@ -1116,8 +1147,9 @@ def mydevenv(remote_configuration=None):
     # Not yet ready
     #git_clone_or_update('1flow', 'dev.1flow.net:/home/groups/oneflow.git')
 
-    git_clone_or_update('licorn', 'dev.licorn.org:/home/groups/licorn.git')
-    git_clone_or_update('mylicorn', 'my.licorn.org:/home/groups/mylicorn.git')
+    LOGGER.warning(u'Licorn® repositories disabled.')
+    #git_clone_or_update('licorn', 'dev.licorn.org:/home/groups/licorn.git')
+    #git_clone_or_update('mylicorn', 'my.licorn.org:/home/groups/mylicorn.git')
 
 
 @task
