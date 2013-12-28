@@ -90,6 +90,8 @@ def wrapped_sudo(*args, **kwargs):
         if u'Sessions still open, not unmounting' in result:
             result.failed    = False
             result.succeeded = True
+            result.replace(u'Sessions still open, not unmounting\n',
+                           u'')
 
         elif original_must_fail:
             # Until Fabric 2.0, we have no exception class
