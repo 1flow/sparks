@@ -43,7 +43,8 @@ from ..fabric import with_remote_configuration, is_local_environment
 
 LOGGER = logging.getLogger(__name__)
 
-BASE_CMD    = '{pg_env} psql -tc "{sqlcmd}"'
+# Never ask for a password, return tuples only (no headers), execute command.
+BASE_CMD = '{pg_env} psql -wtc "{sqlcmd}"'
 
 # {pg_env} is intentionnaly repeated, it will be filled later.
 # Without repeating it, `.format()` will fail with `KeyError`.
@@ -78,25 +79,34 @@ def wrapped_sudo(*args, **kwargs):
 
     """
 
-    original_must_fail = False
+    if 'warn_only' in kwargs:
+        #original_must_fail = False
+        pass
 
-    if not 'warn_only' in kwargs:
-        original_must_fail  = True
+    else:
+        #original_must_fail  = True
         kwargs['warn_only'] = True
 
     result = sudo(*args, **kwargs)
 
-    if result.failed:
-        if u'Sessions still open, not unmounting' in result:
-            result.failed    = False
-            result.succeeded = True
-            result.replace(u'Sessions still open, not unmounting\n',
-                           u'')
+    if u'Sessions still open, not unmounting' in result:
 
-        elif original_must_fail:
-            # Until Fabric 2.0, we have no exception class
-            # cf. https://github.com/fabric/fabric/issues/277
-            raise Exception('Command failed')
+        from ..fabric.nofabric import _AttributeString
+
+        result2 = _AttributeString(result.replace(
+                                   u'Sessions still open, '
+                                   u'not unmounting', u''))
+
+        #if original_must_fail:
+        #    # Until Fabric 2.0, we have no exception class
+        #    # cf. https://github.com/fabric/fabric/issues/277
+        #    raise Exception('Command failed')
+
+        if result.failed:
+            result2.failed    = False
+            result2.succeeded = True
+
+        result = result2
 
     return result
 
