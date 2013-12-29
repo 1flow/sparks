@@ -140,8 +140,8 @@ def install_sublime(remote_configuration=None, overwrite=False):
         run('chmod 755 %s' % executable, quiet=True)
 
         if overwrite or not exists('/usr/share/applications/sublime2.desktop'):
-            put(os.path.join(os.path.expanduser('~'), 'Dropbox', 'configuration', 
-                'data', 'sublime2.desktop'),
+            put(os.path.join(os.path.expanduser('~'), 'Dropbox',
+                'configuration', 'data', 'sublime2.desktop'),
                 '/usr/share/applications', use_sudo=True)
 
 
@@ -157,8 +157,9 @@ def install_spotify(remote_configuration=None, overwrite=False):
     else:
         if overwrite or not exists('/usr/bin/spotify'):
 
-            sudo('apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 94558F59')
-            
+            sudo(u'apt-key adv --keyserver keyserver.ubuntu.com '
+                 u'--recv-keys 94558F59')
+
             append('/etc/apt/sources.list.d/spotify.list',
                    'deb http://repository.spotify.com stable non-free',
                    use_sudo=True)
@@ -1039,7 +1040,7 @@ def graph(remote_configuration=None):
         pkg.apt.ppa_pkg('ppa:myunity/ppa', 'myunity', '/usr/bin/myunity')
 
     if remote_configuration.lsb.RELEASE == '13.10':
-    
+
         if not exists('/usr/share/icons/Faenza'):
             run(u'wget https://launchpad.net/~tiheum/+archive/equinox/+files/'
                 u'faenza-icon-theme_1.3.1_all.deb -O /tmp/faenza.deb && '
@@ -1047,12 +1048,20 @@ def graph(remote_configuration=None):
     else:
         pkg.apt.ppa_pkg('ppa:tiheum/equinox', ('faience-icon-theme',
                         'faenza-icon-theme'), '/usr/share/icons/Faenza')
-                        
+
     pkg.apt.ppa_pkg('ppa:caffeine-developers/ppa',
                     'caffeine', '/usr/bin/caffeine')
     #pkg.apt.ppa_pkg('ppa:conscioususer/polly-unstable',
     #                 'polly', '/usr/bin/polly')
-    pkg.apt.ppa_pkg('ppa:kilian/f.lux', 'fluxgui', '/usr/bin/fluxgui')
+    #
+    # pkg.apt.ppa_pkg('ppa:kilian/f.lux', 'fluxgui', '/usr/bin/fluxgui')
+    # pkg.apt.ppa_pkg('ppa:jonls/redshift-ppa',
+    #                 'redshift', '/usr/bin/redshift')
+    if remote_configuration.lsb.RELEASE == '13.10':
+        pkg.apt_add(('gtk-redshift', ))
+
+    elif remote_configuration.lsb.RELEASE.startswith('14'):
+        pkg.apt_add(('redshift-gtk', ))
 
 
 @task(aliases=('graphkbd', 'kbd', ))
@@ -1215,8 +1224,8 @@ def myfullenv(remote_configuration=None):
 
     # ask questions last, when everything else has been installed / setup.
     if not remote_configuration.is_osx and confirm(
-                'Reinstall bcmwl-kernel-source (MacbookAir(3,2) late 2010)?',
-                default=False):
+        'Reinstall bcmwl-kernel-source (MacbookAir(3,2) late 2010)?',
+            default=False):
         # Reinstall / rebuild the BCM wlan driver.
         # NM should detect and re-connect automatically at the end.
         sudo('apt-get install --reinstall bcmwl-kernel-source')
