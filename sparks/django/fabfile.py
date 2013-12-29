@@ -1697,15 +1697,21 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
     with settings(sudo_user=pg.get_admin_user()):
 
         # WARNING: don't .strip() here, else we fail Fabric's attributes.
-        db_user_result = sudo(pg.SELECT_USER.format(
-                pg_env=pg_env, user=user), warn_only=True)
+        db_user_result = pg.wrapped_sudo(pg.SELECT_USER.format(
+            pg_env=pg_env, user=user), warn_only=True)
 
-        if db_user_result.failed:
-            if is_local_environment():
-                raise RuntimeError('Is your local user account `{0}` a '
-                                   'PostgreSQL administrator? it shoud be. '
-                                   'To acheive it, please run:{1}'.format(
-                                       pwd.getpwuid(os.getuid()).pw_name, '''
+        if db_user_result.strip() == '':
+            create_user_result = pg.wrapped_sudo(pg.CREATE_USER.format(
+                pg_env=pg_env, user=user, password=password), warn_only=True)
+
+            if not 'CREATE ROLE' in create_user_result:
+                if is_local_environment():
+                    raise RuntimeError(u'Is your local user account `{0}` a '
+                                       u'PostgreSQL administrator? it shoud '
+                                       u'be. To acheive it, please '
+                                       u'run:{1}'.format(
+                                           pwd.getpwuid(os.getuid()).pw_name,
+                                           '''
     sudo su - postgres
     USER=<your-username-here>
     PASS=<your-password-here>
@@ -1719,18 +1725,18 @@ you should also setup the following in /etc/···/pg_hba.conf:
 local    all    <MYUSERNAME>    trust
 
 '''))
-            else:
-                raise RuntimeError('Your remote system lacks a dedicated '
-                                   'PostgreSQL administrator account. Did '
-                                   'you create one? You can specify it via '
-                                   'environment variables $SPARKS_PG_SUPERUSER '
-                                   ' and $SPARKS_PG_SUPERPASS. You can also '
-                                   'specify $SPARKS_PG_TMPL_DB (defaults to '
-                                   '“template1” if unset, which is safe).')
+                else:
+                    # NOTE: template0 is OK on linux, but not available on OSX.
+                    raise RuntimeError(u'Your remote system lacks a dedicated '
+                                       u'PostgreSQL administrator account. '
+                                       u'Did you create one? You can specify '
+                                       u'it via environment variables '
+                                       u'$SPARKS_PG_SUPERUSER and '
+                                       u'$SPARKS_PG_SUPERPASS. You can also '
+                                       u'specify $SPARKS_PG_TMPL_DB (defaults '
+                                       u' to “template1” if unset, which is '
+                                       u'safe).')
 
-        if db_user_result.strip() in ('', 'Password:'):
-            pg.wrapped_sudo(pg.CREATE_USER.format(
-                pg_env=pg_env, user=user, password=password))
         else:
             pg.wrapped_sudo(pg.ALTER_USER.format(pg_env=pg_env,
                             user=user, password=password))
