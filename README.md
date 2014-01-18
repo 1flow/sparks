@@ -206,3 +206,7 @@ Then, i run:
 Which will clone the powerline GIT repository in the remote machines and configure their SSHds to accept the local exported variable. With that setup, I don't need to run the full `install_powerline` target on them, so they don't get the powerline font installed (which is useless on a remote headless server).
 
 And after that, I can enjoy powerline everywhere, but the font is only installed on my laptop or PC.
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/1flow/sparks/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
