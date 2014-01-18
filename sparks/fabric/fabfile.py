@@ -1036,6 +1036,9 @@ def graph(remote_configuration=None):
         pkg.apt.ppa_pkg('ppa:freyja-dev/unity-tweak-tool-daily',
                         'unity-tweak-tool', '/usr/bin/unity-tweak-tool')
 
+        pkg.apt.ppa_pkg('ppa:gwendal-lebihan-dev/cinnamon-stable',
+                        ('nemo', 'nemo-fileroller'), '/usr/bin/nemo')
+
     elif remote_configuration.lsb.RELEASE == '12.04':
         pkg.apt.ppa_pkg('ppa:myunity/ppa', 'myunity', '/usr/bin/myunity')
 
