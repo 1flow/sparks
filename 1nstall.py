@@ -24,7 +24,12 @@ from sparks.fabric import utils
 # If we are running this script more than once, Fabric is likely to be 
 # installed at calls+1. We set `host_string` to localhost to avoid it
 # stopping the automatic installation for asking us the obvious answer.
-sf.env.host_string = 'localhost'
+try:
+    sf.env.host_string = 'localhost'
+
+except AttributeError:
+    pass
+
 DROPBOX_PATH = os.path.expanduser('~/Dropbox')
 
 
