@@ -224,8 +224,10 @@ def install_powerline(remote_configuration=None):
             git_clone_or_update('ubuntu-mono-powerline-ttf',
                                 'https://github.com/pdf/'
                                 'ubuntu-mono-powerline-ttf.git')
-            run('cp ubuntu-mono-powerline-ttf/*.ttf %s'
-                % tilde('Library/Fonts/UbuntuMono-B-Powerline.ttf'))
+
+            with cd(tilde('sources')):
+                run('cp ubuntu-mono-powerline-ttf/*.ttf %s'
+                    % tilde('Library/Fonts'))
 
     else:
         if not exists(tilde('.fonts/ubuntu-mono-powerline-ttf')):
@@ -962,6 +964,38 @@ def deployment(remote_configuration=None):
     pkg.pip2_add(('fabric', ))
 
 
+@task
+@with_remote_configuration
+def docker(remote_configuration=None):
+    """ Docker local runner (containers manager). """
+
+    warning("This functions is not yet implemented.")
+
+    """
+    # http://docs.docker.io/en/latest/installation/ubuntulinux/#ubuntu-precise
+
+    sudo apt-get update
+    sudo apt-get install linux-image-generic-lts-raring linux-headers-generic-lts-raring
+    sudo reboot
+
+    sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 36A1D7869245C8950F966E92D8576A8BA88D21E9
+    sudo sh -c "echo deb http://get.docker.io/ubuntu docker main > /etc/apt/sources.list.d/docker.list"
+    sudo apt-get update
+    sudo apt-get install lxc-docker
+
+    sudo docker run -i -t ubuntu /bin/bash
+        exit
+
+    docker images
+
+
+
+
+    """
+
+    return
+
+
 @task(aliases=('lxc_runner', ))
 @with_remote_configuration
 def lxc_host(remote_configuration=None):
@@ -1179,7 +1213,8 @@ def mydotfiles(overwrite=False, locally=False, remote_configuration=None):
                          'gitconfig', 'gitignore', 'dupload.conf',
                          'multitailrc'):
             symlink(dotfiles('dot.%s' % filename),
-                    '.%s' % filename, overwrite=overwrite, locally=locally)
+                    os.path.join(tilde(), '.%s' % filename),
+                    overwrite=overwrite, locally=locally)
 
         if not remote_configuration.is_osx:
             if not exists('.config'):
@@ -1263,7 +1298,12 @@ def lxc_base(remote_configuration=None):
     # Remove firefox's locale, it's completely useless in a LXC.
     pkg.apt_del(('firefox-locale-fr', 'firefox-locale-en', ))
 
-    pkg.apt_add(('bsd-mailx', 'nullmailer', ))
+    pkg.apt_add(('bsd-mailx', ))
+
+    # When using lxc_server on a lxc_host which already has postfix
+    # installed, don't replace it by nullmailer, this is harmful.
+    if not pkg.apt_is_installed('postfix'):
+        pkg.apt_add(('nullmailer', ))
 
 
 @task

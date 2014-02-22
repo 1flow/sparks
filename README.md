@@ -1,67 +1,72 @@
 # Sparks
 
-My *foundations* repository, which I use to bootstrap any new project or machine. Written in `Python`.
+This is my *foundations* deployment tool and receipes. I use to bootstrap any new project or machine. It's written in `Python`. Features and advantages:
 
-- Uses [Fabric](http://fabfile.org/) to deploy.
+- provides a handful set of `Fabric` rules, notably for complex Django projects (celery, redis, memcache, mongodb+mongoengine…).
+- allows far more flexibility to `Fabric` behavior. Eg. the chain of execution is no more fixed, you can easily deploy a new machine, without touching existing ones (see note).
+
 - Can deploy many machines at a time (eg `fab -R lxc-group lxc_base -P -z 10` works as expected).
 - Works on Ubuntu and OSX *hosts* and *targets*, even mixed (I use both, daily).
 - Is implemented with a lot of tasks and subtasks, which can be re-used to your liking (see `fab --list`).
 - Includes a unified package search tool (`utils/pkgmgr.py`, see below).
 - Contains some modules and a dedicated `fabfile` for bootstraping `Django` projects very quickly. It still needs a little love on the sysadmin side, because installation of system dependancies like PostgreSQL or redis/memcache must be handled manually (there's a start in the `fabfile`, but it's inactive for now).
 
-In the near future:
-- it will likely contain some `AngularJS` modules, too.
+## Flexible execution model
 
-## List of fabric tasks
+This is a sparks addition to the `Fabric` model. It gives us the ability to deploy one machine without touching others. 
+
+This approach is usually considered harmful, because it can lead to desynchronization between the new machine and those which aren't hit by the current execution. Generally speaking, I agree with this. But in a constant scaling scenario where we regularly deploy new machines, this is a pain in the ass.
+
+There are 2 points here:
+
+- the developer (or “source-code”) standpoint, where every machine must be exactly in sync everytime. This points backs the current `Fabric` execution model, and must stay the default.
+- the sysadmin-only standpoint, where I want to be able to deploy a new machine without touching or even restarting the running ones. Eg. I want to be able to quickly add a celery node without restarting the webserver. Considering “only-stable-releases”, this features allows faster deployments.
+
+It's thus your responsibility to use the sparks models, which assumes you know what you are doing. If not sure, use the classic Fabric model, which is safer but redo a lot of useless work in some specific conditions.
 
 
-### Machine installation-related
+## Most useful tasks
 
-You can get an up-to-date list with `fab --list`. Some of them have *aliases*, which I didn't display here.
+I will not list them all here, there are too much and it's beyond the scope of a README. You can get an up-to-date list with `fab --list`. A lot have *aliases*, which don't show here.
 
-    base                  sys_* + brew (on OSX) + byobu, bash-completion, htop.
-    clear_osx_cache       Clears some OSX cache, to avoid opendirectoryd to hog CPU.
-    db_mysql              MySQL database server.
-    db_postgres           PostgreSQL database server.
-    db_sqlite             SQLite database library.
-    deployment            Install Fabric (via PIP for latest paramiko).
-    dev                   Generic development (dev_mini + git-flow + Python & Ruby utils).
-    dev_graphviz          Graphviz and required packages for PYgraphviz.
-    dev_mini              Git and ~/sources/
-    dev_mysql             MySQL development environment (for python packages build).
-    dev_pil               Required packages to build Python PIL.
-    dev_sqlite            SQLite development environment (for python packages build).
-    dev_tildesources      Create ~/sources if not existing.
-    dev_web               Web development packages (NodeJS, Less, Compass…).
-    graph                 Poweruser graphical applications.
-    graphdb               Graphical and client packages for databases.
-    graphdev              Graphical applications for the typical development environment.
-    graphkbd              Gconf / Dconf keyboard shortcuts for back-from-resume loose.
-    local_perms           Re-apply correct permissions on well-known files (eg .ssh/*)
-    lxc                   LXC local runner (guests manager).
+### Metal-installation-related
+
+    test                  Run base commands to test the connection and local user profile.
+    base                  sys_* + brew (on OSX) + byobu, bash-completion, htop…
+
+    lxc                   LXC host (guests manager).
     lxc_base              Base packages for an LXC guest (base+LANG+dev).
     lxc_server            LXC base + server packages (Pg).
-    myapps                Skype + Chrome + Sublime + 1Password
-    mybootstrap           Bootstrap my personal environment on the local machine.
-    mydevenv              Clone my professional / personnal projects with GIT in ~/sources
-    mydotfiles            Symlink a bunch of things to Dropbox/…
-    myenv                 sudo + full + fullgraph + mydev + mypkg + mydot
-    myfullenv             sudo + full + fullgraph + mydev + mypkg + mydot
-    mysetup               Bootstrap my personal environment on the local machine.
+
+    db_postgres           PostgreSQL database server.
+    db_redis              Redis server. Uses the PPA for latest stable package on Ubuntu.
+    db_mongodb            MongoDB server. Uses PPA for same benefits.
+
+    deployment            Installs Fabric (via PIP for latest paramiko).
+
+### Sysadmin-related
+
     sys_admin_pkgs        Install some sysadmin related applications.
-    sys_default_services  Activate some system services I need / use.
-    sys_del_useless       Remove useless or annoying packages (LSB only).
     sys_easy_sudo         Allow sudo to run without password for @sudo members.
-    sys_ssh_powerline     Make remote SSHd accept the POWERLINE_SHELL environment variable.
     sys_unattended        Install unattended-upgrades and set it up for daily auto-run.
-    test                  Just run `uname -a; uptime` remotely, to test the connection
-    sf.update             Refresh all package management tools data (packages lists, receipes…).
-    sf.upgrade            Upgrade all outdated packages from all pkg management tools at once.
+    sf.update             Refresh all package management data (packages lists, receipes…).
+    sf.upgrade            Upgrade all outdated packages from all managements tools at once.
 
-### Django-related tasks
 
-You **must** create your own `fabfile` in your project, and import the sparks one. You just have to specify `env` configuration, and the sparks `fabfile` will do the rest, providing commonly used targets, named `initial`, `deploy` and so on. Considering the `fabfile`:
+### Development-related
 
+    dev_mini              Git and ~/sources/
+    dev                   Generic development (dev_mini + git-flow + Python & Ruby utils).
+    dev_web               Web development packages (NodeJS, Less, Compass…).
+
+    local_perms           Re-apply correct permissions on well-known files (eg .ssh/*)
+
+
+### Django-related
+
+Important: **you must create your own `fabfile`** in your project and import the `sparks` one. You just have to specify `env` configuration, and the sparks `fabfile` will do the rest, providing commonly used targets, named `initial`, `deploy` and so on. Minimal example:
+
+    # See https://github.com/1flow/1flow/ for fully-featured and always-up-to-date file.
     import os
     from fabric.api import env, task
     import sparks.django.fabfile as sdf
@@ -86,53 +91,64 @@ You **must** create your own `fabfile` in your project, and import the sparks on
 
     @task
     def test():
-        env.host_string = 'obi.1flow.net'
+        env.host_string = 'obi.1flow.io'
         env.environment = 'test'
 
     @task
     def production():
-        env.host_string = '1flow.net'
+        env.host_string = '1flow.io'
         env.environment = 'production'
 
 
 Here is the resulting tasks list, with aliases removed for clarity:
 
     local                   >
-    production              > My 3 targets.
+    production              > The 3 "machines" targets.
     test                    >
     deploy                  Pull code, ensure runable, restart services.
     runable                 Ensure we can run the {web,dev}server: db+req+sync+migrate+static.
-    sdf.collectstatic       Run the Django collectstatic management command.
-    sdf.createdb            Create the PostgreSQL user & database. It's OK if already existing.
-    sdf.migrate             Run the Django migrate management command.
-    sdf.requirements        Install PIP requirements (and dev-requirements).
-    sdf.restart_celery      Restart celery (only if detected as installed).
-    sdf.restart_supervisor  (Re-)upload configuration files and reload gunicorn via supervisor.
-    sdf.syncdb              Run the Django syndb management command.
 
-#### Assumptions & conventions
+Some sparks subtasks, always runable one-by-one:
+
+    sdf.requirements        Install PIP requirements (and dev-requirements).
+    sdf.createdb            Create the DB user & database. It's OK if already existing.
+    sdf.syncdb              Run the Django syndb management command.
+    sdf.migrate             Run the Django migrate management command.
+    sdf.collectstatic       Run the Django collectstatic management command.
+    sdf.restart             Restart all running services
+    sdf.restart_*           Restart only some services (eg. celery, µwsgi…).
+
+
+### Assumptions & conventions
 
 The Django sparks `fabfile` includes a little conventions-related magic:
 
 - it will include your Django `settings` and use `.DEBUG` and `.DATABASES` values.
-- if your local machine runs OSX, it will assume you are in test mode (I develop on OSX and run production code on Linux servers).
+- when acting remotely, **Django settings will be the remote ones**. This is a major feature: settings are reloaded after source-code pull. This implies settings can be different from one machine to another if you use the sparks hostname-based settings mechanism or any other that is “Django compatible” (eg. which make `from django.conf import settings` working as usual).
+- if your local machine runs OSX, it will assume you are in test mode (I don't support OSX as servers, only Linux ones; if you don't agree, please submit a patch).
 - when doing remote deployments, you have to set fabric's `env.environment` to either `test` or `production`.
 
 
 ## Installation How-to
 
-On OSX, you will have a chicken-and-egg problem because `git` is not installed by default. I personally solves this by installing `Dropbox` first, which contains an up-to-date copy of this `sparks` repository, and the `1nstall.py` scripts takes care of the rest (see below).
 
-On Ubuntu, just `sudo apt-get install git-core` and you're ready to shine (see below too).
+### OSX note
 
-NOTE: In my Dropbox I have private data or configuration files, which are highly personal (some contains passwords or hashes). You may see a small number of fabric targets crash because of these missing files. Perhaps you should just study them and customize them to your likings before using this library.
+On OSX, you will have a chicken-and-egg problem because `git` is not installed by default. You will thus need to install `Xcode` and `CLI Tools for Xcode`, then `brew` and `git`. I personally solves this by installing `Dropbox` first, which contains an up-to-date copy of this `sparks` repository, and the `1nstall.py` scripts takes care of most of the rest (see below).
+
+### Ubuntu-like installation
+
+On Ubuntu, if `git` is not installed by default (did you remove it??), just `sudo apt-get install git-core` and you're ready to roll out.
+
+NOTE: A small number of task can crash because of missing files. They depend on private configuration files that exist only in my Dropbox. Sorry for that. I will probably externalize these tasks outside of `sparks` for clarity in the future.
+
 
 ### First installation on a brand new machine
 
 This is what I run on a virgin machine to get everything up and running:
 
-- install Dropbox and let it sync
-- on OSX, install Xcode and CLI Tools for Xcode
+- install `Dropbox` and let it sync
+- on OSX, install `Xcode` and `CLI Tools for Xcode`
 - then:
 
 	~Dropbox/sparks/1nstall.py
@@ -148,35 +164,51 @@ You can do the same without `Dropbox`, with:
 `1nstall` will:
 
 - On OSX, install `Brew`, an up-to-date `Python`, and `git`.
-- On Ubuntu and OSX, install all of my needed software to be fully operational.
+- On Ubuntu and OSX, install a bunch of fancy software to be fully operational in minutes.
 
 
-### Simple package manager
+## Simple package manager
 
-It's a command-line utility, which handles `brew` on OSX, `apt-*` on `Ubuntu` / `Debian`, `npm`, `pip` and `gem`.
+Sparks provide receipes for all famous package managers. There is a Python library to list/add/remove packages, and a `search` command-line utility. Supported package managers:
 
-#### Installation
+- `brew` on OSX, 
+- `apt-*` on `Ubuntu` / `Debian`, 
+- `npm`, 
+- `pip` (2 & 3)
+- `gem`.
+
+Adding new packages managers to make `sparks` work on any other systems (eg. `pacman`, `emerge`…) is a matter of minutes.
+
+### Installation
 
 	ln -sf path/to/sparks/utils/pkgmrg.py ~/bin/search
 
-#### Usage
+### Usage
 
 	# search for a package, globaly, everywhere:
 	search toto
 
-As of now, only `search` is implemented. `install`, `remove` and other are planned, but would be only aliases to underlying tools and are thus not that useful. I currently have shell aliases pointing to `brew` or `apt-*`, given the OS I’m on, and that’s quite satisfying.
+### Implementation note
+
+As of now, only `search` is implemented. `install`, `remove` and other are planned, but would be only aliases to underlying tools and are thus not that useful. 
+
+I currently have shell aliases pointing to `brew` or `apt-*`, given the OS I’m on, and that’s quite satisfying.
 
 
-## Example with powerline
+## Sparks example with powerline
 
-`powerline-shell` is not that useful, but the whole example is complex, and thus a good thing to show you how I use `sparks`.
+`powerline-shell` is not that useful per se, but the use-case is quite complex and thus a good example to demonstrate how I use `sparks`.
 
-In `~/.ssh/config` (stored in `Dropbox`), I have:
+### The manual and highly personal part
+
+The powerline configuration is stored in my `Dropbox`. You should just copy these lines in your shell and ssh configuration.
+
+In `~/.ssh/config`, I have:
 
 	Host *
 		SendEnv POWERLINE_SHELL
 
-In `~/.bashrc` (stored in `Dropbox`), I have:
+In `~/.bashrc`, I have:
 
 	if [ \( \
 			\( -e ~/.fonts/ubuntu-mono-powerline-ttf \
@@ -199,14 +231,19 @@ In `~/.bashrc` (stored in `Dropbox`), I have:
 
 	fi
 
+### Deployment with sparks
+
 Then, i run:
 
 	fab -R lxc-hosts -P -z 5 sys_ssh_powerline
 
-Which will clone the powerline GIT repository in the remote machines and configure their SSHds to accept the local exported variable. With that setup, I don't need to run the full `install_powerline` target on them, so they don't get the powerline font installed (which is useless on a remote headless server).
+Which will clone the powerline GIT repository on all remote machines, and configure their SSHds to accept the local exported variable.
+
+With that setup, I don't need to run the full `install_powerline` target on them, so they don't get the powerline *font* installed (which is useless on a remote headless server).
 
 And after that, I can enjoy powerline everywhere, but the font is only installed on my laptop or PC.
 
+### If you have any questions, don't hesitate to get in touch, I will be pleased to help.
 
 [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/1flow/sparks/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
 
