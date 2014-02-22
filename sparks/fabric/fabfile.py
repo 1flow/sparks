@@ -1212,7 +1212,8 @@ def mydotfiles(overwrite=False, locally=False, remote_configuration=None):
                          'gitconfig', 'gitignore', 'dupload.conf',
                          'multitailrc'):
             symlink(dotfiles('dot.%s' % filename),
-                    '.%s' % filename, overwrite=overwrite, locally=locally)
+                    os.path.join(tilde(), '.%s' % filename),
+                    overwrite=overwrite, locally=locally)
 
         if not remote_configuration.is_osx:
             if not exists('.config'):
