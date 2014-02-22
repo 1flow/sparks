@@ -1298,7 +1298,12 @@ def lxc_base(remote_configuration=None):
     # Remove firefox's locale, it's completely useless in a LXC.
     pkg.apt_del(('firefox-locale-fr', 'firefox-locale-en', ))
 
-    pkg.apt_add(('bsd-mailx', 'nullmailer', ))
+    pkg.apt_add(('bsd-mailx', ))
+
+    # When using lxc_server on a lxc_host which already has postfix
+    # installed, don't replace it by nullmailer, this is harmful.
+    if not pkg.apt_is_installed('postfix'):
+        pkg.apt_add(('nullmailer', ))
 
 
 @task
