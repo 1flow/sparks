@@ -224,8 +224,10 @@ def install_powerline(remote_configuration=None):
             git_clone_or_update('ubuntu-mono-powerline-ttf',
                                 'https://github.com/pdf/'
                                 'ubuntu-mono-powerline-ttf.git')
-            run('cp ubuntu-mono-powerline-ttf/*.ttf %s'
-                % tilde('Library/Fonts/UbuntuMono-B-Powerline.ttf'))
+
+            with cd(tilde('sources')):
+                run('cp ubuntu-mono-powerline-ttf/*.ttf %s'
+                    % tilde('Library/Fonts'))
 
     else:
         if not exists(tilde('.fonts/ubuntu-mono-powerline-ttf')):
