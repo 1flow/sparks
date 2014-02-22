@@ -964,6 +964,37 @@ def deployment(remote_configuration=None):
     pkg.pip2_add(('fabric', ))
 
 
+@task
+@with_remote_configuration
+def docker(remote_configuration=None):
+    """ Docker local runner (containers manager). """
+
+    warning("This functions is not yet implemented.")
+
+    """
+    http://docs.docker.io/en/latest/installation/ubuntulinux/#ubuntu-precise
+    sudo apt-get update
+    sudo apt-get install linux-image-generic-lts-raring linux-headers-generic-lts-raring
+    sudo reboot
+    sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 36A1D7869245C8950F966E92D8576A8BA88D21E9
+    sudo sh -c "echo deb http://get.docker.io/ubuntu docker main\
+    > /etc/apt/sources.list.d/docker.list"
+    sudo apt-get update
+    sudo apt-get install lxc-docker
+
+    sudo docker run -i -t ubuntu /bin/bash
+        exit
+
+    docker images
+
+
+
+
+    """
+
+    return
+
+
 @task(aliases=('lxc_runner', ))
 @with_remote_configuration
 def lxc_host(remote_configuration=None):
