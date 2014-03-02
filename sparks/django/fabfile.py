@@ -1118,6 +1118,12 @@ def requirements_task(fast=False, upgrade=False):
                              django_env=django_settings_env_var())
 
     with cd(env.root):
+
+        if not exists('.pipcache'):
+            mkdir('.pipcache')
+
+        pip_cache = os.path.join(env.root, '.pipcache')
+
         with activate_venv():
 
             if is_development_environment():
@@ -1127,16 +1133,20 @@ def requirements_task(fast=False, upgrade=False):
                 dev_req = os.path.join(env.root, env.dev_requirements_file)
 
                 if exists(dev_req):
-                    run("{command} --requirement {requirements_file}".format(
-                        command=command, requirements_file=dev_req))
+                    run(u"{command} --download-cache {pip_cache} "
+                        u"--requirement {requirements_file}".format(
+                        command=command, requirements_file=dev_req,
+                        pip_cache=pip_cache))
 
             LOGGER.info('Checking requirements…')
 
             req = os.path.join(env.root, env.requirements_file)
 
             if exists(req):
-                run("{command} --requirement {requirements_file}".format(
-                    command=command, requirements_file=req))
+                run(u"{command} --download-cache {pip_cache} "
+                    u" --requirement {requirements_file}".format(
+                    command=command, requirements_file=req,
+                    pip_cache=pip_cache))
 
             LOGGER.info('Done checking requirements.')
 
