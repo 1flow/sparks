@@ -1119,10 +1119,10 @@ def requirements_task(fast=False, upgrade=False):
 
     with cd(env.root):
 
-        if not exists('.pipcache'):
-            run('mkdir .pipcache')
-
         pip_cache = os.path.join(env.root, '.pipcache')
+
+        if not exists(pip_cache):
+            run('mkdir -p {0}'.format(pip_cache))
 
         with activate_venv():
 
