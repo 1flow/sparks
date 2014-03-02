@@ -1120,7 +1120,7 @@ def requirements_task(fast=False, upgrade=False):
     with cd(env.root):
 
         if not exists('.pipcache'):
-            mkdir('.pipcache')
+            run('mkdir .pipcache')
 
         pip_cache = os.path.join(env.root, '.pipcache')
 
