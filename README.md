@@ -244,3 +244,6 @@ With that setup, I don't need to run the full `install_powerline` target on them
 And after that, I can enjoy powerline everywhere, but the font is only installed on my laptop or PC.
 
 ### If you have any questions, don't hesitate to get in touch, I will be pleased to help.
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/1flow/sparks/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
