@@ -654,13 +654,13 @@ def dev_memcache(remote_configuration=None):
 def dev_python_deps(remote_configuration=None):
     """ Other non-Python development packages (for python packages build). """
 
-    LOGGER.info('Checking dev_memcache() components…')
+    LOGGER.info('Checking dev_python_deps() components…')
 
     if remote_configuration.is_osx:
-        pass
+        pkg.pkg_add(('zmq', ))
 
     else:
-        pkg.pkg_add(('libxml2-dev', 'libxslt-dev', ))
+        pkg.pkg_add(('libxml2-dev', 'libxslt-dev', 'libzmq-dev', ))
 
     # PIP version is probably more recent.
     pkg.pip2_add(('cython', ))
