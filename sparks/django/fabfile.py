@@ -1118,6 +1118,12 @@ def requirements_task(fast=False, upgrade=False):
                              django_env=django_settings_env_var())
 
     with cd(env.root):
+
+        pip_cache = os.path.join(env.root, '.pipcache')
+
+        if not exists(pip_cache):
+            run('mkdir -p {0}'.format(pip_cache))
+
         with activate_venv():
 
             if is_development_environment():
@@ -1127,16 +1133,20 @@ def requirements_task(fast=False, upgrade=False):
                 dev_req = os.path.join(env.root, env.dev_requirements_file)
 
                 if exists(dev_req):
-                    run("{command} --requirement {requirements_file}".format(
-                        command=command, requirements_file=dev_req))
+                    run(u"{command} --download-cache {pip_cache} "
+                        u"--requirement {requirements_file}".format(
+                        command=command, requirements_file=dev_req,
+                        pip_cache=pip_cache))
 
             LOGGER.info('Checking requirements…')
 
             req = os.path.join(env.root, env.requirements_file)
 
             if exists(req):
-                run("{command} --requirement {requirements_file}".format(
-                    command=command, requirements_file=req))
+                run(u"{command} --download-cache {pip_cache} "
+                    u" --requirement {requirements_file}".format(
+                    command=command, requirements_file=req,
+                    pip_cache=pip_cache))
 
             LOGGER.info('Done checking requirements.')
 
@@ -1416,6 +1426,32 @@ def worker_options(context, has_djsettings, remote_configuration):
         running clusters.
     """
 
+    def get_option(from_dict, role_name, use__all__=True):
+        return from_dict.get(
+
+            # Try "queue_full_name@hostname"
+            '%s@%s' % (role_name, env.host_string),
+            from_dict.get(
+
+                # Then "queue@hostname"
+                '%s@%s' % (role_name[7:] or 'worker', env.host_string),
+                from_dict.get(
+
+                    # Then, "hostname"
+                    env.host_string,
+                    from_dict.get(
+
+                        # Then "queue"
+                        role_name,
+
+                        # And finally "__all__" for a global default.
+                        from_dict.get('__all__', None)
+                        if use__all__ else None
+                    )
+                )
+            )
+        )
+
     command_pre_args  = ''
     command_post_args = ''
 
@@ -1434,65 +1470,24 @@ def worker_options(context, has_djsettings, remote_configuration):
             short_hostname, role_name[7:], domain_name)
 
         sparks_options = getattr(env, 'sparks_options', {})
-        worker_concurrency = sparks_options.get('worker_concurrency', {})
-        worker_pool = sparks_options.get('worker_pool', {})
-        worker_time_limit = sparks_options.get('worker_time_limit', {})
-        worker_soft_time = sparks_options.get('worker_soft_time_limit', {})
-        worker_max_tpc = sparks_options.get('max_tasks_per_child', {})
 
         # TODO: '5' should be 'if remote_configuration.is_lxc'
         # but we don't have this configuration attribute yet.
 
-        custom_pool = worker_pool.get('%s@%s' % (role_name, env.host_string),
-                                      worker_pool.get(
-                                      '%s@%s' % (role_name[7:] or 'worker',
-                                                 env.host_string),
-                                      worker_pool.get(env.host_string,
-                                      worker_pool.get(role_name, None))))
-        if custom_pool:
-            command_post_args += ' -P {0}'.format(custom_pool)
+        for dict_name, opt_string, default in (
+            ('worker_pool',            ' -P {0}',                 False),
+            ('worker_time_limit',      ' --time-limit {0}',       True),
+            ('worker_soft_time_limit', ' --soft-time-limit {0}',  True),
+            ('worker_concurrency',     ' -c {0}',                 True),
+            ('autoscale',              ' --autoscale {0}',        True),
+            ('max_tasks_per_child',    ' --maxtasksperchild={0}', True),
+        ):
 
-        tli = worker_time_limit.get('%s@%s' % (role_name, env.host_string),
-                                    worker_time_limit.get(
-                                    '%s@%s' % (role_name[7:] or 'worker',
-                                               env.host_string),
-                                    worker_time_limit.get(env.host_string,
-                                    worker_time_limit.get(role_name, None))))
+            opt_value = get_option(sparks_options.get(dict_name, {}),
+                                   role_name, use__all__=default)
 
-        if tli:
-            command_post_args += ' --time-limit {0}'.format(tli)
-
-        stl = worker_soft_time.get('%s@%s' % (role_name, env.host_string),
-                                   worker_soft_time.get(
-                                   '%s@%s' % (role_name[7:] or 'worker',
-                                              env.host_string),
-                                   worker_soft_time.get(env.host_string,
-                                   worker_soft_time.get(role_name,
-                                   worker_soft_time.get('__all__', None)))))
-
-        if stl:
-            command_post_args += ' --soft-time-limit {0}'.format(
-                stl)
-
-        wc = worker_concurrency.get('%s@%s' % (role_name, env.host_string),
-                                    worker_concurrency.get(
-                                    '%s@%s' % (role_name[7:] or 'worker',
-                                               env.host_string),
-                                    worker_concurrency.get(env.host_string,
-                                    worker_concurrency.get(role_name,
-                                    worker_concurrency.get('__all__', None)))))
-        if wc:
-            command_post_args += ' -c {0}'.format(wc)
-
-        wmtpc = worker_max_tpc.get('%s@%s' % (role_name, env.host_string),
-                                   worker_max_tpc.get(
-                                   '%s@%s' % (role_name[7:] or 'worker',
-                                              env.host_string),
-                                   worker_max_tpc.get(env.host_string,
-                                   worker_max_tpc.get(role_name,
-                                   worker_max_tpc.get('__all__', None)))))
-        if wmtpc:
-            command_post_args += ' --maxtasksperchild={0}'.format(wmtpc)
+            if opt_value:
+                command_post_args += opt_string.format(opt_value)
 
     if role_name == 'flower':
         try:
