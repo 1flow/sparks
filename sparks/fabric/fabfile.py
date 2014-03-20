@@ -1085,8 +1085,10 @@ def graph(remote_configuration=None):
         pkg.apt.ppa_pkg('ppa:tiheum/equinox', ('faience-icon-theme',
                         'faenza-icon-theme'), '/usr/share/icons/Faenza')
 
-    pkg.apt.ppa_pkg('ppa:caffeine-developers/ppa',
-                    'caffeine', '/usr/bin/caffeine')
+    if int(remote_configuration.lsb.RELEASE.split('.', 1)[0]) < 14:
+        pkg.apt.ppa_pkg('ppa:caffeine-developers/ppa',
+                        'caffeine', '/usr/bin/caffeine')
+
     #pkg.apt.ppa_pkg('ppa:conscioususer/polly-unstable',
     #                 'polly', '/usr/bin/polly')
     #
