@@ -660,7 +660,7 @@ def dev_python_deps(remote_configuration=None):
         pkg.pkg_add(('zmq', ))
 
     else:
-        pkg.pkg_add(('libxml2-dev', 'libxslt-dev', 'libzmq-dev', ))
+        pkg.pkg_add(('libxml2-dev', 'libxslt-dev', 'libzmq-dev', 'python-dev'))
 
     # PIP version is probably more recent.
     pkg.pip2_add(('cython', ))
