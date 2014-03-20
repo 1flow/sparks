@@ -801,7 +801,7 @@ def dev(remote_configuration=None):
 
     pkg.pkg_add(py3_pkgs)
 
-    pkg.pip2_add(('yolk', 'ipython', 'flake8', ))
+    pkg.pip2_add(('git-up', 'ipython', 'flake8', ))
 
     # yolk & flake8 fail because of distribute incompatible with Python 3.
     pkg.pip3_add(('ipython', ))
@@ -809,8 +809,6 @@ def dev(remote_configuration=None):
     # No need yet, it's already available from the system, in Python 2,
     # and can perfectly generate a virtualenv for Python 3.3.
     #pkg.pip3_add(('virtualenv', 'virtualenvwrapper', ))
-
-    pkg.gem_add(('git-up', ))
 
 
 # --------------------------------------------------- Databases recipes
