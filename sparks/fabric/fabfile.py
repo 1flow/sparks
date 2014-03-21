@@ -584,7 +584,15 @@ def dev_postgresql(remote_configuration=None):
     LOGGER.info('Checking dev_postgresql() components…')
 
     if not remote_configuration.is_osx:
-        pkg.pkg_add(('postgresql-client-9.1', 'postgresql-server-dev-9.1', ))
+        major_distro_version = \
+            int(remote_configuration.lsb.RELEASE.split('.')[0])
+
+        if major_distro_version >= 14:
+            pkg.pkg_add(('postgresql-client-9.3', 'postgresql-server-dev-9.3',
+                         'postgresql-server-dev-all'))
+        else:
+            pkg.pkg_add(('postgresql-client-9.1', 'postgresql-server-dev-9.1',
+                         'postgresql-server-dev-all'))
 
     pkg.pip2_add(('psycopg2', ))
 
@@ -891,7 +899,15 @@ def db_postgresql(remote_configuration=None):
             # Test connection
             # psql template1
     else:
-        pkg.apt_add(('postgresql-9.1', ))
+        major_distro_version = \
+            int(remote_configuration.lsb.RELEASE.split('.')[0])
+
+        if major_distro_version >= 14:
+            pkg.apt_add(('postgresql-9.3', ))
+
+        else:
+            pkg.apt_add(('postgresql-9.1', ))
+
 
     dev_postgresql()
 
