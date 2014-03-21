@@ -702,8 +702,12 @@ def dev_web(remote_configuration=None):
                 # upgrade it, unlike `apt-get install nodejs` does.
                 pkg.pkg_del(('nodejs', ))
 
-    # NOTE: nodejs` PPA version already includes `npm`,
+        else:
+            pkg.pkg_add(('npm', ))
+
+    # NOTE: `nodejs` PPA version already includes `npm`,
     # no need to install it via a separate package on Ubuntu.
+    # If not using the PPA, `npm` has already been installed.
     pkg.pkg_add(('nodejs',
                 # PySide build-deps, for Ghost.py text parsing.
                 'cmake', ))
@@ -722,7 +726,7 @@ def dev_web(remote_configuration=None):
     else:
         pkg.pkg_add(('libqt4-dev', ))
 
-    # But on OSX, we need NPM too.
+    # But on OSX, we need NPM too. For Ubuntu, this has already been handled.
     if remote_configuration.is_osx:
         pkg.pkg_add(('npm', ))
 
