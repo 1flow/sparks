@@ -411,6 +411,10 @@ def sys_mongodb(remote_configuration=None):
             LOGGER.warning('Installing mongodb package, hope this is the good '
                            'version!')
             return 'mongodb'
+
+    elif remote_configuration.lsb.ID.lower() == 'debian':
+        return 'mongodb'
+
     else:
         print('MongoDB install not implemented on anything else than '
               'Ubuntu. Please submit a patch.')
@@ -687,7 +691,7 @@ def dev_web(remote_configuration=None):
 
     LOGGER.info('Checking dev_web() components…')
 
-    if not remote_configuration.is_osx:
+    if remote_configuration.lsb.ID == 'ubuntu':
         major_distro_version = \
             int(remote_configuration.lsb.RELEASE.split('.')[0])
 
@@ -804,7 +808,7 @@ def dev(remote_configuration=None):
         # TODO: 'python3-pip',
         # NOTE: zlib1g-dev is required to build git-up.
         py3_pkgs = ('python3', 'python3-dev', 'python3-examples',
-                    'python3-minimal', 'zlib1g-dev' )
+                    'python3-minimal', 'zlib1g-dev', )
 
         if int(remote_configuration.lsb.RELEASE.split('.', 1)[0]) > 12:
             py3_pkgs += ('python3.3', 'python3.3-dev', 'python3.3-examples',
@@ -988,7 +992,7 @@ def deployment(remote_configuration=None):
 def docker(remote_configuration=None):
     """ Docker local runner (containers manager). """
 
-    warning("This functions is not yet implemented.")
+    LOGGER.warning("This functions is not yet implemented.")
 
     """
     # http://docs.docker.io/en/latest/installation/ubuntulinux/#ubuntu-precise
