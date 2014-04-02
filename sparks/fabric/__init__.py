@@ -14,7 +14,6 @@ import cPickle as pickle
 import cStringIO as StringIO
 
 from ..foundations.classes import SimpleObject
-from ..contrib import lsb_release
 
 from . import nofabric
 # Cannot import "utils" here, circular loop.
@@ -533,14 +532,13 @@ class RemoteConfiguration(object):
                       "print platform.system()'",
                       quiet=not DEBUG, combine_stderr=False)
 
-
         self.lsb = None
 
-        out = out.strip()
+        out = out.strip().lower()
 
-        if out == u'Linux':
+        if out == u'linux':
             distro = run("python -c 'import platform; "
-                      "print \",\".join(platform.dist())'",
+                      "print \",\".join(platform.linux_distribution())'",
                       quiet=not DEBUG, combine_stderr=False).strip().split(',')
 
             if distro[0].lower() in ('debian', 'ubuntu'):
@@ -556,7 +554,7 @@ class RemoteConfiguration(object):
                                    u'developers.'.format(
                                    self.host_string, distro[0]))
 
-        elif out == u'Darwin':
+        elif out == u'darwin':
             self.is_osx = True
             self.mac    = None
 
@@ -578,21 +576,21 @@ class RemoteConfiguration(object):
             except SyntaxError:
                 # something went very wrong,
                 # none of the detection methods worked.
-                raise RuntimeError(u'cannot determine platform of {0}, '
+                raise RuntimeError(u'Cannot determine platform of {0}, '
                                    u'platform.mac_ver() reported nothing '
                                    u'usable:\n{1}'.format(self.host_string,
                                    out))
             else:
                 if self.mac is None:
-                    raise RuntimeError(u'cannot determine platform of {0}, '
+                    raise RuntimeError(u'Cannot determine platform of {0}, '
                                        u'platform.mac_ver() reported nothing '
                                        u'usable:\n{1}'.format(self.host_string,
                                        out))
 
         else:
-            raise RuntimeError(u'Unsupported platform on {0}, please get in '
-                               u'touch with 1flow/sparks developers.'.format(
-                               self.host_string, out))
+            raise RuntimeError(u'Unsupported platform {1} on {0}, please '
+                               u'get in touch with 1flow/sparks '
+                               u'developers.'.format(self.host_string, out))
 
 
     def get_uname(self):
@@ -705,20 +703,37 @@ class LocalConfiguration(object):
 
         self.host_string = host_string or 'localhost'
 
-        lsb = lsb_release.get_lsb_information()
+        system = platform.system().lower()
 
-        if lsb:
-            # FIXME: on anything other than Debian/Ubuntu, this will FAIL!
-            self.lsb = SimpleObject(
-                from_dict=lsb)
+        if system == 'linux':
+
+            distro = platform.linux_distribution()
+
+            if distro[0].lower() in ('debian', 'ubuntu'):
+
+                self.lsb          = SimpleObject()
+                self.lsb.ID       = distro[0]
+                self.lsb.RELEASE  = distro[1]
+                self.lsb.CODENAME = distro[2]
+
+            else:
+                raise RuntimeError(u'Unsupported Linux distro {1} on '
+                                   u'localhost, please get in touch with '
+                                   u'1flow/sparks developers.'.format(
+                                       distro[0]))
             self.is_osx = False
 
-        else:
+        elif system == 'darwin':
             self.lsb    = None
             self.is_osx = True
             self.mac    = SimpleObject(from_dict=dict(zip(
                                        ('release', 'version', 'machine'),
                                        platform.mac_ver())))
+
+        else:
+            raise RuntimeError(u'Unsupported platform {0} on localhost, '
+                               u'please get in touch with 1flow/sparks '
+                               u'developers.'.format(system))
 
         self.uname = SimpleObject(from_dict=dict(zip(
                                   ('sysname', 'nodename', 'release',
