@@ -1481,7 +1481,7 @@ def worker_options(context, has_djsettings, remote_configuration):
             ('worker_concurrency',     ' -c {0}',                 True),
             ('autoscale',              ' --autoscale {0}',        True),
             ('max_tasks_per_child',    ' --maxtasksperchild={0}', True),
-            ('custom_arguments',       '{0}',                     False),
+            ('custom_arguments',       ' {0}',                    False),
         ):
 
             opt_value = get_option(sparks_options.get(dict_name, {}),
