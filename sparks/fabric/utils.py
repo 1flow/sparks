@@ -11,13 +11,19 @@ LOGGER = logging.getLogger(__name__)
 # ======================================================================= Utils
 
 
-SPARKS_DOTFILES_PATH = os.environ.get('DOTFILES', None)
+SPARKS_DOTFILES_PATH = os.environ.get('SPARKS_DOTFILES_PATH', None)
 
 
 if SPARKS_DOTFILES_PATH is None:
-    LOGGER.info(u'SPARKS_DOTFILES_PATH is unset, using default value '
-                u'"~/Dropbox/configuration/dotfiles".')
-    SPARKS_DOTFILES_PATH = 'Dropbox/configuration/dotfiles'
+    if os.path.exists(os.expanduser(u'~/Dropbox/configuration/dotfiles')):
+        LOGGER.info(u'Using default value of "~/Dropbox/configuration/dotfiles"'
+                    u'for SPARKS_DOTFILES_PATH.')
+        SPARKS_DOTFILES_PATH = 'Dropbox/configuration/dotfiles'
+
+    else:
+       LOGGER.info(u'Please define shell variable SPARKS_DOTFILES_PATH '
+                   u'if you would like to benefit from sparks personal '
+                   u'deployment facilities.')
 else:
     LOGGER.info(u'Using SPARKS_DOTFILES_PATH="%s".', SPARKS_DOTFILES_PATH)
 
