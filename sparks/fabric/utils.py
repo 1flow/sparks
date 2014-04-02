@@ -15,7 +15,7 @@ SPARKS_DOTFILES_PATH = os.environ.get('SPARKS_DOTFILES_PATH', None)
 
 
 if SPARKS_DOTFILES_PATH is None:
-    if os.path.exists(os.expanduser(u'~/Dropbox/configuration/dotfiles')):
+    if os.path.exists(os.path.expanduser(u'~/Dropbox/configuration/dotfiles')):
         LOGGER.info(u'Using default value of "~/Dropbox/configuration/dotfiles"'
                     u'for SPARKS_DOTFILES_PATH.')
         SPARKS_DOTFILES_PATH = 'Dropbox/configuration/dotfiles'
