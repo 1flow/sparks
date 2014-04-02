@@ -988,7 +988,7 @@ def deployment(remote_configuration=None):
 def docker(remote_configuration=None):
     """ Docker local runner (containers manager). """
 
-    warning("This functions is not yet implemented.")
+    LOGGER.warning("This functions is not yet implemented.")
 
     """
     # http://docs.docker.io/en/latest/installation/ubuntulinux/#ubuntu-precise
