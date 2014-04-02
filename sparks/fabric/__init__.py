@@ -497,7 +497,7 @@ class RemoteConfiguration(object):
                   '{user} in {home}.'.format(
                   release='Apple OSX {0}'.format(self.mac.release)
                   if self.is_osx
-                  else self.lsb.DESCRIPTION,
+                  else self.lsb.ID.title(),
                   host=cyan(self.uname.nodename),
                   vm=('VMWare ' if self.is_vmware else 'Parallels ')
                   if self.is_vm else '',
@@ -529,24 +529,34 @@ class RemoteConfiguration(object):
     def get_platform(self):
         # Be sure we don't get stuck in a virtualenv for free.
         with prefix('deactivate >/dev/null 2>&1 || true'):
-            out = run("python -c 'import lsb_release; "
-                      "print lsb_release.get_lsb_information()'",
+            out = run("python -c 'import platform; "
+                      "print platform.system()'",
                       quiet=not DEBUG, combine_stderr=False)
+
 
         self.lsb = None
 
-        try:
-            # Try to avoid pollution lines that comes before python output,
-            # like: “/home/olive/.profile: line 23: /usr/bin/byobu-launch:
-            # No such file or directory”. This should not be kept by Fabric
-            # thanks to combine_stderr=False, but in this particular case
-            # it just doesn't work…
-            for line in out.splitlines():
-                if line.startswith("{'"):
-                    self.lsb = SimpleObject(from_dict=ast.literal_eval(line))
-                    break
+        out = out.strip()
 
-        except SyntaxError:
+        if out == u'Linux':
+            distro = run("python -c 'import platform; "
+                      "print \",\".join(platform.dist())'",
+                      quiet=not DEBUG, combine_stderr=False).strip().split(',')
+
+            if distro[0].lower() in ('debian', 'ubuntu'):
+
+                self.lsb          = SimpleObject()
+                self.lsb.ID       = distro[0]
+                self.lsb.RELEASE  = distro[1]
+                self.lsb.CODENAME = distro[2]
+
+            else:
+                raise RuntimeError(u'Unsupported Linux distro {1} on {0}, '
+                                   u'please get in touch with 1flow/sparks '
+                                   u'developers.'.format(
+                                   self.host_string, distro[0]))
+
+        elif out == u'Darwin':
             self.is_osx = True
             self.mac    = None
 
@@ -578,6 +588,12 @@ class RemoteConfiguration(object):
                                        u'platform.mac_ver() reported nothing '
                                        u'usable:\n{1}'.format(self.host_string,
                                        out))
+
+        else:
+            raise RuntimeError(u'Unsupported platform on {0}, please get in '
+                               u'touch with 1flow/sparks developers.'.format(
+                               self.host_string, out))
+
 
     def get_uname(self):
         # Be sure we don't get stuck in a virtualenv for free.

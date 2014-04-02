@@ -244,10 +244,10 @@ def install_powerline(remote_configuration=None):
 @task
 @with_remote_configuration
 def test(remote_configuration=None):
-    """ Just run `uname -a; uptime` remotely, to test the connection
-        or sparks core libs. """
+    """ Just run `uname -a; uptime` remotely, to test the connection,
+        and the sparks remote detection engine. """
 
-    run('uname -a; uptime; cat /etc/lsb-release 2>/dev/null; echo $USER — $PWD')
+    run('uname -a; uptime; echo $USER — $PWD')
 
 
 @task
