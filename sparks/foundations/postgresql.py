@@ -129,7 +129,7 @@ def get_admin_user(remote_configuration=None):
             return 'postgres'
 
         raise NotImplementedError("Don't know how to find PG user "
-                                  "on remote OSX server / Ubuntu.")
+                                  "on remote server other than LSB.")
 
 
 @with_remote_configuration
