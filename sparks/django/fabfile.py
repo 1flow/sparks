@@ -1688,9 +1688,13 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
             pg_env.append('PGPORT={0}'.format(db_port))
 
     # flatten the list
-    pg_env = ' '.join(pg_env)
+    pg_env  = ' '.join(pg_env)
+    pg_role = pg.get_admin_user()
 
-    with settings(sudo_user=pg.get_admin_user()):
+    LOGGER.info(u'Using PosgreSQL role “%s” and environment “%s”.',
+                pg_role, pg_env)
+
+    with settings(sudo_user=pg_role):
 
         # WARNING: don't .strip() here, else we fail Fabric's attributes.
         db_user_result = pg.wrapped_sudo(pg.SELECT_USER.format(
