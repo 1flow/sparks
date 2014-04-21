@@ -6,6 +6,7 @@
 
 import os
 import logging
+
 from os.path import dirname, abspath, join, exists
 from ..fabric import local_configuration as platform
 
@@ -155,7 +156,18 @@ def include_snippets(snippets_list, project__file__, project_globals):
     snippets_path = join(os.path.dirname(project__file__), 'snippets')
 
     for snippet in snippets_list:
-        execfile(join(snippets_path, snippet + '.py'), project_globals)
+        try:
+            execfile(join(snippets_path, snippet + '.py'), project_globals)
+
+        except Exception:
+            # We need to print the full stack here, because Django will
+            # only print unicode(exception), and this is a pain to debug
+            # when settings fail to import.
+            LOGGER.exception(u'Could not include snippet “%s”', snippet)
+
+            # We still raise, to be sure to halt the settings import
+            # process at the Django level.
+            raise
 
 
 def clone_settings(machine_name, project__file__, project_globals):
