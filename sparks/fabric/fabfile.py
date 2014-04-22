@@ -709,6 +709,11 @@ def dev_web(remote_configuration=None):
         else:
             pkg.pkg_add(('npm', ))
 
+            if major_distro_version == 14:
+                # On Ubuntu 14.04, `django-pipeline` miss the `/usr/bin/node`
+                # executable; we only have `nodejs` left in recent versions.
+                pkg.pkg_add(('nodejs-legacy', ))
+
     # NOTE: `nodejs` PPA version already includes `npm`,
     # no need to install it via a separate package on Ubuntu.
     # If not using the PPA, `npm` has already been installed.
