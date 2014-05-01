@@ -47,6 +47,7 @@ except ImportError:
 from ..fabric import (fabfile, all_roles, worker_roles,
                       with_remote_configuration,
                       local_configuration as platform,
+                      is_localhost,
                       is_local_environment,
                       is_development_environment,
                       is_production_environment,
@@ -1681,10 +1682,10 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
         db_host    = db_setting.get('HOST', None)
         db_port    = db_setting.get('PORT', None)
 
-        if db_host is not None:
+        if db_host is not None and not is_localhost(db_host):
             pg_env.append('PGHOST={0}'.format(db_host))
 
-        if db_port is not None:
+        if db_port is not None and db_port != u'':
             pg_env.append('PGPORT={0}'.format(db_port))
 
     # flatten the list

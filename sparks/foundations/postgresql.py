@@ -120,14 +120,16 @@ def get_admin_user(remote_configuration=None):
         LOGGER.info('Using environment variable SPARKS_PG_SUDO_USER.')
         return environ_user
 
-    if is_local_environment():
+    if remote_configuration.lsb:
+        # FIXED: on Ubuntu / Debian, it's been `postgres` since ages.
+        return 'postgres'
+
+    elif remote_configuration.is_osx:
+        # On OSX where PG is installed via brew, the local
+        # user is admin, there is no "postgres" admin user.
         return pwd.getpwuid(os.getuid()).pw_name
 
     else:
-        if remote_configuration.lsb:
-            # FIXED: on Ubuntu / Debian, it's been `postgres` since ages.
-            return 'postgres'
-
         raise NotImplementedError("Don't know how to find PG user "
                                   "on remote server other than LSB.")
 
