@@ -1594,6 +1594,16 @@ def django_manage(command, prefix=None, **kwargs):
 def handlemessages(remote_configuration=None, mode=None):
     """ Run the Django compilemessages management command.
 
+        set ``SPARKS_DONT_TRANSLATE_LANGUAGE_CODE`` in the project environment
+        if you do not want the main language to show in translations. This is
+        the case for example if i18n strings in your code are in english or
+        your native language. Setting the variable to any value makes it
+        detected as ``True``. **For default behaviour, unset it completely.**
+
+        If you use codes like ``exception.object.display_message`` and not
+        plain sentences (which is the case of 1flow since 20140505), even the
+        main Django LANGUAGE_CODE will show up in translations.
+
         .. note:: not a Fabric task, but a helper function.
     """
 
@@ -1603,6 +1613,9 @@ def handlemessages(remote_configuration=None, mode=None):
     elif mode not in ('make', 'compile'):
         raise RuntimeError(
             '"mode" argument must be either "make" or "compile".')
+
+    show_english = not os.environ.get('SPARKS_DONT_TRANSLATE_LANGUAGE_CODE',
+                                      False)
 
     def compile_internal(run_from):
         for language in languages:
@@ -1615,7 +1628,8 @@ def handlemessages(remote_configuration=None, mode=None):
     languages = [('{0}_{1}{2}'.format(code[:2], code[3:5].upper(), code[5:])
                  if len(code) > 2 else code) for code, name
                  in remote_configuration.django_settings.LANGUAGES
-                 if code != remote_configuration.django_settings.LANGUAGE_CODE]
+                 if show_english
+                 or code != remote_configuration.django_settings.LANGUAGE_CODE]
 
     project_apps = [app.split('.', 1)[1] for app
                     in remote_configuration.django_settings.INSTALLED_APPS
