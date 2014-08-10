@@ -721,14 +721,15 @@ class LocalConfiguration(object):
                 self.lsb.RELEASE  = distro[1]
                 self.lsb.CODENAME = distro[2]
 
-            elif distro in (('arch', '', ''), ('', '', '')):
+            elif distro[0].lower() == 'arch' or (
+                distro == ('', '', '')
+                    and 'ARCH' in platform.platform()):
                 # http://bugs.python.org/issue12214
                 # is implemented only for Python 3.3+.
-                if 'ARCH' in platform.platform():
-                    self.lsb          = SimpleObject()
-                    self.lsb.ID       = 'arch'
-                    self.lsb.RELEASE  = platform.release()
-                    self.lsb.CODENAME = 'ArchLinux'
+                self.lsb          = SimpleObject()
+                self.lsb.ID       = 'arch'
+                self.lsb.RELEASE  = platform.release()
+                self.lsb.CODENAME = 'ArchLinux'
 
                 else:
                     raise RuntimeError(u'Unsupported Linux distro on '
