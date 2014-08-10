@@ -721,9 +721,9 @@ class LocalConfiguration(object):
                 self.lsb.RELEASE  = distro[1]
                 self.lsb.CODENAME = distro[2]
 
-            elif distro == ('', '', ''):
-                # http://bugs.python.org/issue12214 is implemented only
-                # for Python 3.3.
+            elif distro in (('arch', '', ''), ('', '', '')):
+                # http://bugs.python.org/issue12214
+                # is implemented only for Python 3.3+.
                 if 'ARCH' in platform.platform():
                     self.lsb          = SimpleObject()
                     self.lsb.ID       = 'arch'
