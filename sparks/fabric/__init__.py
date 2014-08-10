@@ -528,8 +528,11 @@ class RemoteConfiguration(object):
     def get_platform(self):
         # Be sure we don't get stuck in a virtualenv for free.
         with prefix('deactivate >/dev/null 2>&1 || true'):
-            out = run("python -c 'import platform; "
-                      "print platform.system()'",
+            out = run("python -c 'try: "
+                      "from __future__ import print_function; "
+                      "except: pass;"
+                      "import platform; "
+                      "print(platform.system())'",
                       quiet=not DEBUG, combine_stderr=False)
 
         self.lsb = None
@@ -537,9 +540,13 @@ class RemoteConfiguration(object):
         out = out.strip().lower()
 
         if out == u'linux':
-            distro = run("python -c 'import platform; "
-                      "print \",\".join(platform.linux_distribution())'",
-                      quiet=not DEBUG, combine_stderr=False).strip().split(',')
+            distro = run("python -c 'try: "
+                         "from __future__ import print_function; "
+                         "except: pass;"
+                         "import platform; "
+                         "print(\",\".join(platform.linux_distribution()))'",
+                         quiet=not DEBUG,
+                         combine_stderr=False).strip().split(',')
 
             if distro[0].lower() in ('debian', 'ubuntu'):
 
@@ -560,8 +567,11 @@ class RemoteConfiguration(object):
 
             # Be sure we don't get stuck in a virtualenv for free.
             with prefix('deactivate >/dev/null 2>&1 || true'):
-                out = run("python -c 'import platform; "
-                          "print platform.mac_ver()'", quiet=not DEBUG,
+                out = run("python -c 'try: "
+                          "from __future__ import print_function; "
+                          "except: pass;"
+                          "import platform; "
+                          "print(platform.mac_ver())'", quiet=not DEBUG,
                           combine_stderr=False)
 
             try:
@@ -596,7 +606,10 @@ class RemoteConfiguration(object):
     def get_uname(self):
         # Be sure we don't get stuck in a virtualenv for free.
         with prefix('deactivate >/dev/null 2>&1 || true'):
-            out = run("python -c 'import os; print os.uname()'",
+            out = run("python -c 'try: "
+                      "from __future__ import print_function; "
+                      "except: pass;"
+                      "import os; print(os.uname())'",
                       quiet=not DEBUG, combine_stderr=False)
 
         self.uname = None
