@@ -551,6 +551,16 @@ class RemoteConfiguration(object):
                 self.lsb.RELEASE  = distro[1]
                 self.lsb.CODENAME = distro[2]
 
+            elif distro[0].lower() == 'arch' or (
+                distro == ('', '', '')
+                    and 'ARCH' in platform.platform()):
+                # http://bugs.python.org/issue12214
+                # is implemented only for Python 3.3+.
+                self.lsb          = SimpleObject()
+                self.lsb.ID       = 'arch'
+                self.lsb.RELEASE  = platform.release()
+                self.lsb.CODENAME = 'ArchLinux'
+
             else:
                 raise RuntimeError(u'Unsupported Linux distro {1} on {0}, '
                                    u'please get in touch with 1flow/sparks '
