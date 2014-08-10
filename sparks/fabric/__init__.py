@@ -731,11 +731,6 @@ class LocalConfiguration(object):
                 self.lsb.RELEASE  = platform.release()
                 self.lsb.CODENAME = 'ArchLinux'
 
-                else:
-                    raise RuntimeError(u'Unsupported Linux distro on '
-                                       u'localhost, please get in touch '
-                                       u'with 1flow/sparks developers.')
-
             else:
                 raise RuntimeError(u'Unsupported Linux distro {1} on '
                                    u'localhost, please get in touch with '
