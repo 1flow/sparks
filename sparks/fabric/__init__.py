@@ -528,9 +528,7 @@ class RemoteConfiguration(object):
     def get_platform(self):
         # Be sure we don't get stuck in a virtualenv for free.
         with prefix('deactivate >/dev/null 2>&1 || true'):
-            out = run("python -c 'try: "
-                      "from __future__ import print_function; "
-                      "except: pass;"
+            out = run("python -c 'from __future__ import print_function; "
                       "import platform; "
                       "print(platform.system())'",
                       quiet=not DEBUG, combine_stderr=False)
@@ -540,9 +538,7 @@ class RemoteConfiguration(object):
         out = out.strip().lower()
 
         if out == u'linux':
-            distro = run("python -c 'try: "
-                         "from __future__ import print_function; "
-                         "except: pass;"
+            distro = run("python -c 'from __future__ import print_function; "
                          "import platform; "
                          "print(\",\".join(platform.linux_distribution()))'",
                          quiet=not DEBUG,
@@ -567,9 +563,7 @@ class RemoteConfiguration(object):
 
             # Be sure we don't get stuck in a virtualenv for free.
             with prefix('deactivate >/dev/null 2>&1 || true'):
-                out = run("python -c 'try: "
-                          "from __future__ import print_function; "
-                          "except: pass;"
+                out = run("python -c 'from __future__ import print_function; "
                           "import platform; "
                           "print(platform.mac_ver())'", quiet=not DEBUG,
                           combine_stderr=False)
@@ -606,9 +600,7 @@ class RemoteConfiguration(object):
     def get_uname(self):
         # Be sure we don't get stuck in a virtualenv for free.
         with prefix('deactivate >/dev/null 2>&1 || true'):
-            out = run("python -c 'try: "
-                      "from __future__ import print_function; "
-                      "except: pass;"
+            out = run("python -c 'from __future__ import print_function; "
                       "import os; print(os.uname())'",
                       quiet=not DEBUG, combine_stderr=False)
 
