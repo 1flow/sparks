@@ -10,7 +10,10 @@ import random
 import logging
 import platform
 import functools
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except:
+    import pickle
 import cStringIO as StringIO
 
 from ..foundations.classes import SimpleObject
@@ -551,6 +554,16 @@ class RemoteConfiguration(object):
                 self.lsb.RELEASE  = distro[1]
                 self.lsb.CODENAME = distro[2]
 
+            elif distro[0].lower() == 'arch' or (
+                distro == ('', '', '')
+                    and 'ARCH' in platform.platform()):
+                # http://bugs.python.org/issue12214
+                # is implemented only for Python 3.3+.
+                self.lsb          = SimpleObject()
+                self.lsb.ID       = 'arch'
+                self.lsb.RELEASE  = platform.release()
+                self.lsb.CODENAME = 'ArchLinux'
+
             else:
                 raise RuntimeError(u'Unsupported Linux distro {1} on {0}, '
                                    u'please get in touch with 1flow/sparks '
@@ -721,19 +734,15 @@ class LocalConfiguration(object):
                 self.lsb.RELEASE  = distro[1]
                 self.lsb.CODENAME = distro[2]
 
-            elif distro in (('arch', '', ''), ('', '', '')):
+            elif distro[0].lower() == 'arch' or (
+                distro == ('', '', '')
+                    and 'ARCH' in platform.platform()):
                 # http://bugs.python.org/issue12214
                 # is implemented only for Python 3.3+.
-                if 'ARCH' in platform.platform():
-                    self.lsb          = SimpleObject()
-                    self.lsb.ID       = 'arch'
-                    self.lsb.RELEASE  = platform.release()
-                    self.lsb.CODENAME = 'ArchLinux'
-
-                else:
-                    raise RuntimeError(u'Unsupported Linux distro on '
-                                       u'localhost, please get in touch '
-                                       u'with 1flow/sparks developers.')
+                self.lsb          = SimpleObject()
+                self.lsb.ID       = 'arch'
+                self.lsb.RELEASE  = platform.release()
+                self.lsb.CODENAME = 'ArchLinux'
 
             else:
                 raise RuntimeError(u'Unsupported Linux distro {1} on '
