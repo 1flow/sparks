@@ -10,7 +10,10 @@ import random
 import logging
 import platform
 import functools
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except:
+    import pickle
 import cStringIO as StringIO
 
 from ..foundations.classes import SimpleObject
