@@ -509,7 +509,7 @@ class ConfigurationMixin(object):
 
     @property
     def is_arch(self):
-        return self.lsb and self.lsb.ID == arch
+        return self.lsb and self.lsb.ID == 'arch'
 
 
 class RemoteConfiguration(ConfigurationMixin):
