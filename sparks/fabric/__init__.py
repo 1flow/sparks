@@ -492,7 +492,7 @@ class RemoteConfiguration(object):
 
         # No need to `deactivate` for this calls, it's pure shell.
         self.user, self.tilde = run('echo "${USER},${HOME}"',
-                                    quiet=True).strip().split(',')
+                                    quiet=QUIET).strip().split(',')
 
         self.get_platform()
         self.get_uname()
