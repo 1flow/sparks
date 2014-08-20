@@ -13,8 +13,7 @@ from fabric.contrib.files    import contains, append, exists, sed
 from fabric.context_managers import cd, lcd, settings, hide
 from fabric.colors           import yellow, cyan
 
-from ...sparks import version as sparks_version
-from .. import pkg
+from .. import pkg, version as sparks_version
 from .utils import (with_remote_configuration,  # dsh_to_roledefs,
                     tilde, symlink, dotfiles)
 
