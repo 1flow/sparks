@@ -13,6 +13,7 @@ from fabric.contrib.files    import contains, append, exists, sed
 from fabric.context_managers import cd, lcd, settings, hide
 from fabric.colors           import yellow, cyan
 
+from ...sparks import version as sparks_version
 from .. import pkg
 from .utils import (with_remote_configuration,  # dsh_to_roledefs,
                     tilde, symlink, dotfiles)
@@ -247,7 +248,7 @@ def test(remote_configuration=None):
     """ Just run `uname -a; uptime` remotely, to test the connection,
         and the sparks remote detection engine. """
 
-    run('uname -a; uptime; echo $USER — $PWD')
+    run('uname -a; uptime; echo $USER — $PWD — Sparks v%s' % sparks_version)
 
 
 @task
