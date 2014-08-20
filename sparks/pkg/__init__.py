@@ -9,6 +9,9 @@ from .pip import (pip_perms,
 from .apt import (apt_usable, apt_is_installed, apt_update, apt_upgrade,
                   apt_add, apt_del, apt_search, )
 
+from .arch import (arch_usable, arch_is_installed, arch_update, arch_upgrade,
+                  arch_add, arch_del, arch_search, )
+
 from .brew import (brew_usable, brew_is_installed, brew_add, brew_del,
                    brew_update, brew_upgrade, brew_search, )
 
@@ -22,6 +25,9 @@ from .other import (npm_is_installed, npm_add, npm_search,
 @with_remote_configuration
 def pkg_is_installed(pkg, remote_configuration=None):
     if remote_configuration.lsb:
+        if remote_configuration.lsb.ID == 'arch':
+            return arch_is_installed(pkg)
+
         return apt_is_installed(pkg)
     else:
         return brew_is_installed(pkg)
