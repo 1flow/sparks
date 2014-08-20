@@ -14,7 +14,11 @@ try:
     import cPickle as pickle
 except:
     import pickle
-import cStringIO as StringIO
+
+try:
+    import cStringIO as StringIO
+except:
+    import StringIO
 
 from ..foundations.classes import SimpleObject
 
