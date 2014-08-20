@@ -511,6 +511,18 @@ class ConfigurationMixin(object):
     def is_arch(self):
         return self.lsb and self.lsb.ID == 'arch'
 
+    @property
+    def is_ubuntu(self):
+        return self.lsb and self.lsb.ID.lower() == 'ubuntu'
+
+    @property
+    def is_debian(self):
+        return self.lsb and self.lsb.ID.lower() == 'debian'
+
+    @property
+    def is_deb(self):
+        return self.lsb and self.lsb.ID.lower() in ('ubuntu', 'debian',)
+
 
 class RemoteConfiguration(ConfigurationMixin):
     """ Define an easy to use object with remote machine configuration. """
