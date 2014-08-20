@@ -483,7 +483,36 @@ def is_production_environment():
     return is_production
 
 
-class RemoteConfiguration(object):
+class ConfigurationMixin(object):
+    """ Common methods to Remote & Local configuration classes. """
+
+    def __getattr__(self, key):
+        """ This lazy getter will allow to load the Django settings after
+            Fabric and the project fabfile has initialized `env`. Doing
+            elseway leads to cycle dependancy KeyErrors. """
+
+        if key == 'django_settings':
+            try:
+                self.get_django_settings()
+
+            except ImportError:
+                raise AttributeError(u'%s Django settings could not be '
+                                     u'loaded.' % ('Remote' if 'Remote'
+                                                   in self.__class__.__name__
+                                                   else 'Local'))
+
+            return self.django_settings
+
+    @property
+    def is_osx(self):
+        return self.mac is not None
+
+    @property
+    def is_arch(self):
+        return self.lsb and self.lsb.ID == arch
+
+
+class RemoteConfiguration(ConfigurationMixin):
     """ Define an easy to use object with remote machine configuration. """
 
     def __init__(self, host_string):
@@ -512,20 +541,6 @@ class RemoteConfiguration(object):
                   home=self.tilde,
                   ))
 
-    def __getattr__(self, key):
-        """ This lazy getter will allow to load the Django settings after
-            Fabric and the project fabfile has initialized `env`. Doing
-            elseway leads to cycle dependancy KeyErrors. """
-
-        if key == 'django_settings':
-            try:
-                self.get_django_settings()
-            except ImportError:
-                raise AttributeError(
-                    'Remote Django settings could not be loaded.')
-
-            return self.django_settings
-
     def reload(self):
         """ This methods just reloads the remote Django settings, because
             anything else is very unlikely to have changed. """
@@ -541,6 +556,7 @@ class RemoteConfiguration(object):
                       quiet=not DEBUG, combine_stderr=False)
 
         self.lsb = None
+        self.mac = None
 
         out = out.strip().lower()
 
@@ -575,8 +591,6 @@ class RemoteConfiguration(object):
                                    self.host_string, distro[0]))
 
         elif out == u'darwin':
-            self.is_osx = True
-            self.mac    = None
 
             # Be sure we don't get stuck in a virtualenv for free.
             with prefix('deactivate >/dev/null 2>&1 || true'):
@@ -612,7 +626,6 @@ class RemoteConfiguration(object):
             raise RuntimeError(u'Unsupported platform {1} on {0}, please '
                                u'get in touch with 1flow/sparks '
                                u'developers.'.format(self.host_string, out))
-
 
     def get_uname(self):
         # Be sure we don't get stuck in a virtualenv for free.
@@ -711,7 +724,7 @@ class RemoteConfiguration(object):
                     raise ImportError
 
 
-class LocalConfiguration(object):
+class LocalConfiguration(ConfigurationMixin):
     """ Define an easy to use object with local machine configuration.
 
         This class doesn't use fabric, it's used to bootstrap the local
@@ -727,20 +740,20 @@ class LocalConfiguration(object):
 
         system = platform.system().lower()
 
-        if system == 'linux':
+        self.lsb = None
+        self.mac = None
 
+        if system == 'linux':
             distro = platform.linux_distribution()
 
             if distro[0].lower() in ('debian', 'ubuntu'):
-
                 self.lsb          = SimpleObject()
                 self.lsb.ID       = distro[0]
                 self.lsb.RELEASE  = distro[1]
                 self.lsb.CODENAME = distro[2]
 
             elif distro[0].lower() == 'arch' or (
-                distro == ('', '', '')
-                    and 'ARCH' in platform.platform()):
+                    distro == ('', '', '') and 'ARCH' in platform.platform()):
                 # http://bugs.python.org/issue12214
                 # is implemented only for Python 3.3+.
                 self.lsb          = SimpleObject()
@@ -753,11 +766,8 @@ class LocalConfiguration(object):
                                    u'localhost, please get in touch with '
                                    u'1flow/sparks developers.'.format(
                                        distro[0]))
-            self.is_osx = False
 
         elif system == 'darwin':
-            self.lsb    = None
-            self.is_osx = True
             self.mac    = SimpleObject(from_dict=dict(zip(
                                        ('release', 'version', 'machine'),
                                        platform.mac_ver())))
