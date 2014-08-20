@@ -25,7 +25,7 @@ from .other import (npm_is_installed, npm_add, npm_search,
 @with_remote_configuration
 def pkg_is_installed(pkg, remote_configuration=None):
     if remote_configuration.lsb:
-        if remote_configuration.lsb.ID == 'arch':
+        if remote_configuration.is_arch:
             return arch_is_installed(pkg)
 
         return apt_is_installed(pkg)
@@ -36,6 +36,9 @@ def pkg_is_installed(pkg, remote_configuration=None):
 @with_remote_configuration
 def pkg_add(pkgs, remote_configuration=None):
     if remote_configuration.lsb:
+        if remote_configuration.is_arch:
+            return arch_add(pkg)
+
         return apt_add(pkgs)
     else:
         return brew_add(pkgs)
@@ -44,6 +47,9 @@ def pkg_add(pkgs, remote_configuration=None):
 @with_remote_configuration
 def pkg_del(pkgs, remote_configuration=None):
     if remote_configuration.lsb:
+        if remote_configuration.is_arch:
+            return arch_del(pkg)
+
         return apt_del(pkgs)
     else:
         return brew_del(pkgs)
@@ -52,6 +58,9 @@ def pkg_del(pkgs, remote_configuration=None):
 @with_remote_configuration
 def pkg_update(remote_configuration=None):
     if remote_configuration.lsb:
+        if remote_configuration.is_arch:
+            return arch_update(pkg)
+
         return apt_update()
     else:
         return brew_update()
@@ -60,6 +69,9 @@ def pkg_update(remote_configuration=None):
 @with_remote_configuration
 def pkg_upgrade(remote_configuration=None):
     if remote_configuration.lsb:
+        if remote_configuration.is_arch:
+            return arch_upgrade(pkg)
+
         return apt_upgrade()
     else:
         return brew_upgrade()
