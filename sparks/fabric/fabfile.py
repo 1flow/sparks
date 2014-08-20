@@ -55,15 +55,18 @@ def install_chrome(remote_configuration=None):
             info("Please install Google Chrome manually.")
 
     else:
+        print('XXX on Arch/BSD…')
+
         if exists('/usr/bin/google-chrome'):
             return
 
-        pkg.apt.key('https://dl-ssl.google.com/linux/linux_signing_key.pub')
-        append('/etc/apt/sources.list.d/google-chrome.list',
-               'deb http://dl.google.com/linux/chrome/deb/ stable main',
-               use_sudo=True)
-        pkg.apt_update()
-        pkg.apt_add('google-chrome-stable')
+        if remote_configuration.is_ubuntu:
+            pkg.apt.key('https://dl-ssl.google.com/linux/linux_signing_key.pub')
+            append('/etc/apt/sources.list.d/google-chrome.list',
+                   'deb http://dl.google.com/linux/chrome/deb/ stable main',
+                   use_sudo=True)
+            pkg.pkg_update()
+            pkg.pkg_add('google-chrome-stable')
 
 
 @task
@@ -317,11 +320,13 @@ def sys_del_useless(remote_configuration=None):
 
     LOGGER.info('Checking sys_del_useless() components…')
 
-    pkg.apt_del(('apport', 'python-apport',
-                'landscape-client-ui-install', 'gnome-orca',
-                'brltty', 'libbrlapi0.5', 'python3-brlapi', 'python-brlapi',
-                'ubuntuone-client', 'ubuntuone-control-panel',
-                'rhythmbox-ubuntuone', 'python-ubuntuone-client', 'onboard'))
+    if remote_configuration.lsb and not remote_configuration.is_arch:
+        pkg.pkg_del(('apport', 'python-apport',
+                    'landscape-client-ui-install', 'gnome-orca',
+                    'brltty', 'libbrlapi0.5', 'python3-brlapi',
+                    'python-brlapi', 'ubuntuone-client',
+                    'ubuntuone-control-panel', 'rhythmbox-ubuntuone',
+                    'python-ubuntuone-client', ))
 
 
 @task
@@ -334,8 +339,9 @@ def sys_low_resources_purge(remote_configuration=None):
 
     LOGGER.info('Removing packages for a low-resource system…')
 
-    pkg.apt_del(('bluez', 'blueman', 'oneconf', 'colord',
-                 'zeitgeist', ))
+    if remote_configuration.lsb and not remote_configuration.is_arch:
+        pkg.pkg_del(('bluez', 'blueman', 'oneconf', 'colord',
+                     'zeitgeist', ))
 
 
 @task
@@ -360,8 +366,11 @@ def sys_admin_pkgs(remote_configuration=None):
         # See https://github.com/mperham/lunchy
         pkg.gem_add(('lunchy', ))
 
+    elif remote_configuration.lsb:
+        pkg.pkg_add(('acl', 'attr', 'colordiff', 'telnet', 'psmisc', 'host', ))
+
     else:
-        pkg.apt_add(('acl', 'attr', 'colordiff', 'telnet', 'psmisc', 'host', ))
+        raise NotImplementedError('implement sysadmin pkgs for BSD.')
 
 
 @task
@@ -392,7 +401,7 @@ def sys_ssh_powerline(remote_configuration=None):
 def sys_mongodb(remote_configuration=None):
     """ Install the MongoDB APT repository if on Ubuntu and 12.04. """
 
-    if remote_configuration.lsb.ID.lower() == 'ubuntu':
+    if remote_configuration.is_ubuntu:
         major_distro_version = \
             int(remote_configuration.lsb.RELEASE.split('.')[0])
 
@@ -692,7 +701,7 @@ def dev_web(remote_configuration=None):
 
     LOGGER.info('Checking dev_web() components…')
 
-    if remote_configuration.lsb.ID == 'ubuntu':
+    if remote_configuration.is_ubuntu:
         major_distro_version = \
             int(remote_configuration.lsb.RELEASE.split('.')[0])
 
@@ -783,12 +792,14 @@ def dev(remote_configuration=None):
         pkg.brew_add(('git-flow-avh', 'ack', 'python', ))
 
     else:
+        print('XXX on Arch…')
+
         # On Ubuntu, `ack` is `ack-grep`.
-        pkg.apt_add(('git-flow', 'ack-grep', 'python-pip',
-                    'ruby', 'ruby-dev', 'rubygems', ))
+        pkg.pkg_add(('git-flow', 'ack-grep', 'python-pip',
+                     'ruby', 'ruby-dev', 'rubygems', ))
 
         # Remove eventually DEB installed old packages (see just after).
-        pkg.apt_del(('python-virtualenv', 'virtualenvwrapper', ))
+        pkg.pkg_del(('python-virtualenv', 'virtualenvwrapper', ))
 
     # Gettext is used nearly everywhere, and Django
     # {make,compile}messages commands need it.
@@ -882,9 +893,10 @@ def db_redis(remote_configuration=None):
                         pkg.apt_upgrade()
 
                     else:
-                        pkg.apt_add('redis-server')
+                        pkg.pkg_add('redis-server')
+
             else:
-                pkg.apt_add('redis-server')
+                pkg.pkg_add('redis-server')
 
 
 @task
@@ -925,14 +937,17 @@ def db_postgresql(remote_configuration=None):
             # Test connection
             # psql template1
     else:
+
+        print('XXX on Arch/BSD…')
+
         major_distro_version = \
             int(remote_configuration.lsb.RELEASE.split('.')[0])
 
         if major_distro_version >= 14:
-            pkg.apt_add(('postgresql-9.3', ))
+            pkg.pkg_add(('postgresql-9.3', ))
 
         else:
-            pkg.apt_add(('postgresql-9.1', ))
+            pkg.pkg_add(('postgresql-9.1', ))
 
 
     dev_postgresql()
@@ -952,8 +967,10 @@ def db_mongodb(remote_configuration=None):
                 '~/Library/LaunchAgents/homebrew.*.mongodb.plist')
 
     else:
+        print('XXX on Arch/BSD…')
+
         package_name = sys_mongodb()
-        pkg.apt_add((package_name, ))
+        pkg.pkg_add((package_name, ))
 
     dev_mongodb()
 
@@ -1046,7 +1063,9 @@ def lxc_host(remote_configuration=None):
         info("Skipped LXC host setup (not on LSB).")
         return
 
-    pkg.apt_add(('lxc', 'cgroup-lite', ))
+    print('XXX on Arch/BSD…')
+
+    pkg.pkg_add(('lxc', 'cgroup-lite', ))
 
 # ------------------------------------ Client or graphical applications
 
@@ -1072,7 +1091,9 @@ def graphdev(remote_configuration=None):
                 info("Please install %s manually." % yellow(app))
         return
 
-    pkg.apt_add(('gitg', 'meld', 'regexxer', 'cscope', 'exuberant-ctags',
+    print('XXX on Arch/BSD…')
+
+    pkg.pkg_add(('gitg', 'meld', 'regexxer', 'cscope', 'exuberant-ctags',
                 'vim-gnome', 'terminator', 'gedit-developer-plugins',
                 'gedit-plugins', 'geany', 'geany-plugins', ))
 
@@ -1086,7 +1107,9 @@ def graphdb(remote_configuration=None):
         info("Skipped graphical DB-related packages (not on LSB).")
         return
 
-    pkg.apt_add('pgadmin3')
+    print('XXX on Arch/BSD…')
+
+    pkg.pkg_add('pgadmin3')
 
 
 @task
@@ -1098,11 +1121,11 @@ def graph(remote_configuration=None):
         info("Skipped graphical APT packages (not on LSB).")
         return
 
-    if not remote_configuration.lsb.ID.lower() == 'ubuntu':
-        info("Skipped graphe PPA packages (not on Ubuntu).")
+    if remote_configuration.is_ubuntu:
+        info("Skipped graph PPA packages (not on Ubuntu).")
         return
 
-    pkg.apt_add(('synaptic', 'gdebi', 'compizconfig-settings-manager',
+    pkg.pkg_add(('synaptic', 'gdebi', 'compizconfig-settings-manager',
                 'dconf-tools', 'gconf-editor', 'pidgin', 'vlc', 'mplayer',
                 'indicator-multiload'))
 
@@ -1138,10 +1161,10 @@ def graph(remote_configuration=None):
     # pkg.apt.ppa_pkg('ppa:jonls/redshift-ppa',
     #                 'redshift', '/usr/bin/redshift')
     if remote_configuration.lsb.RELEASE == '13.10':
-        pkg.apt_add(('gtk-redshift', ))
+        pkg.pkg_add(('gtk-redshift', ))
 
     elif remote_configuration.lsb.RELEASE.startswith('14'):
-        pkg.apt_add(('redshift-gtk', ))
+        pkg.pkg_add(('redshift-gtk', ))
 
 
 @task(aliases=('graphkbd', 'kbd', ))
@@ -1317,7 +1340,7 @@ def myfullenv(remote_configuration=None):
 def mybootstrap(remote_configuration=None):
     """ Bootstrap my personal environment on the local machine. """
 
-    pkg.apt_add(('ssh', ), locally=True)
+    pkg.pkg_add(('ssh', ), locally=True)
 
     mydotfiles(remote_configuration=None, locally=True)
 
@@ -1335,18 +1358,20 @@ def lxc_base(remote_configuration=None):
 
     sys_easy_sudo()
 
+    print('XXX on Arch/BSD…')
+
     # install the locale before everything, else DPKG borks.
-    pkg.apt_add(('language-pack-fr', 'language-pack-en', ))
+    pkg.pkg_add(('language-pack-fr', 'language-pack-en', ))
 
     # Remove firefox's locale, it's completely useless in a LXC.
-    pkg.apt_del(('firefox-locale-fr', 'firefox-locale-en', ))
+    pkg.pkg_del(('firefox-locale-fr', 'firefox-locale-en', ))
 
-    pkg.apt_add(('bsd-mailx', ))
+    pkg.pkg_add(('bsd-mailx', ))
 
     # When using lxc_server on a lxc_host which already has postfix
     # installed, don't replace it by nullmailer, this is harmful.
-    if not pkg.apt_is_installed('postfix'):
-        pkg.apt_add(('nullmailer', ))
+    if not pkg.pkg_is_installed('postfix'):
+        pkg.pkg_add(('nullmailer', ))
 
 
 @task
@@ -1372,11 +1397,14 @@ def lxc_purge(remote_configuration=None):
         info('Skipped lxc_purge (not on LSB).')
         return
 
-    # Some other useless packages on LXCs…
-    # NOTE: don't purge dbus, it's used by the upstart bash completer. Too bad.
-    pkg.apt_del(('man-db', 'ureadahead', ))  # 'dbus', ))
+    if remote_configuration.is_ubuntu:
+        # Some other useless packages on LXCs…
+        # NOTE: don't purge dbus, it's used by the upstart bash completer. Too bad.
+        pkg.pkg_del(('man-db', 'ureadahead', ))  # 'dbus', ))
 
-    sudo('apt-get autoremove --purge --yes --force-yes')
+        sudo('apt-get autoremove --purge --yes --force-yes')
+
+    print('XXX on Arch/BSD…')
 
 
 @task
