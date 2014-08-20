@@ -37,7 +37,7 @@ def pkg_is_installed(pkg, remote_configuration=None):
 def pkg_add(pkgs, remote_configuration=None):
     if remote_configuration.lsb:
         if remote_configuration.is_arch:
-            return arch_add(pkg)
+            return arch_add(pkgs)
 
         return apt_add(pkgs)
     else:
@@ -48,7 +48,7 @@ def pkg_add(pkgs, remote_configuration=None):
 def pkg_del(pkgs, remote_configuration=None):
     if remote_configuration.lsb:
         if remote_configuration.is_arch:
-            return arch_del(pkg)
+            return arch_del(pkgs)
 
         return apt_del(pkgs)
     else:
@@ -59,7 +59,7 @@ def pkg_del(pkgs, remote_configuration=None):
 def pkg_update(remote_configuration=None):
     if remote_configuration.lsb:
         if remote_configuration.is_arch:
-            return arch_update(pkg)
+            return arch_update()
 
         return apt_update()
     else:
@@ -70,7 +70,7 @@ def pkg_update(remote_configuration=None):
 def pkg_upgrade(remote_configuration=None):
     if remote_configuration.lsb:
         if remote_configuration.is_arch:
-            return arch_upgrade(pkg)
+            return arch_upgrade()
 
         return apt_upgrade()
     else:
@@ -93,6 +93,9 @@ def update(remote_configuration=None):
     #gem_update()
 
     if remote_configuration.lsb:
+        if remote_configuration.is_arch:
+            return arch_update()
+
         apt_update()
     else:
         brew_update()
@@ -110,6 +113,9 @@ def upgrade(update=False, remote_configuration=None):
     #gem_update()
 
     if remote_configuration.lsb:
+        if remote_configuration.is_arch:
+            return arch_upgrade()
+
         apt_upgrade()
     else:
         brew_upgrade()
