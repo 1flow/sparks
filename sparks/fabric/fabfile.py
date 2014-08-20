@@ -288,7 +288,8 @@ def sys_unattended(remote_configuration=None):
         info("Skipped unattended-upgrades (not on LSB).")
         return
 
-    pkg.apt_add('unattended-upgrades')
+    if not remote_configuration.is_arch:
+        pkg.apt_add('unattended-upgrades')
 
     # always install the files, in case they
     # already exist and have different contents.
@@ -820,7 +821,11 @@ def dev(remote_configuration=None):
             py3_pkgs += ('python3.3', 'python3.3-dev', 'python3.3-examples',
                          'python3.3-minimal', )
 
-        pkg.apt_add(('build-essential', 'python-all-dev', ))
+        if remote_configuration.is_arch:
+            pkg.pkg_add(('gcc', ))
+
+        else:
+            pkg.pkg_add(('build-essential', 'python-all-dev', ))
 
     pkg.pkg_add(py3_pkgs)
 
@@ -858,21 +863,29 @@ def db_redis(remote_configuration=None):
         run('launchctl load ~/Library/LaunchAgents/homebrew.*.redis.plist',
             quiet=True)
 
+    elif remote_configuration.is_bsd:
+        raise NotImplementedError(u'implement BSD redis installation…')
+
     else:
-        if remote_configuration.lsb.RELEASE.startswith('12') \
-                or remote_configuration.lsb.RELEASE.startswith('13'):
-            if not exists('/etc/apt/sources.list.d/'
-                          'chris-lea-redis-server-{0}.list'.format(
-                              remote_configuration.lsb.CODENAME)):
-                pkg.apt.ppa('ppa:chris-lea/redis-server')
+        if remote_configuration.is_arch:
+            pkg.pkg_add(('redis', ))
 
-                if exists('/usr/bin/redis-cli'):
-                    pkg.apt_upgrade()
-
-                else:
-                    pkg.apt_add('redis-server')
         else:
-            pkg.apt_add('redis-server')
+
+            if remote_configuration.lsb.RELEASE.startswith('12') \
+                    or remote_configuration.lsb.RELEASE.startswith('13'):
+                if not exists('/etc/apt/sources.list.d/'
+                              'chris-lea-redis-server-{0}.list'.format(
+                                  remote_configuration.lsb.CODENAME)):
+                    pkg.apt.ppa('ppa:chris-lea/redis-server')
+
+                    if exists('/usr/bin/redis-cli'):
+                        pkg.apt_upgrade()
+
+                    else:
+                        pkg.apt_add('redis-server')
+            else:
+                pkg.apt_add('redis-server')
 
 
 @task
