@@ -715,7 +715,7 @@ def dev_web_nodejs(remote_configuration=None):
     # packages could fail to install because of outdate indexes.
     pkg.pkg_update()
 
-    LOGGER.info('Checking dev_web_nodejs() components…')
+    LOGGER.info('Checking NodeJS & NPM components…')
 
     # ———————————————————————————————————————————————————————————— NodeJS & NPM
 
@@ -751,6 +751,7 @@ def dev_web_nodejs(remote_configuration=None):
                     'cmake', ))
 
     elif remote_configuration.is_arch:
+        LOGGER.debug('ARCH NodeJS & NPM…')
         pkg.pkg_add(('nodejs', 'cmake', ))
 
     elif remote_configuration.is_freebsd:
@@ -759,28 +760,6 @@ def dev_web_nodejs(remote_configuration=None):
     # But on OSX/BSD, we need NPM too. For Ubuntu, this has already been handled.
     elif remote_configuration.is_osx:
         pkg.pkg_add(('nodejs', 'npm', ))
-
-    # ——————————————————————————————————————————————— PySide build-deps (again)
-    # for Ghost.py text parsing.
-
-    if remote_configuration.is_osx and not exists('/opt'):
-
-        # Even this doesn't work, we need to official binary,
-        # else PySide won't find it…
-        #run('brew install qt --developer')
-
-        LOGGER.critical('You need to install PySide and Qt from '
-                        'http://qt-project.org/wiki/PySide_Binaries_MacOSX '
-                        '(eg. http://pyside.markus-ullmann.de/pyside-1.1.1-qt48-py27apple.pkg)') # NOQA
-
-    elif remote_configuration.is_deb:
-        pkg.pkg_add(('libqt4-dev', ))
-
-    elif remote_configuration.is_arch:
-        pkg.pkg_add(('qt4', 'qtwebkit', ))
-
-    elif remote_configuration.is_freebsd:
-        pkg.pkg_add(('devel/qt4', 'www/webkit-qt4', ))
 
     # ——————————————————————————————————————————————————————————— Node packages
 
@@ -800,6 +779,35 @@ def dev_web_nodejs(remote_configuration=None):
                  #'coffeescript-concat',
                  #'coffeescript_compiler_tools',
                  ))
+
+
+@task
+@with_remote_configuration
+def dev_web_pyside(remote_configuration=None):
+
+    # ——————————————————————————————————————————————— PySide build-deps (again)
+    # for Ghost.py text parsing.
+
+    LOGGER.info('Checking QT4 & webkit components…')
+
+    if remote_configuration.is_osx and not exists('/opt'):
+
+        # Even this doesn't work, we need to official binary,
+        # else PySide won't find it…
+        #run('brew install qt --developer')
+
+        LOGGER.critical('You need to install PySide and Qt from '
+                        'http://qt-project.org/wiki/PySide_Binaries_MacOSX '
+                        '(eg. http://pyside.markus-ullmann.de/pyside-1.1.1-qt48-py27apple.pkg)') # NOQA
+
+    elif remote_configuration.is_deb:
+        pkg.pkg_add(('libqt4-dev', ))
+
+    elif remote_configuration.is_arch:
+        pkg.pkg_add(('qt4', 'qtwebkit', ))
+
+    elif remote_configuration.is_freebsd:
+        pkg.pkg_add(('devel/qt4', 'www/webkit-qt4', ))
 
 
 @task
@@ -1345,6 +1353,7 @@ def mydevenv(remote_configuration=None):
     dev()
     dev_web_nodejs()
     dev_web_ruby()
+    dev_web_pyside()
 
     deployment()
 
