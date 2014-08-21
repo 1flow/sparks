@@ -576,7 +576,7 @@ def dev_tildesources(remote_configuration=None):
 def dev_sqlite(remote_configuration=None):
     """ SQLite development environment (for python packages build). """
 
-    if not remote_configuration.is_osx:
+    if remote_configuration.is_deb:
         pkg.pkg_add(('libsqlite3-dev', 'python-all-dev', ))
 
     pkg.pip2_add(('pysqlite', ))
@@ -587,8 +587,8 @@ def dev_sqlite(remote_configuration=None):
 def dev_mysql(remote_configuration=None):
     """ MySQL development environment (for python packages build). """
 
-    pkg.pkg_add('' if remote_configuration.is_osx else 'libmysqlclient-dev')
 
+    pkg.pkg_add('libmysqlclient-dev' if remote_configuration.is_deb else '')
 
 @task
 @with_remote_configuration
@@ -614,6 +614,9 @@ def dev_postgresql(remote_configuration=None):
     if remote_configuration.is_arch:
         pkg.pkg_add(('postgresql-libs', ))
 
+    if remote_configuration.is_freebsd:
+        pkg.pkg_add(('postgresql94-client', ))
+
     pkg.pip2_add(('psycopg2', ))
 
 
@@ -628,7 +631,6 @@ def dev_mongodb(remote_configuration=None):
         sys_mongodb()
         #pkg.pkg_add(('mongodb-10gen-dev', ))
 
-    # pkg.pip2_add(('psycopg2', ))
     pass
 
 
@@ -687,6 +689,9 @@ def dev_python_deps(remote_configuration=None):
     if remote_configuration.is_osx:
         pkg.pkg_add(('zmq', ))
 
+    elif remote_configuration.is_freebsd:
+        pkg.pkg_add(('libzmq4', ))
+
     else:
         pkg.pkg_add(('libxml2-dev', 'libxslt-dev', 'libzmq-dev', 'python-dev'))
 
@@ -706,6 +711,8 @@ def dev_web(remote_configuration=None):
     pkg.pkg_update()
 
     LOGGER.info('Checking dev_web() components…')
+
+    # ———————————————————————————————————————————————————————————— NodeJS & NPM
 
     if remote_configuration.is_ubuntu:
         major_distro_version = \
@@ -730,6 +737,7 @@ def dev_web(remote_configuration=None):
                 # executable; we only have `nodejs` left in recent versions.
                 pkg.pkg_add(('nodejs-legacy', ))
 
+    if remote_configuration.is_deb:
     # NOTE: `nodejs` PPA version already includes `npm`,
     # no need to install it via a separate package on Ubuntu.
     # If not using the PPA, `npm` has already been installed.
@@ -737,7 +745,16 @@ def dev_web(remote_configuration=None):
                 # PySide build-deps, for Ghost.py text parsing.
                 'cmake', ))
 
-    # PySide build-deps (again), for Ghost.py text parsing.
+    elif remote_configuration.is_freebsd:
+        pkg.pkg_add(('www/node', 'devel/cmake', ))
+
+    # But on OSX/BSD, we need NPM too. For Ubuntu, this has already been handled.
+    elif remote_configuration.is_osx:
+        pkg.pkg_add(('npm', ))
+
+    # ——————————————————————————————————————————————— PySide build-deps (again)
+    # for Ghost.py text parsing.
+
     if remote_configuration.is_osx and not exists('/opt'):
 
         # Even this doesn't work, we need to official binary,
@@ -748,12 +765,13 @@ def dev_web(remote_configuration=None):
                         'http://qt-project.org/wiki/PySide_Binaries_MacOSX '
                         '(eg. http://pyside.markus-ullmann.de/pyside-1.1.1-qt48-py27apple.pkg)') # NOQA
 
-    else:
+    elif remote_configuration.is_deb:
         pkg.pkg_add(('libqt4-dev', ))
 
-    # But on OSX, we need NPM too. For Ubuntu, this has already been handled.
-    if remote_configuration.is_osx:
-        pkg.pkg_add(('npm', ))
+    elif remote_configuration.is_freebsd:
+        pkg.pkg_add(('devel/qt4', 'www/webkit-qt4', ))
+
+    # ——————————————————————————————————————————————————————————— Node packages
 
     pkg.npm_add(('coffee-script',       # used in Django-pipeline
                  'yuglify',             # used in Django-pipeline
@@ -771,6 +789,14 @@ def dev_web(remote_configuration=None):
                  #'coffeescript-concat',
                  #'coffeescript_compiler_tools',
                  ))
+
+    # ————————————————————————————————————————————————————— Ruby & GEM packages
+
+    if remote_configuration.is_freebsd:
+        # Ruby 2.1 is the recommended version for new
+        # projects. Other version are just legacy.
+        pkg.pkg_add(('lang/ruby21', 'devel/ruby-gems', 'devel/rubygem-rake', ))
+        # install ruby-gdbm too ?
 
     pkg.gem_add(
         ('compass',                   # used in Django-pipeline
@@ -795,7 +821,10 @@ def dev(remote_configuration=None):
         #     - virtualenv* come only via PIP.
         #    - git-flow-avh brings small typing enhancements.
 
-        pkg.brew_add(('git-flow-avh', 'ack', 'python', ))
+        pkg.pkg_add(('git-flow-avh', 'ack', 'python', ))
+
+    elif remote_configuration.is_freebsd:
+        pkg.pkg_add(('git-flow-avh', 'ack', 'python', ))
 
     else:
         print('XXX on Arch…')
