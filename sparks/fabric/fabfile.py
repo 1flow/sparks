@@ -750,12 +750,15 @@ def dev_web_nodejs(remote_configuration=None):
                     # PySide build-deps, for Ghost.py text parsing.
                     'cmake', ))
 
+    elif remote_configuration.is_arch:
+        pkg.pkg_add(('nodejs', 'cmake', ))
+
     elif remote_configuration.is_freebsd:
         pkg.pkg_add(('www/node', 'www/npm', 'devel/cmake', ))
 
     # But on OSX/BSD, we need NPM too. For Ubuntu, this has already been handled.
     elif remote_configuration.is_osx:
-        pkg.pkg_add(('npm', ))
+        pkg.pkg_add(('nodejs', 'npm', ))
 
     # ——————————————————————————————————————————————— PySide build-deps (again)
     # for Ghost.py text parsing.
@@ -772,6 +775,9 @@ def dev_web_nodejs(remote_configuration=None):
 
     elif remote_configuration.is_deb:
         pkg.pkg_add(('libqt4-dev', ))
+
+    elif remote_configuration.is_arch:
+        pkg.pkg_add(('qt4', 'qtwebkit', ))
 
     elif remote_configuration.is_freebsd:
         pkg.pkg_add(('devel/qt4', 'www/webkit-qt4', ))
