@@ -19,7 +19,7 @@ def arch_usable(remote_configuration=None):
 def arch_is_installed(pkg):
     """ Return ``True`` if a given package is installed. """
 
-    return is_installed('%s -Qs "%s"' % (ARCH_CMD, pkg))
+    return is_installed('%s -Qs "%s" | grep "/%s "' % (ARCH_CMD, pkg, pkg))
 
 
 def arch_update():
