@@ -69,7 +69,7 @@ def pkg_del(pkgs, remote_configuration=None):
         return apt_del(pkgs)
 
     elif remote_configuration.is_bsd:
-        return ports_add(pkgs)
+        return ports_del(pkgs)
 
     else:
         return brew_del(pkgs)
