@@ -677,7 +677,8 @@ def dev_memcached(remote_configuration=None):
     LOGGER.info('Checking dev_memcached() components…')
 
     pkg.pkg_add(('libmemcached-dev' if remote_configuration.is_deb
-                else 'libmemcached', ))
+                else 'libmemcached' if remote_configuration.is_arch
+                else 'databases/libmemcached', ))
 
 
 @task
