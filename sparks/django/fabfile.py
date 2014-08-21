@@ -797,7 +797,8 @@ def install_components(remote_configuration=None, upgrade=False):
     with activate_venv():
         with cd(env.root):
             fabfile.dev()
-            fabfile.dev_web()
+            fabfile.dev_web_nodejs()
+            fabfile.dev_web_ruby()
             fabfile.dev_django_full()
 
     # OSX == test environment == no nginx/supervisor/etc

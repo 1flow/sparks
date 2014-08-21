@@ -692,8 +692,12 @@ def dev_python_deps(remote_configuration=None):
     elif remote_configuration.is_freebsd:
         pkg.pkg_add(('libzmq4', ))
 
-    else:
-        pkg.pkg_add(('libxml2-dev', 'libxslt-dev', 'libzmq-dev', 'python-dev'))
+    elif remote_configuration.is_deb:
+        pkg.pkg_add(('libxml2-dev', 'libxslt-dev',
+                    'libzmq-dev', 'python-dev', ))
+
+    elif remote_configuration.is_arch:
+        pkg.pkg_add(('zeromq', ))
 
     # PIP version is probably more recent.
     pkg.pip2_add(('cython', ))
@@ -701,7 +705,7 @@ def dev_python_deps(remote_configuration=None):
 
 @task
 @with_remote_configuration
-def dev_web(remote_configuration=None):
+def dev_web_nodejs(remote_configuration=None):
     """ Web development packages (NodeJS, Less, Compass…). """
 
     dev_mini()
@@ -710,7 +714,7 @@ def dev_web(remote_configuration=None):
     # packages could fail to install because of outdate indexes.
     pkg.pkg_update()
 
-    LOGGER.info('Checking dev_web() components…')
+    LOGGER.info('Checking dev_web_nodejs() components…')
 
     # ———————————————————————————————————————————————————————————— NodeJS & NPM
 
@@ -746,7 +750,7 @@ def dev_web(remote_configuration=None):
                 'cmake', ))
 
     elif remote_configuration.is_freebsd:
-        pkg.pkg_add(('www/node', 'devel/cmake', ))
+        pkg.pkg_add(('www/node', 'www/npm', 'devel/cmake', ))
 
     # But on OSX/BSD, we need NPM too. For Ubuntu, this has already been handled.
     elif remote_configuration.is_osx:
@@ -790,9 +794,26 @@ def dev_web(remote_configuration=None):
                  #'coffeescript_compiler_tools',
                  ))
 
-    # ————————————————————————————————————————————————————— Ruby & GEM packages
 
-    if remote_configuration.is_freebsd:
+@task
+@with_remote_configuration
+def dev_web_ruby(remote_configuration=None):
+
+    dev_mini()
+
+    # This is needed when run from the Django tasks, else some
+    # packages could fail to install because of outdate indexes.
+    pkg.pkg_update()
+
+    LOGGER.info('Checking dev_web_ruby() components…')
+
+    if remote_configuration.is_arch:
+        pkg.pkg_add(('ruby', ))
+
+    elif remote_configuration.is_deb:
+        pkg.pkg_add(('ruby', 'ruby-dev', 'rubygems', ))
+
+    elif remote_configuration.is_freebsd:
         # Ruby 2.1 is the recommended version for new
         # projects. Other version are just legacy.
         pkg.pkg_add(('lang/ruby21', 'devel/ruby-gems', 'devel/rubygem-rake', ))
@@ -808,7 +829,8 @@ def dev_web(remote_configuration=None):
 @task
 @with_remote_configuration
 def dev(remote_configuration=None):
-    """ Generic development (dev_mini + git-flow + Python & Ruby utils). """
+    """ Generic Python development (dev_mini + git-flow & other tools
+        + Python2/3 & PIP/virtualenv utils). """
 
     dev_mini()
 
@@ -824,21 +846,25 @@ def dev(remote_configuration=None):
         pkg.pkg_add(('git-flow-avh', 'ack', 'python', ))
 
     elif remote_configuration.is_freebsd:
-        pkg.pkg_add(('git-flow-avh', 'ack', 'python', ))
+        # NOTE: git-flow doesn't seem to have a port
+        # on FreeBSD (searched on 9.2, 20140821).
+        pkg.pkg_add(('textproc/ack', 'lang/python27', ))
 
-    else:
-        print('XXX on Arch…')
-
+    elif remote_configuration.is_deb:
         # On Ubuntu, `ack` is `ack-grep`.
-        pkg.pkg_add(('git-flow', 'ack-grep', 'python-pip',
-                     'ruby', 'ruby-dev', 'rubygems', ))
+        pkg.pkg_add(('git-flow', 'ack-grep', 'python-pip', ))
 
         # Remove eventually DEB installed old packages (see just after).
         pkg.pkg_del(('python-virtualenv', 'virtualenvwrapper', ))
 
-    # Gettext is used nearly everywhere, and Django
-    # {make,compile}messages commands need it.
-    pkg.pkg_add(('gettext', ))
+    elif remote_configuration.is_arch:
+        # gitflow-git is in AUR (via yaourt),
+        # thus not yet automatically installed.
+        # Arch has no Python 2.x by default.
+        pkg.pkg_add(('ack', 'python2', 'python2-pip', ))
+
+
+    # ——————————————————————————————————————————————————————— Python virtualenv
 
     LOGGER.info('Checking dev():python components…')
 
@@ -848,15 +874,18 @@ def dev(remote_configuration=None):
 
     #TODO: if exists virtualenv and is_lxc(machine):
 
-    # We remove the DEB packages to avoid duplicates and conflicts.
-    # It's usually older than the PIP package.
-    pkg.pkg_del(('ipython', 'ipython3', ))
+    # We remove the system packages to avoid duplicates and import
+    # misses/conflicts in virtualenvs. Anyway, the system packages
+    # are usually older than the PIP ones.
+    pkg.pkg_del(('ipython', 'ipython2', 'ipython3', 'devel/ipython' ))
+
+    # —————————————————————————————————————————————————————————————— Python 3.x
 
     if remote_configuration.is_osx:
         # The brew python3 receipe installs pip3 and development files.
         py3_pkgs = ('python3', )
 
-    else:
+    elif remote_configuration.is_deb:
         # TODO: 'python3-pip',
         # NOTE: zlib1g-dev is required to build git-up.
         py3_pkgs = ('python3', 'python3-dev', 'python3-examples',
@@ -866,11 +895,29 @@ def dev(remote_configuration=None):
             py3_pkgs += ('python3.3', 'python3.3-dev', 'python3.3-examples',
                          'python3.3-minimal', )
 
-        if remote_configuration.is_arch:
-            pkg.pkg_add(('gcc', ))
+    elif remote_configuration.is_arch:
+        # Arch has already Python 3 as the default.
+        py3_pkgs = ()
 
-        else:
-            pkg.pkg_add(('build-essential', 'python-all-dev', ))
+    elif remote_configuration.is_freebsd:
+        py3_pkgs = ('lang/python3', )
+
+    # ——————————————————————————————————————————————————————— Build environment
+
+    # Gettext is used nearly everywhere, and Django
+    # {make,compile}messages commands need it.
+    pkg.pkg_add(('devel/gettext' if remote_configuration.is_bsd
+                else 'gettext', ))
+
+    if remote_configuration.is_arch:
+        pkg.pkg_add(('gcc', 'make', 'autogen', 'autoconf'))
+
+    elif remote_configuration.is_freebsd:
+        pkg.pkg_add(('lang/gcc', 'devel/gmake',
+                    'devel/autogen', 'devel/autoconf'))
+
+    elif remote_configuration.is_deb:
+        pkg.pkg_add(('build-essential', 'python-all-dev', ))
 
     pkg.pkg_add(py3_pkgs)
 
@@ -1276,7 +1323,8 @@ def mydevenv(remote_configuration=None):
     install_powerline()
 
     dev()
-    dev_web()
+    dev_web_nodejs()
+    dev_web_ruby()
 
     deployment()
 
