@@ -898,6 +898,7 @@ def dev(remote_configuration=None):
     # —————————————————————————————————————————————————————————————— Python 3.x
 
     LOGGER.info('Checking Python 3.x components…')
+
     if remote_configuration.is_osx:
         # The brew python3 receipe installs pip3 and development files.
         py3_pkgs = ('python3', )
@@ -920,6 +921,8 @@ def dev(remote_configuration=None):
         py3_pkgs = ('lang/python3', )
 
     # ——————————————————————————————————————————————————————— Build environment
+
+    LOGGER.info('Checking build environment…')
 
     # Gettext is used nearly everywhere, and Django
     # {make,compile}messages commands need it.
@@ -956,6 +959,8 @@ def dev(remote_configuration=None):
 def db_sqlite(remote_configuration=None):
     """ SQLite database library. """
 
+    LOGGER.info('Installing SQLite…')
+
     pkg.pkg_add('sqlite' if remote_configuration.is_osx else 'sqlite3')
 
 
@@ -963,6 +968,8 @@ def db_sqlite(remote_configuration=None):
 @with_remote_configuration
 def db_redis(remote_configuration=None):
     """ Redis server. """
+
+    LOGGER.info('Installing Redis…')
 
     if remote_configuration.is_osx:
         pkg.pkg_add(('redis', ))
@@ -1006,6 +1013,8 @@ def db_redis(remote_configuration=None):
 def db_mysql(remote_configuration=None):
     """ MySQL database server. """
 
+    LOGGER.info('Installing MySQL…')
+
     pkg.pkg_add('mysql' if remote_configuration.is_osx else 'mysql-server')
 
 
@@ -1013,6 +1022,8 @@ def db_mysql(remote_configuration=None):
 @with_remote_configuration
 def db_memcached(remote_configuration=None):
     """ Memcache key-value volatile store. """
+
+    LOGGER.info('Installing Memcached…')
 
     pkg.pkg_add('memcached')
 
@@ -1027,6 +1038,8 @@ def db_memcached(remote_configuration=None):
 @with_remote_configuration
 def db_postgresql(remote_configuration=None):
     """ PostgreSQL database server. """
+
+    LOGGER.info('Installing PostgreSQL…')
 
     if remote_configuration.is_osx:
         if pkg.pkg_add(('postgresql', )):
@@ -1055,8 +1068,6 @@ def db_postgresql(remote_configuration=None):
 
         else:
             pkg.pkg_add(('postgresql-9.1', ))
-
-    dev_postgresql()
 
     LOGGER.warning('You still have to tweak pg_hba.conf yourself.')
 
