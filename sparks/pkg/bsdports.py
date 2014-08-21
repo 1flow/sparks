@@ -42,8 +42,18 @@ def ports_usable(remote_configuration=None):
 def ports_is_installed(pkg):
     """ Return ``True`` if a given port is installed. """
 
-    return is_installed("portmaster -l --list-origins "
-                        "| grep '^%s$' >/dev/null 2>&1" % pkg)
+    # Note, some ports (like databases/postgresql94-server) can be checked
+    # only via list-origins, because the final package name is different from
+    # the port name (eg. postgresql9-server-9.4.b1_1 for pkg name, and
+    # databases/postgresql9-server does not exist as port name…).
+    # The vast majority of other ports can be checked via “-l”.
+    # Thus, we must check both, to avoid reinstalling already installed package
+    # as much as we can (reinstalling gcc at each deployment is not an option).
+
+    return is_installed("portmaster --list-origins "
+                        "| grep '^%s$' >/dev/null 2>&1" % pkg) \
+        or is_installed("portmaster -l "
+                        "| grep ' %s$' >/dev/null 2>&1" % pkg)
 
 
 def ports_add(pkgs):
