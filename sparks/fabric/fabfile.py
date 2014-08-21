@@ -983,7 +983,7 @@ def db_redis(remote_configuration=None):
         pkg.pkg_add(('databases/redis', ))
 
     elif remote_configuration.is_arch:
-            pkg.pkg_add(('redis', ))
+        pkg.pkg_add(('redis', ))
 
     elif remote_configuration.is_deb:
 
@@ -1053,10 +1053,10 @@ def db_postgresql(remote_configuration=None):
             # psql template1
 
     elif remote_configuration.is_bsd:
-            pkg.pkg_add(('databases/postgresql94', ))
+        pkg.pkg_add(('databases/postgresql94', ))
 
     elif remote_configuration.is_arch:
-            pkg.pkg_add(('postgresql', ))
+        pkg.pkg_add(('postgresql', ))
 
     elif remote_configuration.is_deb:
 
