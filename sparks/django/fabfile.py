@@ -53,7 +53,7 @@ from ..fabric import (fabfile, all_roles, worker_roles,
                       is_production_environment,
                       execute_or_not, get_current_role,
                       worker_information_from_role, QUIET)
-import sparks.pkg
+from sparks import pkg
 from ..foundations import postgresql as pg
 from ..foundations.classes import SimpleObject
 
