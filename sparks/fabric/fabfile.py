@@ -743,12 +743,12 @@ def dev_web_nodejs(remote_configuration=None):
                 pkg.pkg_add(('nodejs-legacy', ))
 
     if remote_configuration.is_deb:
-    # NOTE: `nodejs` PPA version already includes `npm`,
-    # no need to install it via a separate package on Ubuntu.
-    # If not using the PPA, `npm` has already been installed.
-    pkg.pkg_add(('nodejs',
-                # PySide build-deps, for Ghost.py text parsing.
-                'cmake', ))
+        # NOTE: `nodejs` PPA version already includes `npm`,
+        # no need to install it via a separate package on Ubuntu.
+        # If not using the PPA, `npm` has already been installed.
+        pkg.pkg_add(('nodejs',
+                    # PySide build-deps, for Ghost.py text parsing.
+                    'cmake', ))
 
     elif remote_configuration.is_freebsd:
         pkg.pkg_add(('www/node', 'www/npm', 'devel/cmake', ))
