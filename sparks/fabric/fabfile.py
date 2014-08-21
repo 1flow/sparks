@@ -1076,7 +1076,8 @@ def db_postgresql(remote_configuration=None):
     elif remote_configuration.is_arch:
         pkg.pkg_add(('postgresql', ))
 
-        if not os.path.exists('/var/lib/postgres/data/pg_hba.conf'):
+        # We use_sudo because PG files are ultra protected on ArchLinux.
+        if not exists('/var/lib/postgres/data/pg_hba.conf', use_sudo=True):
             # TODO: /var/lib/postgres/data/postgresql.conf
             # stats_temp_directory = '/run/postgresql'
             #
