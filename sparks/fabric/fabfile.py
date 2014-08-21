@@ -647,14 +647,16 @@ def dev_mini(remote_configuration=None):
 
     LOGGER.info('Checking dev_mini() components…')
 
-    pkg.pkg_add(('git-core' if remote_configuration.is_deb else 'git'))
+    pkg.pkg_add(('git-core' if remote_configuration.is_deb
+                else 'devel/git' if remote_configuration.is_bsd
+                else 'git'))
 
     dev_tildesources()
 
     if remote_configuration.is_osx:
         return
 
-    pkg.pkg_add(('make', ))
+    pkg.pkg_add(('devel/gmake' if remote_configuration.is_bsd else 'make', ))
 
 
 @task
