@@ -192,7 +192,7 @@ def install_homebrew(remote_configuration=None):
         sudo('ruby -e "$(curl -fsSL https://raw.github.com/mxcl/homebrew/go)"')
 
         sudo('brew doctor')
-        pkg.brew_add(('git', ))
+        pkg.pkg_add(('git', ))
 
         # TODO: implement this.
         info('Please install OSX CLI tools for Xcode manually.')
@@ -262,7 +262,7 @@ def sys_easy_sudo(remote_configuration=None):
 
     if remote_configuration.is_osx:
         # GNU sed is needed for fabric `sed` command to succeed.
-        pkg.brew_add('gnu-sed')
+        pkg.pkg_add('gnu-sed')
         symlink('/usr/local/bin/gsed', '/usr/local/bin/sed')
 
         sudoers = '/private/etc/sudoers'
@@ -598,9 +598,9 @@ def dev_postgresql(remote_configuration=None):
     LOGGER.info('Checking dev_postgresql() components…')
 
     if remote_configuration.is_osx:
-        return
+        pass
 
-    if remote_configuration.is_ubuntu:
+    elif remote_configuration.is_ubuntu:
         major_distro_version = \
             int(remote_configuration.lsb.RELEASE.split('.')[0])
 
@@ -611,13 +611,14 @@ def dev_postgresql(remote_configuration=None):
             pkg.pkg_add(('postgresql-client-9.1', 'postgresql-server-dev-9.1',
                          'postgresql-server-dev-all'))
 
-    if remote_configuration.is_arch:
+    elif remote_configuration.is_arch:
         pkg.pkg_add(('postgresql-libs', ))
 
-    if remote_configuration.is_freebsd:
+    elif remote_configuration.is_freebsd:
         pkg.pkg_add(('postgresql94-client', ))
 
-    pkg.pip2_add(('psycopg2', ))
+    # This should be done in the virtualenv.
+    #pkg.pip2_add(('psycopg2', ))
 
 
 @task
@@ -627,7 +628,7 @@ def dev_mongodb(remote_configuration=None):
 
     LOGGER.info('Checking dev_mongodb() components…')
 
-    if not remote_configuration.is_osx:
+    if remote_configuration.is_deb:
         sys_mongodb()
         #pkg.pkg_add(('mongodb-10gen-dev', ))
 
@@ -664,16 +665,16 @@ def dev_django_full(remote_configuration=None):
     LOGGER.info('Checking dev_django_full() components…')
 
     dev_postgresql()
-    dev_memcache()
+    dev_memcached()
     dev_python_deps()
 
 
 @task
 @with_remote_configuration
-def dev_memcache(remote_configuration=None):
+def dev_memcached(remote_configuration=None):
     """ Memcache development environment (for python packages build). """
 
-    LOGGER.info('Checking dev_memcache() components…')
+    LOGGER.info('Checking dev_memcached() components…')
 
     pkg.pkg_add(('libmemcached-dev' if remote_configuration.is_deb
                 else 'libmemcached', ))
@@ -948,7 +949,7 @@ def db_redis(remote_configuration=None):
     """ Redis server. """
 
     if remote_configuration.is_osx:
-        pkg.brew_add(('redis', ))
+        pkg.pkg_add(('redis', ))
 
         run('ln -sfv /usr/local/opt/redis/*.plist ~/Library/LaunchAgents',
             quiet=True)
@@ -956,14 +957,14 @@ def db_redis(remote_configuration=None):
             quiet=True)
 
     elif remote_configuration.is_bsd:
-        raise NotImplementedError(u'implement BSD redis installation…')
+        pkg.pkg_add(('databases/redis', ))
 
-    else:
-        if remote_configuration.is_arch:
+    elif remote_configuration.is_arch:
             pkg.pkg_add(('redis', ))
 
-        else:
+    elif remote_configuration.is_deb:
 
+        if remote_configuration.is_ubuntu:
             if remote_configuration.lsb.RELEASE.startswith('12') \
                     or remote_configuration.lsb.RELEASE.startswith('13'):
                 if not exists('/etc/apt/sources.list.d/'
@@ -979,6 +980,9 @@ def db_redis(remote_configuration=None):
 
             else:
                 pkg.pkg_add('redis-server')
+
+        else:
+            pkg.pkg_add('redis-server')
 
 
 @task
@@ -1009,7 +1013,7 @@ def db_postgresql(remote_configuration=None):
     """ PostgreSQL database server. """
 
     if remote_configuration.is_osx:
-        if pkg.brew_add(('postgresql', )):
+        if pkg.pkg_add(('postgresql', )):
             run('initdb /usr/local/var/postgres -E utf8')
             run('ln -sfv /usr/local/opt/postgresql/*.plist '
                 '~/Library/LaunchAgents')
@@ -1018,9 +1022,14 @@ def db_postgresql(remote_configuration=None):
 
             # Test connection
             # psql template1
-    else:
 
-        print('XXX on Arch/BSD…')
+    elif remote_configuration.is_bsd:
+            pkg.pkg_add(('databases/postgresql94', ))
+
+    elif remote_configuration.is_arch:
+            pkg.pkg_add(('postgresql', ))
+
+    elif remote_configuration.is_deb:
 
         major_distro_version = \
             int(remote_configuration.lsb.RELEASE.split('.')[0])
@@ -1030,7 +1039,6 @@ def db_postgresql(remote_configuration=None):
 
         else:
             pkg.pkg_add(('postgresql-9.1', ))
-
 
     dev_postgresql()
 
@@ -1043,14 +1051,18 @@ def db_mongodb(remote_configuration=None):
     """ MongoDB database server. """
 
     if remote_configuration.is_osx:
-        if pkg.brew_add(('mongodb', )):
+        if pkg.pkg_add(('mongodb', )):
             run('ln -sfv /usr/local/opt/mongodb/*.plist ~/Library/LaunchAgents')
             run('launchctl load '
                 '~/Library/LaunchAgents/homebrew.*.mongodb.plist')
 
-    else:
-        print('XXX on Arch/BSD…')
+    elif remote_configuration.is_arch:
+        pkg.pkg_add(('mongodb', ))
 
+    elif remote_configuration.is_freebsd:
+        pkg.pkg_add(('databases/mongodb', ))
+
+    elif remote_configuration.is_deb:
         package_name = sys_mongodb()
         pkg.pkg_add((package_name, ))
 
