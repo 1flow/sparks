@@ -1058,6 +1058,17 @@ def db_postgresql(remote_configuration=None):
     elif remote_configuration.is_arch:
         pkg.pkg_add(('postgresql', ))
 
+        if not os.path.exists('/var/lib/postgres/data/pg_hba.conf'):
+            # TODO: /var/lib/postgres/data/postgresql.conf
+            # stats_temp_directory = '/run/postgresql'
+            #
+            run('su - postgres -c "initdb --locale en_US.UTF-8 '
+                '-E UTF8 -D /var/lib/postgres/data"')
+
+        # This won't hurt beiing done more than once (tested 20140821).
+        sudo('systemctl enable postgresql')
+        sudo('systemctl start postgresql')
+
     elif remote_configuration.is_deb:
 
         major_distro_version = \
@@ -1086,14 +1097,16 @@ def db_mongodb(remote_configuration=None):
     elif remote_configuration.is_arch:
         pkg.pkg_add(('mongodb', ))
 
+        # This won't hurt beiing done more than once (tested 20140821).
+        sudo('systemctl enable mongodb')
+        sudo('systemctl start mongodb')
+
     elif remote_configuration.is_freebsd:
         pkg.pkg_add(('databases/mongodb', ))
 
     elif remote_configuration.is_deb:
         package_name = sys_mongodb()
         pkg.pkg_add((package_name, ))
-
-    dev_mongodb()
 
     LOGGER.warning('You still have to tweak mongodb.conf yourself '
                    '(eg. `bind_ip=…`).')
