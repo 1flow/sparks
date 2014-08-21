@@ -75,7 +75,7 @@ def ports_del(pkgs):
 
 def ports_update():
 
-    sudo('portsnap update')
+    sudo('portsnap fetch; portsnap update')
 
 
 def ports_upgrade():
