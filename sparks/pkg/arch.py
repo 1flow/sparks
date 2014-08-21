@@ -40,13 +40,13 @@ def arch_upgrade():
 def arch_add(pkgs):
     for pkg in list_or_split(pkgs):
         if not arch_is_installed(pkg):
-            sudo(arch_CMD + ' -S %s' % pkg)
+            sudo(ARCH_CMD + ' -S %s' % pkg)
 
 
 def arch_del(pkgs):
     for pkg in list_or_split(pkgs):
         if arch_is_installed(pkg):
-            sudo(arch_CMD + ' -Rs %s' % pkg)
+            sudo(ARCH_CMD + ' -Rs %s' % pkg)
 
 def arch_search(pkgs):
     for pkg in list_or_split(pkgs):
