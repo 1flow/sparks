@@ -985,6 +985,10 @@ def db_redis(remote_configuration=None):
     elif remote_configuration.is_arch:
         pkg.pkg_add(('redis', ))
 
+        # This won't hurt beiing done more than once (tested 20140821).
+        sudo('systemctl enable redis')
+        sudo('systemctl start redis')
+
     elif remote_configuration.is_deb:
 
         if remote_configuration.is_ubuntu:
@@ -1027,7 +1031,13 @@ def db_memcached(remote_configuration=None):
 
     pkg.pkg_add('memcached')
 
-    if remote_configuration.is_osx:
+    if remote_configuration.is_arch:
+
+        # This won't hurt beiing done more than once (tested 20140821).
+        sudo('systemctl enable memcached')
+        sudo('systemctl start memcached')
+
+    elif remote_configuration.is_osx:
         run('ln -sfv /usr/local/opt/memcached/*.plist ~/Library/LaunchAgents',
             quiet=True)
         run('launchctl load ~/Library/LaunchAgents/homebrew.*.memcached.plist',
