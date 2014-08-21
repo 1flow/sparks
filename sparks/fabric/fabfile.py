@@ -1125,6 +1125,8 @@ def db_mongodb(remote_configuration=None):
     elif remote_configuration.is_freebsd:
         pkg.pkg_add(('databases/mongodb', ))
 
+        LOGGER.warning('PLEASE ENSURE MongoDB is configured/running…')
+
     elif remote_configuration.is_deb:
         package_name = sys_mongodb()
         pkg.pkg_add((package_name, ))

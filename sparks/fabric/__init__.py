@@ -560,7 +560,7 @@ class RemoteConfiguration(ConfigurationMixin):
 
         # No need to `deactivate` for this calls, it's pure shell.
         self.user, self.tilde = run('echo "${USER},${HOME}"',
-                                    quiet=QUIET).strip().split(',')
+                                    quiet=not DEBUG).strip().split(',')
 
         self.get_platform()
         self.get_uname()
