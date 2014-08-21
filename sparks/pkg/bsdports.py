@@ -58,7 +58,7 @@ def ports_is_installed(pkg):
     return is_installed("portmaster --list-origins "
                         "| grep '^%s$' >/dev/null 2>&1" % pkg) \
         or is_installed("portmaster -l "
-                        "| grep ' %s$' >/dev/null 2>&1" % portname)
+                        "| grep ' %s-' >/dev/null 2>&1" % portname)
 
 
 def ports_add(pkgs):
