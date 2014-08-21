@@ -597,7 +597,10 @@ def dev_postgresql(remote_configuration=None):
 
     LOGGER.info('Checking dev_postgresql() components…')
 
-    if not remote_configuration.is_osx:
+    if remote_configuration.is_osx:
+        return
+
+    if remote_configuration.is_ubuntu:
         major_distro_version = \
             int(remote_configuration.lsb.RELEASE.split('.')[0])
 
@@ -607,6 +610,9 @@ def dev_postgresql(remote_configuration=None):
         else:
             pkg.pkg_add(('postgresql-client-9.1', 'postgresql-server-dev-9.1',
                          'postgresql-server-dev-all'))
+
+    if remote_configuration.is_arch:
+        pkg.pkg_add(('postgresql-libs', ))
 
     pkg.pip2_add(('psycopg2', ))
 
@@ -638,7 +644,7 @@ def dev_mini(remote_configuration=None):
 
     LOGGER.info('Checking dev_mini() components…')
 
-    pkg.pkg_add(('git' if remote_configuration.is_osx else 'git-core'))
+    pkg.pkg_add(('git-core' if remote_configuration.is_deb else 'git'))
 
     dev_tildesources()
 
