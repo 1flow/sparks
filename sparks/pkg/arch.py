@@ -23,30 +23,30 @@ def arch_is_installed(pkg):
 
 
 def arch_update():
-    """ Update APT packages list. """
+    """ Update packages list. """
 
     sudo('%s -Sy' % ARCH_CMD)
 
 
 def arch_upgrade():
-    """ Upgrade outdated Debian packages. """
+    """ Upgrade outdated packages. """
 
     # create a line "force-confold" in `/etc/dpkg/dpkg.cfg`.
     # Or, just:
 
-    sudo('%s -Su --noconfirm' % ARCH_CMD)
+    sudo('%s -Su --noconfirm --noprogressbar --force' % ARCH_CMD)
 
 
 def arch_add(pkgs):
     for pkg in list_or_split(pkgs):
         if not arch_is_installed(pkg):
-            sudo(ARCH_CMD + ' -S %s' % pkg)
+            sudo(ARCH_CMD + ' -S --noconfirm --noprogressbar --force %s' % pkg)
 
 
 def arch_del(pkgs):
     for pkg in list_or_split(pkgs):
         if arch_is_installed(pkg):
-            sudo(ARCH_CMD + ' -Rs %s' % pkg)
+            sudo(ARCH_CMD + ' -Rs --noconfirm --noprogressbar --force %s' % pkg)
 
 def arch_search(pkgs):
     for pkg in list_or_split(pkgs):
