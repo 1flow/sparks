@@ -53,7 +53,7 @@ from ..fabric import (fabfile, all_roles, worker_roles,
                       is_production_environment,
                       execute_or_not, get_current_role,
                       worker_information_from_role, QUIET)
-from ..pkg import brew, apt
+import sparks.pkg
 from ..foundations import postgresql as pg
 from ..foundations.classes import SimpleObject
 
@@ -808,7 +808,7 @@ def install_components(remote_configuration=None, upgrade=False):
         LOGGER.warning('Considering a development environment, '
                        'installing everything on OSX.')
 
-        brew.brew_add(('nginx', ))
+        pkg.pkg_add(('nginx', ))
 
         # If you want to host pages on your local machine to the wider network
         # you can change the port to 80 in: /usr/local/etc/nginx/nginx.conf
