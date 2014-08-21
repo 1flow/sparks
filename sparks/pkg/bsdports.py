@@ -49,7 +49,7 @@ def ports_is_installed(pkg):
 def ports_add(pkgs):
     for pkg in list_or_split(pkgs):
         if not ports_is_installed(pkg):
-            sudo('portmaster %s' % pkg)
+            sudo('portmaster -y %s' % pkg)
 
 
 def ports_del(pkgs):
@@ -65,7 +65,7 @@ def ports_update():
 
 def ports_upgrade():
 
-    sudo('portmaster -Da')
+    sudo('portmaster -yDa')
 
 
 def ports_search(pkgs):
