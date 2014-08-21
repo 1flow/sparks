@@ -751,7 +751,6 @@ def dev_web_nodejs(remote_configuration=None):
                     'cmake', ))
 
     elif remote_configuration.is_arch:
-        LOGGER.debug('ARCH NodeJS & NPM…')
         pkg.pkg_add(('nodejs', 'cmake', ))
 
     elif remote_configuration.is_freebsd:
