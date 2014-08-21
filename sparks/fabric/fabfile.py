@@ -1063,7 +1063,17 @@ def db_postgresql(remote_configuration=None):
 
         pkg.pkg_add(('databases/postgresql94', ))
 
-        LOGGER.warning('Please ensure Memcached is enabled and running.')
+        LOGGER.warning('Please ensure PostgreSQL is enabled and running.')
+
+        if not exists('/usr/local/pgsql/data'):
+            run('su - pgsql -c "initdb --locale en_US.UTF-8 '
+                '-E UTF8 -D /usr/local/pgsql/data"')
+            append('/usr/local/pgsql/data/postmaster.opts',
+                   '/usr/local/bin/postgres -D /usr/local/pgsql/data',
+                   use_sudo=True)
+            sudo('chown pgsql:pgsql /usr/local/pgsql/data/postmaster.optparse')
+            append('/etc/rc.conf', 'postgresql_enable="YES"', use_sudo=True)
+            sudo('/usr/local/etc/rc.d/postgresql start')
 
     elif remote_configuration.is_arch:
         pkg.pkg_add(('postgresql', ))
