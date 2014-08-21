@@ -647,6 +647,10 @@ def dev_mini(remote_configuration=None):
 
     LOGGER.info('Checking dev_mini() components…')
 
+    # Avoid a crash during install because xmlcatmgr is missing.
+    if remote_configuration.is_freebsd:
+        pkg.pkg_add(('textproc/xmlcatmgr', ))
+
     pkg.pkg_add(('git-core' if remote_configuration.is_deb
                 else 'devel/git' if remote_configuration.is_bsd
                 else 'git'))
