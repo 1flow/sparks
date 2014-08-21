@@ -13,7 +13,7 @@ from fabric.contrib.files    import contains, append, exists, sed
 from fabric.context_managers import cd, lcd, settings, hide
 from fabric.colors           import yellow, cyan
 
-from .. import pkg
+from .. import pkg, version as sparks_version
 from .utils import (with_remote_configuration,  # dsh_to_roledefs,
                     tilde, symlink, dotfiles)
 
@@ -55,15 +55,18 @@ def install_chrome(remote_configuration=None):
             info("Please install Google Chrome manually.")
 
     else:
+        print('XXX on Arch/BSD…')
+
         if exists('/usr/bin/google-chrome'):
             return
 
-        pkg.apt.key('https://dl-ssl.google.com/linux/linux_signing_key.pub')
-        append('/etc/apt/sources.list.d/google-chrome.list',
-               'deb http://dl.google.com/linux/chrome/deb/ stable main',
-               use_sudo=True)
-        pkg.apt_update()
-        pkg.apt_add('google-chrome-stable')
+        if remote_configuration.is_ubuntu:
+            pkg.apt.key('https://dl-ssl.google.com/linux/linux_signing_key.pub')
+            append('/etc/apt/sources.list.d/google-chrome.list',
+                   'deb http://dl.google.com/linux/chrome/deb/ stable main',
+                   use_sudo=True)
+            pkg.pkg_update()
+            pkg.pkg_add('google-chrome-stable')
 
 
 @task
@@ -189,7 +192,7 @@ def install_homebrew(remote_configuration=None):
         sudo('ruby -e "$(curl -fsSL https://raw.github.com/mxcl/homebrew/go)"')
 
         sudo('brew doctor')
-        pkg.brew_add(('git', ))
+        pkg.pkg_add(('git', ))
 
         # TODO: implement this.
         info('Please install OSX CLI tools for Xcode manually.')
@@ -247,7 +250,7 @@ def test(remote_configuration=None):
     """ Just run `uname -a; uptime` remotely, to test the connection,
         and the sparks remote detection engine. """
 
-    run('uname -a; uptime; echo $USER — $PWD')
+    run('uname -a; uptime; echo $USER — $PWD — Sparks v%s' % sparks_version)
 
 
 @task
@@ -259,7 +262,7 @@ def sys_easy_sudo(remote_configuration=None):
 
     if remote_configuration.is_osx:
         # GNU sed is needed for fabric `sed` command to succeed.
-        pkg.brew_add('gnu-sed')
+        pkg.pkg_add('gnu-sed')
         symlink('/usr/local/bin/gsed', '/usr/local/bin/sed')
 
         sudoers = '/private/etc/sudoers'
@@ -287,7 +290,8 @@ def sys_unattended(remote_configuration=None):
         info("Skipped unattended-upgrades (not on LSB).")
         return
 
-    pkg.apt_add('unattended-upgrades')
+    if not remote_configuration.is_arch:
+        pkg.apt_add('unattended-upgrades')
 
     # always install the files, in case they
     # already exist and have different contents.
@@ -316,11 +320,13 @@ def sys_del_useless(remote_configuration=None):
 
     LOGGER.info('Checking sys_del_useless() components…')
 
-    pkg.apt_del(('apport', 'python-apport',
-                'landscape-client-ui-install', 'gnome-orca',
-                'brltty', 'libbrlapi0.5', 'python3-brlapi', 'python-brlapi',
-                'ubuntuone-client', 'ubuntuone-control-panel',
-                'rhythmbox-ubuntuone', 'python-ubuntuone-client', 'onboard'))
+    if remote_configuration.lsb and not remote_configuration.is_arch:
+        pkg.pkg_del(('apport', 'python-apport',
+                    'landscape-client-ui-install', 'gnome-orca',
+                    'brltty', 'libbrlapi0.5', 'python3-brlapi',
+                    'python-brlapi', 'ubuntuone-client',
+                    'ubuntuone-control-panel', 'rhythmbox-ubuntuone',
+                    'python-ubuntuone-client', ))
 
 
 @task
@@ -333,8 +339,9 @@ def sys_low_resources_purge(remote_configuration=None):
 
     LOGGER.info('Removing packages for a low-resource system…')
 
-    pkg.apt_del(('bluez', 'blueman', 'oneconf', 'colord',
-                 'zeitgeist', ))
+    if remote_configuration.lsb and not remote_configuration.is_arch:
+        pkg.pkg_del(('bluez', 'blueman', 'oneconf', 'colord',
+                     'zeitgeist', ))
 
 
 @task
@@ -359,8 +366,11 @@ def sys_admin_pkgs(remote_configuration=None):
         # See https://github.com/mperham/lunchy
         pkg.gem_add(('lunchy', ))
 
+    elif remote_configuration.lsb:
+        pkg.pkg_add(('acl', 'attr', 'colordiff', 'telnet', 'psmisc', 'host', ))
+
     else:
-        pkg.apt_add(('acl', 'attr', 'colordiff', 'telnet', 'psmisc', 'host', ))
+        raise NotImplementedError('implement sysadmin pkgs for BSD.')
 
 
 @task
@@ -391,7 +401,7 @@ def sys_ssh_powerline(remote_configuration=None):
 def sys_mongodb(remote_configuration=None):
     """ Install the MongoDB APT repository if on Ubuntu and 12.04. """
 
-    if remote_configuration.lsb.ID.lower() == 'ubuntu':
+    if remote_configuration.is_ubuntu:
         major_distro_version = \
             int(remote_configuration.lsb.RELEASE.split('.')[0])
 
@@ -566,7 +576,7 @@ def dev_tildesources(remote_configuration=None):
 def dev_sqlite(remote_configuration=None):
     """ SQLite development environment (for python packages build). """
 
-    if not remote_configuration.is_osx:
+    if remote_configuration.is_deb:
         pkg.pkg_add(('libsqlite3-dev', 'python-all-dev', ))
 
     pkg.pip2_add(('pysqlite', ))
@@ -577,8 +587,8 @@ def dev_sqlite(remote_configuration=None):
 def dev_mysql(remote_configuration=None):
     """ MySQL development environment (for python packages build). """
 
-    pkg.pkg_add('' if remote_configuration.is_osx else 'libmysqlclient-dev')
 
+    pkg.pkg_add('libmysqlclient-dev' if remote_configuration.is_deb else '')
 
 @task
 @with_remote_configuration
@@ -587,7 +597,10 @@ def dev_postgresql(remote_configuration=None):
 
     LOGGER.info('Checking dev_postgresql() components…')
 
-    if not remote_configuration.is_osx:
+    if remote_configuration.is_osx:
+        pass
+
+    elif remote_configuration.is_ubuntu:
         major_distro_version = \
             int(remote_configuration.lsb.RELEASE.split('.')[0])
 
@@ -598,7 +611,14 @@ def dev_postgresql(remote_configuration=None):
             pkg.pkg_add(('postgresql-client-9.1', 'postgresql-server-dev-9.1',
                          'postgresql-server-dev-all'))
 
-    pkg.pip2_add(('psycopg2', ))
+    elif remote_configuration.is_arch:
+        pkg.pkg_add(('postgresql-libs', ))
+
+    elif remote_configuration.is_freebsd:
+        pkg.pkg_add(('postgresql94-client', ))
+
+    # This should be done in the virtualenv.
+    #pkg.pip2_add(('psycopg2', ))
 
 
 @task
@@ -608,11 +628,10 @@ def dev_mongodb(remote_configuration=None):
 
     LOGGER.info('Checking dev_mongodb() components…')
 
-    if not remote_configuration.is_osx:
+    if remote_configuration.is_deb:
         sys_mongodb()
         #pkg.pkg_add(('mongodb-10gen-dev', ))
 
-    # pkg.pip2_add(('psycopg2', ))
     pass
 
 
@@ -628,7 +647,7 @@ def dev_mini(remote_configuration=None):
 
     LOGGER.info('Checking dev_mini() components…')
 
-    pkg.pkg_add(('git' if remote_configuration.is_osx else 'git-core'))
+    pkg.pkg_add(('git-core' if remote_configuration.is_deb else 'git'))
 
     dev_tildesources()
 
@@ -646,19 +665,20 @@ def dev_django_full(remote_configuration=None):
     LOGGER.info('Checking dev_django_full() components…')
 
     dev_postgresql()
-    dev_memcache()
+    dev_memcached()
     dev_python_deps()
 
 
 @task
 @with_remote_configuration
-def dev_memcache(remote_configuration=None):
+def dev_memcached(remote_configuration=None):
     """ Memcache development environment (for python packages build). """
 
-    LOGGER.info('Checking dev_memcache() components…')
+    LOGGER.info('Checking dev_memcached() components…')
 
-    pkg.pkg_add(('libmemcached' if remote_configuration.is_osx
-                else 'libmemcached-dev', ))
+    pkg.pkg_add(('libmemcached-dev' if remote_configuration.is_deb
+                else 'libmemcached' if remote_configuration.is_arch
+                else 'databases/libmemcached', ))
 
 
 @task
@@ -671,8 +691,15 @@ def dev_python_deps(remote_configuration=None):
     if remote_configuration.is_osx:
         pkg.pkg_add(('zmq', ))
 
-    else:
-        pkg.pkg_add(('libxml2-dev', 'libxslt-dev', 'libzmq-dev', 'python-dev'))
+    elif remote_configuration.is_freebsd:
+        pkg.pkg_add(('libzmq4', ))
+
+    elif remote_configuration.is_deb:
+        pkg.pkg_add(('libxml2-dev', 'libxslt-dev',
+                    'libzmq-dev', 'python-dev', ))
+
+    elif remote_configuration.is_arch:
+        pkg.pkg_add(('zeromq', ))
 
     # PIP version is probably more recent.
     pkg.pip2_add(('cython', ))
@@ -680,7 +707,7 @@ def dev_python_deps(remote_configuration=None):
 
 @task
 @with_remote_configuration
-def dev_web(remote_configuration=None):
+def dev_web_nodejs(remote_configuration=None):
     """ Web development packages (NodeJS, Less, Compass…). """
 
     dev_mini()
@@ -689,9 +716,11 @@ def dev_web(remote_configuration=None):
     # packages could fail to install because of outdate indexes.
     pkg.pkg_update()
 
-    LOGGER.info('Checking dev_web() components…')
+    LOGGER.info('Checking NodeJS & NPM components…')
 
-    if remote_configuration.lsb.ID == 'ubuntu':
+    # ———————————————————————————————————————————————————————————— NodeJS & NPM
+
+    if remote_configuration.is_ubuntu:
         major_distro_version = \
             int(remote_configuration.lsb.RELEASE.split('.')[0])
 
@@ -714,30 +743,25 @@ def dev_web(remote_configuration=None):
                 # executable; we only have `nodejs` left in recent versions.
                 pkg.pkg_add(('nodejs-legacy', ))
 
-    # NOTE: `nodejs` PPA version already includes `npm`,
-    # no need to install it via a separate package on Ubuntu.
-    # If not using the PPA, `npm` has already been installed.
-    pkg.pkg_add(('nodejs',
-                # PySide build-deps, for Ghost.py text parsing.
-                'cmake', ))
+    if remote_configuration.is_deb:
+        # NOTE: `nodejs` PPA version already includes `npm`,
+        # no need to install it via a separate package on Ubuntu.
+        # If not using the PPA, `npm` has already been installed.
+        pkg.pkg_add(('nodejs',
+                    # PySide build-deps, for Ghost.py text parsing.
+                    'cmake', ))
 
-    # PySide build-deps (again), for Ghost.py text parsing.
-    if remote_configuration.is_osx and not exists('/opt'):
+    elif remote_configuration.is_arch:
+        pkg.pkg_add(('nodejs', 'cmake', ))
 
-        # Even this doesn't work, we need to official binary,
-        # else PySide won't find it…
-        #run('brew install qt --developer')
+    elif remote_configuration.is_freebsd:
+        pkg.pkg_add(('www/node', 'www/npm', 'devel/cmake', ))
 
-        LOGGER.critical('You need to install PySide and Qt from '
-                        'http://qt-project.org/wiki/PySide_Binaries_MacOSX '
-                        '(eg. http://pyside.markus-ullmann.de/pyside-1.1.1-qt48-py27apple.pkg)') # NOQA
+    # But on OSX/BSD, we need NPM too. For Ubuntu, this has already been handled.
+    elif remote_configuration.is_osx:
+        pkg.pkg_add(('nodejs', 'npm', ))
 
-    else:
-        pkg.pkg_add(('libqt4-dev', ))
-
-    # But on OSX, we need NPM too. For Ubuntu, this has already been handled.
-    if remote_configuration.is_osx:
-        pkg.pkg_add(('npm', ))
+    # ——————————————————————————————————————————————————————————— Node packages
 
     pkg.npm_add(('coffee-script',       # used in Django-pipeline
                  'yuglify',             # used in Django-pipeline
@@ -756,6 +780,60 @@ def dev_web(remote_configuration=None):
                  #'coffeescript_compiler_tools',
                  ))
 
+
+@task
+@with_remote_configuration
+def dev_web_pyside(remote_configuration=None):
+
+    # ——————————————————————————————————————————————— PySide build-deps (again)
+    # for Ghost.py text parsing.
+
+    LOGGER.info('Checking QT4 & webkit components…')
+
+    if remote_configuration.is_osx and not exists('/opt'):
+
+        # Even this doesn't work, we need to official binary,
+        # else PySide won't find it…
+        #run('brew install qt --developer')
+
+        LOGGER.critical('You need to install PySide and Qt from '
+                        'http://qt-project.org/wiki/PySide_Binaries_MacOSX '
+                        '(eg. http://pyside.markus-ullmann.de/pyside-1.1.1-qt48-py27apple.pkg)') # NOQA
+
+    elif remote_configuration.is_deb:
+        pkg.pkg_add(('libqt4-dev', ))
+
+    elif remote_configuration.is_arch:
+        pkg.pkg_add(('qt4', 'qtwebkit', ))
+
+    elif remote_configuration.is_freebsd:
+        pkg.pkg_add(('devel/qt4', 'www/webkit-qt4', ))
+
+
+@task
+@with_remote_configuration
+def dev_web_ruby(remote_configuration=None):
+
+    dev_mini()
+
+    # This is needed when run from the Django tasks, else some
+    # packages could fail to install because of outdate indexes.
+    pkg.pkg_update()
+
+    LOGGER.info('Checking dev_web_ruby() components…')
+
+    if remote_configuration.is_arch:
+        pkg.pkg_add(('ruby', ))
+
+    elif remote_configuration.is_deb:
+        pkg.pkg_add(('ruby', 'ruby-dev', 'rubygems', ))
+
+    elif remote_configuration.is_freebsd:
+        # Ruby 2.1 is the recommended version for new
+        # projects. Other version are just legacy.
+        pkg.pkg_add(('lang/ruby21', 'devel/ruby-gems', 'devel/rubygem-rake', ))
+        # install ruby-gdbm too ?
+
     pkg.gem_add(
         ('compass',                   # used in Django-pipeline
          'bundle',                    # used to build Handlebars or EmberJS
@@ -766,7 +844,8 @@ def dev_web(remote_configuration=None):
 @task
 @with_remote_configuration
 def dev(remote_configuration=None):
-    """ Generic development (dev_mini + git-flow + Python & Ruby utils). """
+    """ Generic Python development (dev_mini + git-flow & other tools
+        + Python2/3 & PIP/virtualenv utils). """
 
     dev_mini()
 
@@ -779,19 +858,28 @@ def dev(remote_configuration=None):
         #     - virtualenv* come only via PIP.
         #    - git-flow-avh brings small typing enhancements.
 
-        pkg.brew_add(('git-flow-avh', 'ack', 'python', ))
+        pkg.pkg_add(('git-flow-avh', 'ack', 'python', ))
 
-    else:
+    elif remote_configuration.is_freebsd:
+        # NOTE: git-flow doesn't seem to have a port
+        # on FreeBSD (searched on 9.2, 20140821).
+        pkg.pkg_add(('textproc/ack', 'lang/python27', ))
+
+    elif remote_configuration.is_deb:
         # On Ubuntu, `ack` is `ack-grep`.
-        pkg.apt_add(('git-flow', 'ack-grep', 'python-pip',
-                    'ruby', 'ruby-dev', 'rubygems', ))
+        pkg.pkg_add(('git-flow', 'ack-grep', 'python-pip', ))
 
         # Remove eventually DEB installed old packages (see just after).
-        pkg.apt_del(('python-virtualenv', 'virtualenvwrapper', ))
+        pkg.pkg_del(('python-virtualenv', 'virtualenvwrapper', ))
 
-    # Gettext is used nearly everywhere, and Django
-    # {make,compile}messages commands need it.
-    pkg.pkg_add(('gettext', ))
+    elif remote_configuration.is_arch:
+        # gitflow-git is in AUR (via yaourt),
+        # thus not yet automatically installed.
+        # Arch has no Python 2.x by default.
+        pkg.pkg_add(('ack', 'python2', 'python2-pip', ))
+
+
+    # ——————————————————————————————————————————————————————— Python virtualenv
 
     LOGGER.info('Checking dev():python components…')
 
@@ -801,15 +889,21 @@ def dev(remote_configuration=None):
 
     #TODO: if exists virtualenv and is_lxc(machine):
 
-    # We remove the DEB packages to avoid duplicates and conflicts.
-    # It's usually older than the PIP package.
-    pkg.pkg_del(('ipython', 'ipython3', ))
+    # We remove the system packages to avoid duplicates and import
+    # misses/conflicts in virtualenvs. Anyway, the system packages
+    # are usually older than the PIP ones.
+    LOGGER.info('Removing system python packages…')
+    pkg.pkg_del(('ipython', 'ipython2', 'ipython3', 'devel/ipython' ))
+
+    # —————————————————————————————————————————————————————————————— Python 3.x
+
+    LOGGER.info('Checking Python 3.x components…')
 
     if remote_configuration.is_osx:
         # The brew python3 receipe installs pip3 and development files.
         py3_pkgs = ('python3', )
 
-    else:
+    elif remote_configuration.is_deb:
         # TODO: 'python3-pip',
         # NOTE: zlib1g-dev is required to build git-up.
         py3_pkgs = ('python3', 'python3-dev', 'python3-examples',
@@ -819,7 +913,31 @@ def dev(remote_configuration=None):
             py3_pkgs += ('python3.3', 'python3.3-dev', 'python3.3-examples',
                          'python3.3-minimal', )
 
-        pkg.apt_add(('build-essential', 'python-all-dev', ))
+    elif remote_configuration.is_arch:
+        # Arch has already Python 3 as the default.
+        py3_pkgs = ()
+
+    elif remote_configuration.is_freebsd:
+        py3_pkgs = ('lang/python3', )
+
+    # ——————————————————————————————————————————————————————— Build environment
+
+    LOGGER.info('Checking build environment…')
+
+    # Gettext is used nearly everywhere, and Django
+    # {make,compile}messages commands need it.
+    pkg.pkg_add(('devel/gettext' if remote_configuration.is_bsd
+                else 'gettext', ))
+
+    if remote_configuration.is_arch:
+        pkg.pkg_add(('gcc', 'make', 'autogen', 'autoconf'))
+
+    elif remote_configuration.is_freebsd:
+        pkg.pkg_add(('lang/gcc', 'devel/gmake',
+                    'devel/autogen', 'devel/autoconf'))
+
+    elif remote_configuration.is_deb:
+        pkg.pkg_add(('build-essential', 'python-all-dev', ))
 
     pkg.pkg_add(py3_pkgs)
 
@@ -841,6 +959,8 @@ def dev(remote_configuration=None):
 def db_sqlite(remote_configuration=None):
     """ SQLite database library. """
 
+    LOGGER.info('Installing SQLite…')
+
     pkg.pkg_add('sqlite' if remote_configuration.is_osx else 'sqlite3')
 
 
@@ -849,35 +969,58 @@ def db_sqlite(remote_configuration=None):
 def db_redis(remote_configuration=None):
     """ Redis server. """
 
+    LOGGER.info('Installing Redis…')
+
     if remote_configuration.is_osx:
-        pkg.brew_add(('redis', ))
+        pkg.pkg_add(('redis', ))
 
         run('ln -sfv /usr/local/opt/redis/*.plist ~/Library/LaunchAgents',
             quiet=True)
         run('launchctl load ~/Library/LaunchAgents/homebrew.*.redis.plist',
             quiet=True)
 
-    else:
-        if remote_configuration.lsb.RELEASE.startswith('12') \
-                or remote_configuration.lsb.RELEASE.startswith('13'):
-            if not exists('/etc/apt/sources.list.d/'
-                          'chris-lea-redis-server-{0}.list'.format(
-                              remote_configuration.lsb.CODENAME)):
-                pkg.apt.ppa('ppa:chris-lea/redis-server')
+    elif remote_configuration.is_bsd:
 
-                if exists('/usr/bin/redis-cli'):
-                    pkg.apt_upgrade()
+        pkg.pkg_add(('databases/redis', ))
 
-                else:
-                    pkg.apt_add('redis-server')
+        LOGGER.warning('Please ensure Redis is enabled and running.')
+
+    elif remote_configuration.is_arch:
+        pkg.pkg_add(('redis', ))
+
+        # This won't hurt beiing done more than once (tested 20140821).
+        sudo('systemctl enable redis')
+        sudo('systemctl start redis')
+
+    elif remote_configuration.is_deb:
+
+        if remote_configuration.is_ubuntu:
+            if remote_configuration.lsb.RELEASE.startswith('12') \
+                    or remote_configuration.lsb.RELEASE.startswith('13'):
+                if not exists('/etc/apt/sources.list.d/'
+                              'chris-lea-redis-server-{0}.list'.format(
+                                  remote_configuration.lsb.CODENAME)):
+                    pkg.apt.ppa('ppa:chris-lea/redis-server')
+
+                    if exists('/usr/bin/redis-cli'):
+                        pkg.apt_upgrade()
+
+                    else:
+                        pkg.pkg_add('redis-server')
+
+            else:
+                pkg.pkg_add('redis-server')
+
         else:
-            pkg.apt_add('redis-server')
+            pkg.pkg_add('redis-server')
 
 
 @task
 @with_remote_configuration
 def db_mysql(remote_configuration=None):
     """ MySQL database server. """
+
+    LOGGER.info('Installing MySQL…')
 
     pkg.pkg_add('mysql' if remote_configuration.is_osx else 'mysql-server')
 
@@ -887,22 +1030,34 @@ def db_mysql(remote_configuration=None):
 def db_memcached(remote_configuration=None):
     """ Memcache key-value volatile store. """
 
+    LOGGER.info('Installing Memcached…')
+
     pkg.pkg_add('memcached')
 
-    if remote_configuration.is_osx:
+    if remote_configuration.is_arch:
+
+        # This won't hurt beiing done more than once (tested 20140821).
+        sudo('systemctl enable memcached')
+        sudo('systemctl start memcached')
+
+    elif remote_configuration.is_osx:
         run('ln -sfv /usr/local/opt/memcached/*.plist ~/Library/LaunchAgents',
             quiet=True)
         run('launchctl load ~/Library/LaunchAgents/homebrew.*.memcached.plist',
             quiet=True)
 
+    elif remote_configuration.is_freebsd:
+        LOGGER.warning('Please ensure Memcached is enabled and running.')
 
 @task(aliases=('db_postgres', ))
 @with_remote_configuration
 def db_postgresql(remote_configuration=None):
     """ PostgreSQL database server. """
 
+    LOGGER.info('Installing PostgreSQL…')
+
     if remote_configuration.is_osx:
-        if pkg.brew_add(('postgresql', )):
+        if pkg.pkg_add(('postgresql', )):
             run('initdb /usr/local/var/postgres -E utf8')
             run('ln -sfv /usr/local/opt/postgresql/*.plist '
                 '~/Library/LaunchAgents')
@@ -911,18 +1066,38 @@ def db_postgresql(remote_configuration=None):
 
             # Test connection
             # psql template1
-    else:
+
+    elif remote_configuration.is_bsd:
+
+        pkg.pkg_add(('databases/postgresql94', ))
+
+        LOGGER.warning('Please ensure Memcached is enabled and running.')
+
+    elif remote_configuration.is_arch:
+        pkg.pkg_add(('postgresql', ))
+
+        # We use_sudo because PG files are ultra protected on ArchLinux.
+        if not exists('/var/lib/postgres/data/pg_hba.conf', use_sudo=True):
+            # TODO: /var/lib/postgres/data/postgresql.conf
+            # stats_temp_directory = '/run/postgresql'
+            #
+            run('su - postgres -c "initdb --locale en_US.UTF-8 '
+                '-E UTF8 -D /var/lib/postgres/data"')
+
+        # This won't hurt beiing done more than once (tested 20140821).
+        sudo('systemctl enable postgresql')
+        sudo('systemctl start postgresql')
+
+    elif remote_configuration.is_deb:
+
         major_distro_version = \
             int(remote_configuration.lsb.RELEASE.split('.')[0])
 
         if major_distro_version >= 14:
-            pkg.apt_add(('postgresql-9.3', ))
+            pkg.pkg_add(('postgresql-9.3', ))
 
         else:
-            pkg.apt_add(('postgresql-9.1', ))
-
-
-    dev_postgresql()
+            pkg.pkg_add(('postgresql-9.1', ))
 
     LOGGER.warning('You still have to tweak pg_hba.conf yourself.')
 
@@ -933,16 +1108,24 @@ def db_mongodb(remote_configuration=None):
     """ MongoDB database server. """
 
     if remote_configuration.is_osx:
-        if pkg.brew_add(('mongodb', )):
+        if pkg.pkg_add(('mongodb', )):
             run('ln -sfv /usr/local/opt/mongodb/*.plist ~/Library/LaunchAgents')
             run('launchctl load '
                 '~/Library/LaunchAgents/homebrew.*.mongodb.plist')
 
-    else:
-        package_name = sys_mongodb()
-        pkg.apt_add((package_name, ))
+    elif remote_configuration.is_arch:
+        pkg.pkg_add(('mongodb', ))
 
-    dev_mongodb()
+        # This won't hurt beiing done more than once (tested 20140821).
+        sudo('systemctl enable mongodb')
+        sudo('systemctl start mongodb')
+
+    elif remote_configuration.is_freebsd:
+        pkg.pkg_add(('databases/mongodb', ))
+
+    elif remote_configuration.is_deb:
+        package_name = sys_mongodb()
+        pkg.pkg_add((package_name, ))
 
     LOGGER.warning('You still have to tweak mongodb.conf yourself '
                    '(eg. `bind_ip=…`).')
@@ -1033,7 +1216,9 @@ def lxc_host(remote_configuration=None):
         info("Skipped LXC host setup (not on LSB).")
         return
 
-    pkg.apt_add(('lxc', 'cgroup-lite', ))
+    print('XXX on Arch/BSD…')
+
+    pkg.pkg_add(('lxc', 'cgroup-lite', ))
 
 # ------------------------------------ Client or graphical applications
 
@@ -1059,7 +1244,9 @@ def graphdev(remote_configuration=None):
                 info("Please install %s manually." % yellow(app))
         return
 
-    pkg.apt_add(('gitg', 'meld', 'regexxer', 'cscope', 'exuberant-ctags',
+    print('XXX on Arch/BSD…')
+
+    pkg.pkg_add(('gitg', 'meld', 'regexxer', 'cscope', 'exuberant-ctags',
                 'vim-gnome', 'terminator', 'gedit-developer-plugins',
                 'gedit-plugins', 'geany', 'geany-plugins', ))
 
@@ -1073,7 +1260,9 @@ def graphdb(remote_configuration=None):
         info("Skipped graphical DB-related packages (not on LSB).")
         return
 
-    pkg.apt_add('pgadmin3')
+    print('XXX on Arch/BSD…')
+
+    pkg.pkg_add('pgadmin3')
 
 
 @task
@@ -1085,11 +1274,11 @@ def graph(remote_configuration=None):
         info("Skipped graphical APT packages (not on LSB).")
         return
 
-    if not remote_configuration.lsb.ID.lower() == 'ubuntu':
-        info("Skipped graphe PPA packages (not on Ubuntu).")
+    if remote_configuration.is_ubuntu:
+        info("Skipped graph PPA packages (not on Ubuntu).")
         return
 
-    pkg.apt_add(('synaptic', 'gdebi', 'compizconfig-settings-manager',
+    pkg.pkg_add(('synaptic', 'gdebi', 'compizconfig-settings-manager',
                 'dconf-tools', 'gconf-editor', 'pidgin', 'vlc', 'mplayer',
                 'indicator-multiload'))
 
@@ -1125,10 +1314,10 @@ def graph(remote_configuration=None):
     # pkg.apt.ppa_pkg('ppa:jonls/redshift-ppa',
     #                 'redshift', '/usr/bin/redshift')
     if remote_configuration.lsb.RELEASE == '13.10':
-        pkg.apt_add(('gtk-redshift', ))
+        pkg.pkg_add(('gtk-redshift', ))
 
     elif remote_configuration.lsb.RELEASE.startswith('14'):
-        pkg.apt_add(('redshift-gtk', ))
+        pkg.pkg_add(('redshift-gtk', ))
 
 
 @task(aliases=('graphkbd', 'kbd', ))
@@ -1205,7 +1394,9 @@ def mydevenv(remote_configuration=None):
     install_powerline()
 
     dev()
-    dev_web()
+    dev_web_nodejs()
+    dev_web_ruby()
+    dev_web_pyside()
 
     deployment()
 
@@ -1304,7 +1495,7 @@ def myfullenv(remote_configuration=None):
 def mybootstrap(remote_configuration=None):
     """ Bootstrap my personal environment on the local machine. """
 
-    pkg.apt_add(('ssh', ), locally=True)
+    pkg.pkg_add(('ssh', ), locally=True)
 
     mydotfiles(remote_configuration=None, locally=True)
 
@@ -1322,18 +1513,20 @@ def lxc_base(remote_configuration=None):
 
     sys_easy_sudo()
 
+    print('XXX on Arch/BSD…')
+
     # install the locale before everything, else DPKG borks.
-    pkg.apt_add(('language-pack-fr', 'language-pack-en', ))
+    pkg.pkg_add(('language-pack-fr', 'language-pack-en', ))
 
     # Remove firefox's locale, it's completely useless in a LXC.
-    pkg.apt_del(('firefox-locale-fr', 'firefox-locale-en', ))
+    pkg.pkg_del(('firefox-locale-fr', 'firefox-locale-en', ))
 
-    pkg.apt_add(('bsd-mailx', ))
+    pkg.pkg_add(('bsd-mailx', ))
 
     # When using lxc_server on a lxc_host which already has postfix
     # installed, don't replace it by nullmailer, this is harmful.
-    if not pkg.apt_is_installed('postfix'):
-        pkg.apt_add(('nullmailer', ))
+    if not pkg.pkg_is_installed('postfix'):
+        pkg.pkg_add(('nullmailer', ))
 
 
 @task
@@ -1359,11 +1552,14 @@ def lxc_purge(remote_configuration=None):
         info('Skipped lxc_purge (not on LSB).')
         return
 
-    # Some other useless packages on LXCs…
-    # NOTE: don't purge dbus, it's used by the upstart bash completer. Too bad.
-    pkg.apt_del(('man-db', 'ureadahead', ))  # 'dbus', ))
+    if remote_configuration.is_ubuntu:
+        # Some other useless packages on LXCs…
+        # NOTE: don't purge dbus, it's used by the upstart bash completer. Too bad.
+        pkg.pkg_del(('man-db', 'ureadahead', ))  # 'dbus', ))
 
-    sudo('apt-get autoremove --purge --yes --force-yes')
+        sudo('apt-get autoremove --purge --yes --force-yes')
+
+    print('XXX on Arch/BSD…')
 
 
 @task

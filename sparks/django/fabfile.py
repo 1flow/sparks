@@ -53,7 +53,7 @@ from ..fabric import (fabfile, all_roles, worker_roles,
                       is_production_environment,
                       execute_or_not, get_current_role,
                       worker_information_from_role, QUIET)
-from ..pkg import brew, apt
+from sparks import pkg
 from ..foundations import postgresql as pg
 from ..foundations.classes import SimpleObject
 
@@ -797,7 +797,9 @@ def install_components(remote_configuration=None, upgrade=False):
     with activate_venv():
         with cd(env.root):
             fabfile.dev()
-            fabfile.dev_web()
+            fabfile.dev_web_nodejs()
+            fabfile.dev_web_ruby()
+            fabfile.dev_web_pyside()
             fabfile.dev_django_full()
 
     # OSX == test environment == no nginx/supervisor/etc
@@ -806,7 +808,7 @@ def install_components(remote_configuration=None, upgrade=False):
         LOGGER.warning('Considering a development environment, '
                        'installing everything on OSX.')
 
-        brew.brew_add(('nginx', ))
+        pkg.pkg_add(('nginx', ))
 
         # If you want to host pages on your local machine to the wider network
         # you can change the port to 80 in: /usr/local/etc/nginx/nginx.conf
@@ -822,9 +824,6 @@ def install_components(remote_configuration=None, upgrade=False):
         fabfile.db_mongodb()
         fabfile.db_memcached()
 
-        # Already done in dev_django_full()
-        #fabfile.dev_memcache()
-
         # 'rabbitmq'
         # run('ln -sfv /usr/local/opt/rabbitmq/*.plist ~/Library/LaunchAgents',
         #     quiet=QUIET)
@@ -835,7 +834,9 @@ def install_components(remote_configuration=None, upgrade=False):
         current_role = get_current_role()
 
         if current_role == 'web':
-            apt.apt_add(('nginx-full', ))
+            pkg.pkg_add(('nginx-full' if remote_configuration.is_deb
+                        else 'nginx' if remote_configuration.is_arch
+                        else 'www/nginx', ))
 
         if is_local_environment():
             LOGGER.info('Installing all services for a local development '
@@ -843,15 +844,14 @@ def install_components(remote_configuration=None, upgrade=False):
 
             # These are duplicated here in case env.host_string has been
             # manually set to localhost in fabfile, which I do myself.
-            apt.apt_add(('nginx-full', ))
+            pkg.pkg_add(('nginx-full' if remote_configuration.is_deb
+                        else 'nginx' if remote_configuration.is_arch
+                        else 'www/nginx', ))
 
             fabfile.db_redis()
             fabfile.db_memcached()
             fabfile.db_postgresql()
             fabfile.db_mongodb()
-
-            # Already done in dev_django_full()
-            #fabfile.dev_memcache()
 
         else:
             LOGGER.warning('NOT installing redis/PostgreSQL/MongoDB/Memcache '
@@ -868,7 +868,7 @@ def get_git_branch():
     branch = env.branch
 
     if branch == '<GIT-FLOW-DEPENDANT>':
-        branch = 'master' if env.environment == 'production' else 'develop'
+        branch = 'master' if 'production' in env.environment else 'develop'
 
     return branch
 
