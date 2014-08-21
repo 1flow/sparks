@@ -824,9 +824,6 @@ def install_components(remote_configuration=None, upgrade=False):
         fabfile.db_mongodb()
         fabfile.db_memcached()
 
-        # Already done in dev_django_full()
-        #fabfile.dev_memcache()
-
         # 'rabbitmq'
         # run('ln -sfv /usr/local/opt/rabbitmq/*.plist ~/Library/LaunchAgents',
         #     quiet=QUIET)
@@ -837,7 +834,9 @@ def install_components(remote_configuration=None, upgrade=False):
         current_role = get_current_role()
 
         if current_role == 'web':
-            apt.apt_add(('nginx-full', ))
+            pkg.pkg_add(('nginx-full' if remote_configuration.is_deb
+                        else 'nginx' if remote_configuration.is_arch
+                        else 'www/nginx', ))
 
         if is_local_environment():
             LOGGER.info('Installing all services for a local development '
@@ -845,15 +844,14 @@ def install_components(remote_configuration=None, upgrade=False):
 
             # These are duplicated here in case env.host_string has been
             # manually set to localhost in fabfile, which I do myself.
-            apt.apt_add(('nginx-full', ))
+            pkg.pkg_add(('nginx-full' if remote_configuration.is_deb
+                        else 'nginx' if remote_configuration.is_arch
+                        else 'www/nginx', ))
 
             fabfile.db_redis()
             fabfile.db_memcached()
             fabfile.db_postgresql()
             fabfile.db_mongodb()
-
-            # Already done in dev_django_full()
-            #fabfile.dev_memcache()
 
         else:
             LOGGER.warning('NOT installing redis/PostgreSQL/MongoDB/Memcache '
