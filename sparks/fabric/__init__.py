@@ -512,6 +512,14 @@ class ConfigurationMixin(object):
         return self.lsb and self.lsb.ID == 'arch'
 
     @property
+    def is_bsd(self):
+        return self.bsd is not None
+
+    @property
+    def is_freebsd(self):
+        return self.bsd and self.bsd.ID == 'FreeBSD'
+
+    @property
     def is_ubuntu(self):
         return self.lsb and self.lsb.ID.lower() == 'ubuntu'
 
@@ -569,6 +577,7 @@ class RemoteConfiguration(ConfigurationMixin):
 
         self.lsb = None
         self.mac = None
+        self.bsd = None
 
         out = out.strip().lower()
 
@@ -633,6 +642,20 @@ class RemoteConfiguration(ConfigurationMixin):
                                        u'platform.mac_ver() reported nothing '
                                        u'usable:\n{1}'.format(self.host_string,
                                        out))
+
+        elif out == u'freebsd':
+            release = run("python -c 'from __future__ import print_function; "
+                         "import platform; "
+                         "print(platform.release())'",
+                         quiet=not DEBUG,
+                         combine_stderr=False).strip()
+
+            self.bsd = SimpleObject()
+            self.bsd.ID = 'FreeBSD'
+            self.bsd.RELEASE = release
+            self.bsd.VERSION = release.split('-')[0]
+            self.bsd.MAJOR   = int(self.bsd.VERSION.split('.')[0])
+            self.bsd.MINOR   = int(self.bsd.VERSION.split('.')[1])
 
         else:
             raise RuntimeError(u'Unsupported platform {1} on {0}, please '
