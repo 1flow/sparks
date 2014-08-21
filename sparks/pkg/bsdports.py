@@ -50,10 +50,15 @@ def ports_is_installed(pkg):
     # Thus, we must check both, to avoid reinstalling already installed package
     # as much as we can (reinstalling gcc at each deployment is not an option).
 
+    try:
+        portname = pkg.split('/')[1]
+    except:
+        portname = pkg
+
     return is_installed("portmaster --list-origins "
                         "| grep '^%s$' >/dev/null 2>&1" % pkg) \
         or is_installed("portmaster -l "
-                        "| grep ' %s$' >/dev/null 2>&1" % pkg)
+                        "| grep ' %s$' >/dev/null 2>&1" % portname)
 
 
 def ports_add(pkgs):

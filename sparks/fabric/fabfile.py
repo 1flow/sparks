@@ -934,7 +934,7 @@ def dev(remote_configuration=None):
         pkg.pkg_add(('gcc', 'make', 'autogen', 'autoconf'))
 
     elif remote_configuration.is_freebsd:
-        pkg.pkg_add(('lang/gcc', 'devel/gmake',
+        pkg.pkg_add(('lang/gcc48', 'devel/gmake',
                     'devel/autogen', 'devel/autoconf'))
 
     elif remote_configuration.is_deb:
