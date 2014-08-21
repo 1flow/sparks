@@ -868,7 +868,7 @@ def get_git_branch():
     branch = env.branch
 
     if branch == '<GIT-FLOW-DEPENDANT>':
-        branch = 'master' if env.environment == 'production' else 'develop'
+        branch = 'master' if 'production' in env.environment else 'develop'
 
     return branch
 
