@@ -836,7 +836,8 @@ def install_components(remote_configuration=None, upgrade=False):
         if current_role == 'web':
             pkg.pkg_add(('nginx-full' if remote_configuration.is_deb
                         else 'nginx' if remote_configuration.is_arch
-                        else 'www/nginx', ))
+                        else ('www/apache24'
+                        if env.web_use_apache else 'www/nginx'), ))
 
         if is_local_environment():
             LOGGER.info('Installing all services for a local development '
@@ -2013,7 +2014,7 @@ def runable(fast=False, upgrade=False):
 
     if not fast:
         # Ensure Git is installed.
-        fabfile.dev_mini()
+        execute_or_not(fabfile.dev_mini, sparks_roles=('__any__', ))
 
         execute_or_not(init_environment, sparks_roles=('__any__', ))
 
