@@ -980,7 +980,10 @@ def db_redis(remote_configuration=None):
             quiet=True)
 
     elif remote_configuration.is_bsd:
+
         pkg.pkg_add(('databases/redis', ))
+
+        LOGGER.warning('Please ensure Redis is enabled and running.')
 
     elif remote_configuration.is_arch:
         pkg.pkg_add(('redis', ))
@@ -1043,6 +1046,8 @@ def db_memcached(remote_configuration=None):
         run('launchctl load ~/Library/LaunchAgents/homebrew.*.memcached.plist',
             quiet=True)
 
+    elif remote_configuration.is_freebsd:
+        LOGGER.warning('Please ensure Memcached is enabled and running.')
 
 @task(aliases=('db_postgres', ))
 @with_remote_configuration
@@ -1063,7 +1068,10 @@ def db_postgresql(remote_configuration=None):
             # psql template1
 
     elif remote_configuration.is_bsd:
+
         pkg.pkg_add(('databases/postgresql94', ))
+
+        LOGGER.warning('Please ensure Memcached is enabled and running.')
 
     elif remote_configuration.is_arch:
         pkg.pkg_add(('postgresql', ))
