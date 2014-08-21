@@ -1031,7 +1031,7 @@ def init_environment():
 
     """
 
-    LOGGER.info('Checking base environment…')
+    LOGGER.info('Creating environment…')
 
     if not exists(env.root):
         run('mkdir -p "{0}"'.format(os.path.dirname(env.root)))
@@ -2012,10 +2012,10 @@ def runable(fast=False, upgrade=False):
     """ Ensure we can run the {web,dev}server: db+req+sync+migrate+static. """
 
     if not fast:
-        execute_or_not(init_environment, sparks_roles=('__any__', ))
-
         execute_or_not(install_components, upgrade=upgrade,
                        sparks_roles=('__any__', ))
+
+        execute_or_not(init_environment, sparks_roles=('__any__', ))
 
     # Push everything first.
     # Don't fail if local user doesn't have my aliases.
