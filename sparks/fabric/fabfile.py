@@ -884,10 +884,12 @@ def dev(remote_configuration=None):
     # We remove the system packages to avoid duplicates and import
     # misses/conflicts in virtualenvs. Anyway, the system packages
     # are usually older than the PIP ones.
+    LOGGER.info('Removing system python packages…')
     pkg.pkg_del(('ipython', 'ipython2', 'ipython3', 'devel/ipython' ))
 
     # —————————————————————————————————————————————————————————————— Python 3.x
 
+    LOGGER.info('Checking Python 3.x components…')
     if remote_configuration.is_osx:
         # The brew python3 receipe installs pip3 and development files.
         py3_pkgs = ('python3', )
