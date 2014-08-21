@@ -869,7 +869,7 @@ def dev(remote_configuration=None):
     elif remote_configuration.is_freebsd:
         # NOTE: git-flow doesn't seem to have a port
         # on FreeBSD (searched on 9.2, 20140821).
-        pkg.pkg_add(('textproc/ack', 'lang/python27', ))
+        pkg.pkg_add(('textproc/ack', 'lang/python', ))
 
     elif remote_configuration.is_deb:
         # On Ubuntu, `ack` is `ack-grep`.
