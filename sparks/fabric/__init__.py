@@ -531,6 +531,25 @@ class ConfigurationMixin(object):
     def is_deb(self):
         return self.lsb and self.lsb.ID.lower() in ('ubuntu', 'debian',)
 
+    @property
+    def release_formatted(self):
+
+        if self.mac:
+            return u'Apple OSX {0}'.format(self.mac.release)
+
+        if self.lsb:
+            return u'{0} {1}'.format(self.lsb.ID.title(), self.lsb.RELEASE)
+
+        if self.bsd:
+            return u'{0} {1}'.format(self.bsd.ID, self.bsd.RELEASE)
+
+    @property
+    def vm_formatted(self):
+        return ('VMWare '
+                if self.is_vmware
+                else 'Parallels '
+                ) if self.is_vm else ''
+
 
 class RemoteConfiguration(ConfigurationMixin):
     """ Define an easy to use object with remote machine configuration. """
@@ -550,12 +569,9 @@ class RemoteConfiguration(ConfigurationMixin):
         if not QUIET:
             print('Remote is {release} {host} {vm}{arch}, user '
                   '{user} in {home}.'.format(
-                  release='Apple OSX {0}'.format(self.mac.release)
-                  if self.is_osx
-                  else self.lsb.ID.title(),
+                  release=self.release_formatted,
                   host=cyan(self.uname.nodename),
-                  vm=('VMWare ' if self.is_vmware else 'Parallels ')
-                  if self.is_vm else '',
+                  vm=self.vm_formatted,
                   arch=self.uname.machine,
                   user=cyan(self.user),
                   home=self.tilde,
@@ -777,6 +793,7 @@ class LocalConfiguration(ConfigurationMixin):
 
         self.lsb = None
         self.mac = None
+        self.bsd = None
 
         if system == 'linux':
             distro = platform.linux_distribution()
@@ -806,6 +823,16 @@ class LocalConfiguration(ConfigurationMixin):
             self.mac    = SimpleObject(from_dict=dict(zip(
                                        ('release', 'version', 'machine'),
                                        platform.mac_ver())))
+
+        elif out == u'freebsd':
+            release = platform.release()
+
+            self.bsd = SimpleObject()
+            self.bsd.ID = 'FreeBSD'
+            self.bsd.RELEASE = release
+            self.bsd.VERSION = release.split('-')[0]
+            self.bsd.MAJOR   = int(self.bsd.VERSION.split('.')[0])
+            self.bsd.MINOR   = int(self.bsd.VERSION.split('.')[1])
 
         else:
             raise RuntimeError(u'Unsupported platform {0} on localhost, '
