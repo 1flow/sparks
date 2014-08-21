@@ -886,15 +886,15 @@ def dev(remote_configuration=None):
 
     # ——————————————————————————————————————————————————————— Python virtualenv
 
-    LOGGER.info('Checking dev():python components…')
+    #LOGGER.info('Checking dev():python components…')
 
     #TODO: if exists virtualenv and is_lxc(machine):
 
     # We remove the system packages to avoid duplicates and import
     # misses/conflicts in virtualenvs. Anyway, the system packages
     # are usually older than the PIP ones.
-    LOGGER.info('Removing system python packages…')
-    pkg.pkg_del(('ipython', 'ipython2', 'ipython3', 'devel/ipython' ))
+    #LOGGER.info('Removing system python packages…')
+    #pkg.pkg_del(('ipython', 'ipython2', 'ipython3', 'devel/ipython' ))
 
     # —————————————————————————————————————————————————————————————— Python 3.x
 
