@@ -358,9 +358,9 @@ class ServiceRunner(SimpleObject):
             if self.service_handler == 'upstart':
                 sudo("initctl reload {0} "
                      "|| initctl reload-configuration".format(
-                         self.program_name))
+                         self.program_name), quiet=QUIET)
             else:
-                sudo("supervisorctl update")
+                sudo("supervisorctl update", quiet=QUIET)
         else:
             LOGGER.warning('Service configuration file {0} not '
                            'installed on {1}.'.format(self.program_name,
@@ -371,14 +371,14 @@ class ServiceRunner(SimpleObject):
             if self.service_handler == 'upstart':
                 res = sudo("status {0} | grep 'stop/waiting' "
                            "|| stop {0}".format(self.program_name),
-                           warn_only=warn_only)
+                           warn_only=warn_only, quiet=QUIET)
                 if res.failed and res != 'stop: Unknown instance:' \
                         and not warn_only:
                     raise RuntimeError('Job failed to stop!')
 
             else:
                 sudo("supervisorctl stop {0}".format(self.program_name),
-                     warn_only=warn_only)
+                     warn_only=warn_only, quiet=QUIET)
         else:
             LOGGER.warning('Service configuration file {0} not '
                            'installed.'.format(self.program_name))
@@ -386,10 +386,11 @@ class ServiceRunner(SimpleObject):
     def start(self):
         if self.installed:
             if self.service_handler == 'upstart':
-                sudo("start {0}".format(self.program_name))
+                sudo("start {0}".format(self.program_name), quiet=QUIET)
 
             else:
-                sudo("supervisorctl start {0}".format(self.program_name))
+                sudo("supervisorctl start {0}".format(self.program_name),
+                     quiet=QUIET)
         else:
             LOGGER.warning('Service configuration file {0} not '
                            'installed.'.format(self.program_name))
@@ -414,10 +415,11 @@ class ServiceRunner(SimpleObject):
     def status(self):
         if self.installed:
             if self.service_handler == 'upstart':
-                sudo('status {0}'.format(self.program_name))
+                sudo('status {0}'.format(self.program_name), quiet=QUIET)
 
             else:
-                sudo('supervisorctl status {0}'.format(self.program_name))
+                sudo('supervisorctl status {0}'.format(self.program_name),
+                     quiet=QUIET)
         else:
             LOGGER.warning('Service configuration file {0} not '
                            'installed.'.format(self.program_name))
@@ -432,11 +434,11 @@ class ServiceRunner(SimpleObject):
             self.stop(warn_only=True)
 
             if self.service_handler == 'upstart':
-                sudo("rm /etc/init/{0}.conf".format(self.program_name))
+                sudo("rm /etc/init/{0}.conf".format(self.program_name), quiet=QUIET)
 
             else:
                 sudo("rm /etc/supervisor/conf.d/{0}.conf".format(
-                     self.program_name))
+                     self.program_name), quiet=QUIET)
             # NO need for self.reload(check_installed=False),
             # the property has still the cached value.
             self.reload()
@@ -646,12 +648,12 @@ class ServiceRunner(SimpleObject):
                             context=context, use_sudo=True, backup=False)
 
             if sudo('diff {0} {0}.new'.format(destination),
-                    warn_only=True) == '':
-                sudo('rm -f {0}.new'.format(destination))
+                    warn_only=True, quiet=QUIET) == '':
+                sudo('rm -f {0}.new'.format(destination), quiet=QUIET)
 
             else:
                 self.stop()
-                sudo('mv {0}.new {0}'.format(destination))
+                sudo('mv {0}.new {0}'.format(destination), quiet=QUIET)
                 self.update  = True
                 self.restart = True
 
@@ -695,11 +697,11 @@ class ServiceRunner(SimpleObject):
             put(guniconf, gunidest + '.new')
 
             if sudo('diff {0} {0}.new'.format(gunidest),
-                    warn_only=True) == '':
-                sudo('rm -f {0}.new'.format(gunidest))
+                    warn_only=True, quiet=QUIET) == '':
+                sudo('rm -f {0}.new'.format(gunidest), quiet=QUIET)
 
             else:
-                sudo('mv {0}.new {0}'.format(gunidest))
+                sudo('mv {0}.new {0}'.format(gunidest), quiet=QUIET)
                 self.update  = True
                 self.restart = True
 
@@ -764,7 +766,7 @@ def run_command_task(cmd):
 
     with activate_venv():
         with cd(env.root):
-            run(cmd)
+            run(cmd, quiet=QUIET)
 
 
 @task(aliases=('base', 'base_components'))
@@ -1034,13 +1036,14 @@ def init_environment():
     LOGGER.info('Creating environment…')
 
     if not exists(env.root):
-        run('mkdir -p "{0}"'.format(os.path.dirname(env.root)))
+        run('mkdir -p "{0}"'.format(os.path.dirname(env.root)), quiet=QUIET)
 
         if hasattr(env, 'repository'):
             repositories  = env.get('sparks_options', {}).get('repository', {})
             my_repository = repositories.get(env.host_string, env.repository)
 
-            run("git clone {0} {1}".format(my_repository, env.root))
+            run("git clone {0} {1}".format(my_repository, env.root),
+                quiet=QUIET)
 
         else:
             prompt(u'Please create the git repository in {0}:{1} and press '
@@ -1049,8 +1052,8 @@ def init_environment():
                    u'your fabfile.'.format(env.host_string, env.root))
 
     if run('lsvirtualenv | grep {0}'.format(env.virtualenv),
-           warn_only=True).strip() == '':
-        run('mkvirtualenv {0}'.format(env.virtualenv))
+           warn_only=True, quiet=QUIET).strip() == '':
+        run('mkvirtualenv {0}'.format(env.virtualenv), quiet=QUIET)
 
 
 @task
@@ -1075,7 +1078,7 @@ def pre_requirements_task(fast=False, upgrade=False):
         with activate_venv():
             run('bash "{0}" preinstall "{1}" "{2}" "{3}" "{4}"'.format(
                 custom_script, env.environment, env.virtualenv,
-                role_name, env.host_string))
+                role_name, env.host_string), quiet=QUIET)
 
 
 @task
@@ -1104,7 +1107,7 @@ def post_requirements_task(fast=False, upgrade=False):
         with activate_venv():
             run('bash "{0}" install "{1}" "{2}" "{3}" "{4}"'.format(
                 custom_script, env.environment, env.virtualenv,
-                role_name, env.host_string))
+                role_name, env.host_string), quiet=QUIET)
 
 
 def requirements_task(fast=False, upgrade=False):
@@ -1123,7 +1126,7 @@ def requirements_task(fast=False, upgrade=False):
         pip_cache = os.path.join(env.root, '.pipcache')
 
         if not exists(pip_cache):
-            run('mkdir -p {0}'.format(pip_cache))
+            run('mkdir -p {0}'.format(pip_cache), quiet=QUIET)
 
         with activate_venv():
 
@@ -1137,7 +1140,7 @@ def requirements_task(fast=False, upgrade=False):
                     run(u"{command} --download-cache {pip_cache} "
                         u"--requirement {requirements_file}".format(
                         command=command, requirements_file=dev_req,
-                        pip_cache=pip_cache))
+                        pip_cache=pip_cache), quiet=QUIET)
 
             LOGGER.info('Checking requirements…')
 
@@ -1147,7 +1150,7 @@ def requirements_task(fast=False, upgrade=False):
                 run(u"{command} --download-cache {pip_cache} "
                     u" --requirement {requirements_file}".format(
                     command=command, requirements_file=req,
-                    pip_cache=pip_cache))
+                    pip_cache=pip_cache), quiet=QUIET)
 
             LOGGER.info('Done checking requirements.')
 
@@ -1266,7 +1269,7 @@ def git_update():
 
     with cd(env.root):
         if not is_local_environment():
-            run('git checkout %s' % get_git_branch())
+            run('git checkout %s' % get_git_branch(), quiet=QUIET)
 
 
 @serial
@@ -1279,7 +1282,7 @@ def git_pull_task():
     """
 
     with cd(env.root):
-        if not run('git pull').strip().endswith('Already up-to-date.'):
+        if not run('git pull', quiet=QUIET).strip().endswith('Already up-to-date.'):
             # reload the configuration to refresh Django settings.
             # TODO: examine commits HERE and in push_translations()
             # to reload() only if settings/* changed.
@@ -1320,7 +1323,7 @@ def git_clean():
 
     with cd(env.root):
         run("find . \( -name '*.pyc' -or -name '*.pyo' \) -print0 "
-            " | xargs -0 rm -f", warn_only=True)
+            " | xargs -0 rm -f", warn_only=True, quiet=QUIET)
 
 
 @task(alias='getlangs')
@@ -1344,14 +1347,15 @@ def push_translations(remote_configuration=None):
 
     with cd(env.root):
         if run("git status | grep -E 'modified:.*locale.*django.po' "
-               "|| true") != '':
+               "|| true", quiet=QUIET) != '':
             run(('git add -u \*locale\*po '
                 '&& git commit -m "{0}" '
                 # If there are pending commits in the central, `git push` will
                 # fail if we don't pull them prior to pushing local changes.
                 '&& (git up || git pull) && git push').format(
                 'Automated l10n translations from {0} on {1}.').format(
-                env.host_string, datetime.datetime.now().isoformat()))
+                env.host_string, datetime.datetime.now().isoformat()),
+                quiet=QUIET)
 
             # Get the translations changes back locally.
             # Don't fail if the local user doesn't have git-up,
@@ -1587,7 +1591,8 @@ def django_manage(command, prefix=None, **kwargs):
     with activate_venv():
         with cd(env.root):
             return run('{0}{1}./manage.py {2} --verbosity 1 --traceback'.format(
-                       prefix, sparks_djsettings_env_var(), command), **kwargs)
+                       prefix, sparks_djsettings_env_var(), command),
+                       quiet=QUIET, **kwargs)
 
 
 @with_remote_configuration
@@ -1713,11 +1718,12 @@ def createdb(remote_configuration=None, db=None, user=None, password=None,
 
         # WARNING: don't .strip() here, else we fail Fabric's attributes.
         db_user_result = pg.wrapped_sudo(pg.SELECT_USER.format(
-            pg_env=pg_env, user=user), warn_only=True)
+            pg_env=pg_env, user=user), warn_only=True, quiet=QUIET)
 
         if db_user_result.strip() == '':
             create_user_result = pg.wrapped_sudo(pg.CREATE_USER.format(
-                pg_env=pg_env, user=user, password=password), warn_only=True)
+                pg_env=pg_env, user=user, password=password),
+                warn_only=True, quiet=QUIET)
 
             if not 'CREATE ROLE' in create_user_result:
                 if is_local_environment():
@@ -1754,12 +1760,12 @@ local    all    <MYUSERNAME>    trust
 
         else:
             pg.wrapped_sudo(pg.ALTER_USER.format(pg_env=pg_env,
-                            user=user, password=password))
+                            user=user, password=password), quiet=QUIET)
 
         if pg.wrapped_sudo(pg.SELECT_DB.format(pg_env=pg_env,
-                           db=db)).strip() == '':
+                           db=db), quiet=QUIET).strip() == '':
             pg.wrapped_sudo(pg.CREATE_DB.format(pg_env=pg_env,
-                            db=db, user=user))
+                            db=db, user=user), quiet=QUIET)
 
     LOGGER.info('Done checking database setup.')
 
@@ -1771,7 +1777,7 @@ def syncdb():
     with activate_venv():
         with cd(env.root):
             # TODO: this should be managed by git and the developers, not here.
-            run('chmod 755 manage.py', quiet=True)
+            run('chmod 755 manage.py', quiet=QUIET)
 
     django_manage('syncdb --noinput')
 
@@ -1823,7 +1829,7 @@ def collectstatic(remote_configuration=None, fast=True):
     if not fast:
         with cd(env.root):
             run('rm -rf "{0}"'.format(
-                remote_configuration.django_settings.STATIC_ROOT))
+                remote_configuration.django_settings.STATIC_ROOT), quiet=QUIET)
 
     django_manage('collectstatic --noinput')
 
