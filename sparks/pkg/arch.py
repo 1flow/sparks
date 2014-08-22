@@ -25,7 +25,7 @@ def arch_is_installed(pkg):
 def arch_update():
     """ Update packages list. """
 
-    sudo('%s -Sy' % ARCH_CMD)
+    sudo('%s -Sy' % ARCH_CMD, quiet=QUIET)
 
 
 def arch_upgrade():
@@ -34,19 +34,21 @@ def arch_upgrade():
     # create a line "force-confold" in `/etc/dpkg/dpkg.cfg`.
     # Or, just:
 
-    sudo('%s -Su --noconfirm --noprogressbar --force' % ARCH_CMD)
+    sudo('%s -Su --noconfirm --noprogressbar --force' % ARCH_CMD, quiet=QUIET)
 
 
 def arch_add(pkgs):
     for pkg in list_or_split(pkgs):
         if not arch_is_installed(pkg):
-            sudo(ARCH_CMD + ' -S --noconfirm --noprogressbar --force %s' % pkg)
+            sudo(ARCH_CMD + ' -S --noconfirm --noprogressbar --force %s' % pkg,
+                 quiet=QUIET)
 
 
 def arch_del(pkgs):
     for pkg in list_or_split(pkgs):
         if arch_is_installed(pkg):
-            sudo(ARCH_CMD + ' -Rs --noconfirm --noprogressbar --force %s' % pkg)
+            sudo(ARCH_CMD + ' -Rs --noconfirm --noprogressbar --force %s' % pkg,
+                 quiet=QUIET)
 
 def arch_search(pkgs):
     for pkg in list_or_split(pkgs):
