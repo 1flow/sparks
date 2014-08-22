@@ -15,9 +15,9 @@ from .arch import (arch_usable, arch_is_installed, arch_update, arch_upgrade,
 from .brew import (brew_usable, brew_is_installed, brew_add, brew_del,
                    brew_update, brew_upgrade, brew_search, )
 
-from .bsdports import (ports_usable, ports_is_installed,
-                       ports_add, ports_del,
-                       ports_update, ports_upgrade, ports_search, )
+from .pkgng import (pkgng_usable, pkgng_is_installed,
+                    pkgng_add, pkgng_del,
+                    pkgng_update, pkgng_upgrade, pkgng_search, )
 
 
 from .other import (npm_is_installed, npm_add, npm_search,
@@ -37,7 +37,7 @@ def pkg_is_installed(pkg, remote_configuration=None):
         return apt_is_installed(pkg)
 
     elif remote_configuration.is_bsd:
-        return ports_is_installed(pkg)
+        return pkgng_is_installed(pkg)
 
     else:
         return brew_is_installed(pkg)
@@ -53,7 +53,7 @@ def pkg_add(pkgs, remote_configuration=None):
         return apt_add(pkgs)
 
     elif remote_configuration.is_bsd:
-        return ports_add(pkgs)
+        return pkgng_add(pkgs)
 
     else:
         return brew_add(pkgs)
@@ -69,7 +69,7 @@ def pkg_del(pkgs, remote_configuration=None):
         return apt_del(pkgs)
 
     elif remote_configuration.is_bsd:
-        return ports_add(pkgs)
+        return pkgng_del(pkgs)
 
     else:
         return brew_del(pkgs)
@@ -85,7 +85,7 @@ def pkg_update(remote_configuration=None):
         return apt_update()
 
     elif remote_configuration.is_bsd:
-        return ports_update()
+        return pkgng_update()
 
     else:
         return brew_update()
@@ -101,7 +101,7 @@ def pkg_upgrade(remote_configuration=None):
         return apt_upgrade()
 
     elif remote_configuration.is_bsd:
-        return ports_upgrade()
+        return pkgng_upgrade()
 
     else:
         return brew_upgrade()
@@ -129,7 +129,7 @@ def update(remote_configuration=None):
         return apt_update()
 
     elif remote_configuration.is_bsd:
-        return ports_update()
+        return pkgng_update()
 
     else:
         return brew_update()
@@ -153,7 +153,7 @@ def upgrade(update=False, remote_configuration=None):
         apt_upgrade()
 
     elif remote_configuration.is_bsd:
-        return ports_upgrade()
+        return pkgng_upgrade()
 
     else:
         return brew_upgrade()

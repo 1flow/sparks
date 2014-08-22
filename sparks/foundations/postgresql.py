@@ -124,6 +124,9 @@ def get_admin_user(remote_configuration=None):
         # FIXED: on Ubuntu / Debian, it's been `postgres` since ages.
         return 'postgres'
 
+    elif remote_configuration.is_bsd:
+        return 'pgsql'
+
     elif remote_configuration.is_osx:
         # On OSX where PG is installed via brew, the local
         # user is admin, there is no "postgres" admin user.
