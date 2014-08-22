@@ -811,7 +811,7 @@ def dev_web_pyside(remote_configuration=None):
         pkg.pkg_add(('qt4', 'qtwebkit', ))
 
     elif remote_configuration.is_freebsd:
-        pkg.pkg_add(('qt4', 'webkit-qt4', ))
+        pkg.pkg_add(('qt4', 'qt4-webkit', ))
 
 
 @task
