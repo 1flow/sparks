@@ -38,7 +38,7 @@
 
 """
 
-from ..fabric import sudo, with_remote_configuration
+from ..fabric import sudo, with_remote_configuration, QUIET
 from ..fabric.utils import list_or_split
 from .common import is_installed, search
 
@@ -77,23 +77,23 @@ def pkgng_add(pkgs):
     for pkg in list_or_split(pkgs):
         if not pkgng_is_installed(pkg):
             # -U means REPO_AUTOUPDATE=false
-            sudo('pkg install -Uy %s' % pkg)
+            sudo('pkg install -Uy %s' % pkg, quiet=QUIET)
 
 
 def pkgng_del(pkgs):
     for pkg in list_or_split(pkgs):
         if pkgng_is_installed(pkg):
-            sudo('pkg delete -Ryf %s' % pkg)
+            sudo('pkg delete -Ryf %s' % pkg, quiet=QUIET)
 
 
 def pkgng_update():
 
-    sudo('pkg update')
+    sudo('pkg update', quiet=QUIET)
 
 
 def pkgng_upgrade():
 
-    sudo('pkg upgrade -Uy')
+    sudo('pkg upgrade -Uy', quiet=QUIET)
 
 
 def pkgng_search(pkgs):
