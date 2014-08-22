@@ -824,7 +824,7 @@ class LocalConfiguration(ConfigurationMixin):
                                        ('release', 'version', 'machine'),
                                        platform.mac_ver())))
 
-        elif out == u'freebsd':
+        elif system == u'freebsd':
             release = platform.release()
 
             self.bsd = SimpleObject()
