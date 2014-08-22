@@ -800,7 +800,7 @@ def install_components(remote_configuration=None, upgrade=False):
         fabfile.dev()
         fabfile.dev_web_nodejs()
         fabfile.dev_web_ruby()
-        fabfile.dev_web_pyside()
+        #fabfile.dev_web_pyside()
         fabfile.dev_django_full()
 
     # OSX == test environment == no nginx/supervisor/etc
