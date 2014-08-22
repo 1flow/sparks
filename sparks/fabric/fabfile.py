@@ -787,7 +787,7 @@ def dev_web_nodejs(remote_configuration=None):
 
 @task
 @with_remote_configuration
-def #dev_web_pyside(remote_configuration=None):
+def dev_web_pyside(remote_configuration=None):
 
     # ——————————————————————————————————————————————— PySide build-deps (again)
     # for Ghost.py text parsing.
