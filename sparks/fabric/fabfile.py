@@ -615,7 +615,7 @@ def dev_postgresql(remote_configuration=None):
         pkg.pkg_add(('postgresql-libs', ))
 
     elif remote_configuration.is_freebsd:
-        pkg.pkg_add(('databases/postgresql94-client', ))
+        pkg.pkg_add(('postgresql9-client', ))
 
     # This should be done in the virtualenv.
     #pkg.pip2_add(('psycopg2', ))
@@ -649,18 +649,16 @@ def dev_mini(remote_configuration=None):
 
     # Avoid a crash during install because xmlcatmgr is missing.
     if remote_configuration.is_freebsd:
-        pkg.pkg_add(('textproc/xmlcatmgr', ))
+        pkg.pkg_add(('xmlcatmgr', ))
 
-    pkg.pkg_add(('git-core' if remote_configuration.is_deb
-                else 'devel/git' if remote_configuration.is_bsd
-                else 'git'))
+    pkg.pkg_add(('git-core' if remote_configuration.is_deb else 'git'))
 
     dev_tildesources()
 
     if remote_configuration.is_osx:
         return
 
-    pkg.pkg_add(('devel/gmake' if remote_configuration.is_bsd else 'make', ))
+    pkg.pkg_add(('gmake' if remote_configuration.is_bsd else 'make', ))
 
 
 @task
@@ -761,7 +759,7 @@ def dev_web_nodejs(remote_configuration=None):
         pkg.pkg_add(('nodejs', 'cmake', ))
 
     elif remote_configuration.is_freebsd:
-        pkg.pkg_add(('www/node', 'www/npm', 'devel/cmake', ))
+        pkg.pkg_add(('node', 'npm', 'cmake', ))
 
     # But on OSX/BSD, we need NPM too. For Ubuntu, this has already been handled.
     elif remote_configuration.is_osx:
@@ -813,7 +811,7 @@ def dev_web_pyside(remote_configuration=None):
         pkg.pkg_add(('qt4', 'qtwebkit', ))
 
     elif remote_configuration.is_freebsd:
-        pkg.pkg_add(('devel/qt4', 'www/webkit-qt4', ))
+        pkg.pkg_add(('qt4', 'webkit-qt4', ))
 
 
 @task
@@ -837,7 +835,7 @@ def dev_web_ruby(remote_configuration=None):
     elif remote_configuration.is_freebsd:
         # Ruby 2.1 is the recommended version for new
         # projects. Other version are just legacy.
-        pkg.pkg_add(('lang/ruby21', 'devel/ruby-gems', 'devel/rubygem-rake', ))
+        pkg.pkg_add(('ruby21', 'ruby19-gems', 'rubygem-rake', ))
         # install ruby-gdbm too ?
 
     pkg.gem_add(
@@ -869,7 +867,7 @@ def dev(remote_configuration=None):
     elif remote_configuration.is_freebsd:
         # NOTE: git-flow doesn't seem to have a port
         # on FreeBSD (searched on 9.2, 20140821).
-        pkg.pkg_add(('textproc/ack', 'lang/python', ))
+        pkg.pkg_add(('ack', 'python', ))
 
     elif remote_configuration.is_deb:
         # On Ubuntu, `ack` is `ack-grep`.
@@ -919,7 +917,7 @@ def dev(remote_configuration=None):
         py3_pkgs = ()
 
     elif remote_configuration.is_freebsd:
-        py3_pkgs = ('lang/python3', )
+        py3_pkgs = ('python3', )
 
     # ——————————————————————————————————————————————————————— Build environment
 
@@ -927,15 +925,13 @@ def dev(remote_configuration=None):
 
     # Gettext is used nearly everywhere, and Django
     # {make,compile}messages commands need it.
-    pkg.pkg_add(('devel/gettext' if remote_configuration.is_bsd
-                else 'gettext', ))
+    pkg.pkg_add(('gettext', ))
 
     if remote_configuration.is_arch:
         pkg.pkg_add(('gcc', 'make', 'autogen', 'autoconf'))
 
     elif remote_configuration.is_freebsd:
-        pkg.pkg_add(('lang/gcc48', 'devel/gmake',
-                    'devel/autogen', 'devel/autoconf'))
+        pkg.pkg_add(('gcc48', 'gmake', 'autogen', 'autoconf'))
 
     elif remote_configuration.is_deb:
         pkg.pkg_add(('build-essential', 'python-all-dev', ))
@@ -972,8 +968,7 @@ def db_redis(remote_configuration=None):
             quiet=True)
 
     elif remote_configuration.is_bsd:
-
-        pkg.pkg_add(('databases/redis', ))
+        pkg.pkg_add(('redis', ))
 
         LOGGER.warning('Please ensure Redis is enabled and running.')
 
@@ -1060,8 +1055,7 @@ def db_postgresql(remote_configuration=None):
             # psql template1
 
     elif remote_configuration.is_bsd:
-
-        pkg.pkg_add(('databases/postgresql94', ))
+        pkg.pkg_add(('postgresql9-server', ))
 
         LOGGER.warning('Please ensure PostgreSQL is enabled and running.')
 
@@ -1123,7 +1117,7 @@ def db_mongodb(remote_configuration=None):
         sudo('systemctl start mongodb')
 
     elif remote_configuration.is_freebsd:
-        pkg.pkg_add(('databases/mongodb', ))
+        pkg.pkg_add(('mongodb', ))
 
         LOGGER.warning('PLEASE ENSURE MongoDB is configured/running…')
 
