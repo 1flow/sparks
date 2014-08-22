@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+"""
+
+    This file is not used. We keep it here in case some developer wants to
+    take over ports maintainership and implementation in sparks.
+
+    The official sparks way is PKGng. See pkgng.py for why.
+
+"""
 
 from ..fabric import sudo, with_remote_configuration
 from ..fabric.utils import list_or_split
