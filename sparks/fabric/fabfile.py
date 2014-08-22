@@ -13,6 +13,7 @@ from fabric.contrib.files    import contains, append, exists, sed
 from fabric.context_managers import cd, lcd, settings, hide
 from fabric.colors           import yellow, cyan
 
+from sparks.fabric import QUIET
 from .. import pkg, version as sparks_version
 from .utils import (with_remote_configuration,  # dsh_to_roledefs,
                     tilde, symlink, dotfiles)
@@ -127,20 +128,20 @@ def install_sublime(remote_configuration=None, overwrite=False):
                 url = 'http://c758482.r82.cf2.rackcdn.com/' \
                       + 'Sublime%20Text%202.0.2.tar.bz2'
 
-            run('wget -q -O /var/tmp/sublime.tar.bz2 %s' % url)
+            run('wget -q -O /var/tmp/sublime.tar.bz2 %s' % url, quiet=QUIET)
 
             with cd('/opt'):
-                sudo('tar -xjf /var/tmp/sublime.tar.bz2')
-                sudo('mv "Sublime Text 2" sublime2')
+                sudo('tar -xjf /var/tmp/sublime.tar.bz2', quiet=QUIET)
+                sudo('mv "Sublime Text 2" sublime2', quiet=QUIET)
 
         executable = tilde('bin/sublime')
 
         if overwrite or not exists(executable):
             run('echo -e "#!/bin/sh\ncd /opt/sublime2\n./sublime_text\n" > %s'
-                % executable)
+                % executable, quiet=QUIET)
 
         # Always be sure the executable *IS* executable ;-)
-        run('chmod 755 %s' % executable, quiet=True)
+        run('chmod 755 %s' % executable, quiet=QUIET)
 
         if overwrite or not exists('/usr/share/applications/sublime2.desktop'):
             put(os.path.join(os.path.expanduser('~'), 'Dropbox',
@@ -161,7 +162,7 @@ def install_spotify(remote_configuration=None, overwrite=False):
         if overwrite or not exists('/usr/bin/spotify'):
 
             sudo(u'apt-key adv --keyserver keyserver.ubuntu.com '
-                 u'--recv-keys 94558F59')
+                 u'--recv-keys 94558F59', quiet=QUIET)
 
             append('/etc/apt/sources.list.d/spotify.list',
                    'deb http://repository.spotify.com stable non-free',
@@ -189,9 +190,10 @@ def install_homebrew(remote_configuration=None):
             pkg.brew_upgrade()
 
     else:
-        sudo('ruby -e "$(curl -fsSL https://raw.github.com/mxcl/homebrew/go)"')
+        sudo('ruby -e "$(curl -fsSL https://raw.github.com/mxcl/homebrew/go)"',
+             quiet=QUIET)
 
-        sudo('brew doctor')
+        sudo('brew doctor', quiet=QUIET)
         pkg.pkg_add(('git', ))
 
         # TODO: implement this.
@@ -230,13 +232,13 @@ def install_powerline(remote_configuration=None):
 
             with cd(tilde('sources')):
                 run('cp ubuntu-mono-powerline-ttf/*.ttf %s'
-                    % tilde('Library/Fonts'))
+                    % tilde('Library/Fonts'), quiet=QUIET)
 
     else:
         if not exists(tilde('.fonts/ubuntu-mono-powerline-ttf')):
             run('git clone https://github.com/pdf/ubuntu-mono-powerline-ttf.git'
-                ' ~/.fonts/ubuntu-mono-powerline-ttf')
-            run('fc-cache -vf', warn_only=True, quiet=True)
+                ' ~/.fonts/ubuntu-mono-powerline-ttf', quiet=QUIET)
+            run('fc-cache -vf', warn_only=True, quiet=QUIET)
 
     git_clone_or_update('powerline-shell',
                         '{0}Karmak23/powerline-shell.git'.format(github()))
@@ -250,7 +252,8 @@ def test(remote_configuration=None):
     """ Just run `uname -a; uptime` remotely, to test the connection,
         and the sparks remote detection engine. """
 
-    run('uname -a; uptime; echo $USER — $PWD — Sparks v%s' % sparks_version)
+    run('uname -a; uptime; echo $USER — $PWD — Sparks v%s' % sparks_version,
+        quiet=QUIET)
 
 
 @task
@@ -303,7 +306,7 @@ def sys_unattended(remote_configuration=None):
         '/etc/apt/apt.conf.d/50unattended-upgrades', use_sudo=True)
 
     # Too long. It will be done by CRON anyway.
-    #sudo('unattended-upgrades')
+    #sudo('unattended-upgrades', quiet=QUIET)
 
 
 @task
@@ -352,7 +355,8 @@ def sys_default_services(remote_configuration=None):
     if remote_configuration.is_osx:
         # Activate locate on OSX.
         sudo('launchctl load -w '
-             '/System/Library/LaunchDaemons/com.apple.locate.plist', quiet=True)
+             '/System/Library/LaunchDaemons/com.apple.locate.plist',
+             quiet=QUIET)
 
 
 @task
@@ -393,7 +397,7 @@ def sys_ssh_powerline(remote_configuration=None):
     if not contains(config, 'AcceptEnv.*POWERLINE_SHELL', use_sudo=True):
         append(config, 'AcceptEnv POWERLINE_SHELL', use_sudo=True)
         if reload_ssh:
-            sudo(reload_ssh)
+            sudo(reload_ssh, quiet=QUIET)
 
 
 @task
@@ -411,7 +415,7 @@ def sys_mongodb(remote_configuration=None):
         elif major_distro_version in (12, 13):
             if not exists('/etc/apt/sources.list.d/10gen.list'):
                 sudo('apt-key adv --keyserver keyserver.ubuntu.com '
-                     '--recv 7F0CEB10')
+                     '--recv 7F0CEB10', quiet=QUIET)
                 append('/etc/apt/sources.list.d/10gen.list',
                        'deb http://downloads-distro.mongodb.org/'
                        'repo/ubuntu-upstart dist 10gen', use_sudo=True)
@@ -470,23 +474,26 @@ def replicate_acls(remote_configuration=None,
         # GET correct permissions form origin server.
         with settings(host_string=origin):
             with cd('/tmp'):
-                sudo('getfacl -pR "%s" > "%s"' % (path, remote_perms_file))
+                sudo('getfacl -pR "%s" > "%s"' % (path, remote_perms_file),
+                     quiet=QUIET)
                 get(remote_perms_file, '/tmp')
-                sudo('rm "%s"' % remote_perms_file, quiet=True)
+                sudo('rm "%s"' % remote_perms_file, quiet=QUIET)
 
         if env.host_string != 'localhost':
             # TODO: find a way to transfer from one server to another directly.
             put(remote_perms_file)
 
         # gather local permissions, compare them, and reapply
-        sudo('getfacl -pR "%s" > "%s"' % (path, local_perms_file))
+        sudo('getfacl -pR "%s" > "%s"' % (path, local_perms_file), quiet=QUIET)
         sudo('colordiff -U 3 "%s" "%s" || true' % (local_perms_file,
-                                                   remote_perms_file))
+                                                   remote_perms_file),
+             quiet=QUIET)
 
         sudo('setfacl --restore="%s" %s || true' % (remote_perms_file,
-             '' if apply else '--test'))
+             '' if apply else '--test'), quiet=QUIET)
 
-        sudo('rm "%s" "%s"' % (remote_perms_file, local_perms_file), quiet=True)
+        sudo('rm "%s" "%s"' % (remote_perms_file, local_perms_file),
+             quiet=QUIET)
 
 
 # ------------------------------------------------- Development recipes
@@ -502,10 +509,10 @@ def git_clone_or_update(project, github_source, remote_configuration=None):
         if exists(project):
             with cd(project):
                 print('Updating GIT repository %s…' % yellow(project))
-                run('git up || git pull', quiet=True)
+                run('git up || git pull', quiet=QUIET)
         else:
             print('Creating GIT repository %s…' % yellow(project))
-            run('git clone %s %s' % (github_source, project))
+            run('git clone %s %s' % (github_source, project), quiet=QUIET)
 
 
 @task
@@ -552,7 +559,7 @@ def dev_pil(virtualenv=None, remote_configuration=None):
 
             # TODO:     with prefix('workon myvenv'):
             # This must be done in the virtualenv, not system-wide.
-            #sudo('pip install -U PIL')
+            #sudo('pip install -U PIL', quiet=QUIET)
 
 # TODO: rabbitmq-server
 
@@ -568,7 +575,7 @@ def dev_tildesources(remote_configuration=None):
                 if remote_configuration.is_parallel:
                     symlink('/media/psf/Home/sources', 'sources')
             else:
-                run('mkdir sources')
+                run('mkdir sources', quiet=QUIET)
 
 
 @task
@@ -798,7 +805,7 @@ def dev_web_pyside(remote_configuration=None):
 
         # Even this doesn't work, we need to official binary,
         # else PySide won't find it…
-        #run('brew install qt --developer')
+        #run('brew install qt --developer', quiet=QUIET)
 
         LOGGER.critical('You need to install PySide and Qt from '
                         'http://qt-project.org/wiki/PySide_Binaries_MacOSX '
@@ -963,9 +970,9 @@ def db_redis(remote_configuration=None):
         pkg.pkg_add(('redis', ))
 
         run('ln -sfv /usr/local/opt/redis/*.plist ~/Library/LaunchAgents',
-            quiet=True)
+            quiet=QUIET)
         run('launchctl load ~/Library/LaunchAgents/homebrew.*.redis.plist',
-            quiet=True)
+            quiet=QUIET)
 
     elif remote_configuration.is_bsd:
         pkg.pkg_add(('redis', ))
@@ -976,8 +983,8 @@ def db_redis(remote_configuration=None):
         pkg.pkg_add(('redis', ))
 
         # This won't hurt beiing done more than once (tested 20140821).
-        sudo('systemctl enable redis')
-        sudo('systemctl start redis')
+        sudo('systemctl enable redis', quiet=QUIET)
+        sudo('systemctl start redis', quiet=QUIET)
 
     elif remote_configuration.is_deb:
 
@@ -1024,14 +1031,14 @@ def db_memcached(remote_configuration=None):
     if remote_configuration.is_arch:
 
         # This won't hurt beiing done more than once (tested 20140821).
-        sudo('systemctl enable memcached')
-        sudo('systemctl start memcached')
+        sudo('systemctl enable memcached', quiet=QUIET)
+        sudo('systemctl start memcached', quiet=QUIET)
 
     elif remote_configuration.is_osx:
         run('ln -sfv /usr/local/opt/memcached/*.plist ~/Library/LaunchAgents',
-            quiet=True)
+            quiet=QUIET)
         run('launchctl load ~/Library/LaunchAgents/homebrew.*.memcached.plist',
-            quiet=True)
+            quiet=QUIET)
 
     elif remote_configuration.is_freebsd:
         LOGGER.warning('Please ensure Memcached is enabled and running.')
@@ -1045,11 +1052,11 @@ def db_postgresql(remote_configuration=None):
 
     if remote_configuration.is_osx:
         if pkg.pkg_add(('postgresql', )):
-            run('initdb /usr/local/var/postgres -E utf8')
+            run('initdb /usr/local/var/postgres -E utf8', quiet=QUIET)
             run('ln -sfv /usr/local/opt/postgresql/*.plist '
-                '~/Library/LaunchAgents')
+                '~/Library/LaunchAgents', quiet=QUIET)
             run('launchctl load ~/Library/LaunchAgents/'
-                'homebrew.*.postgresql.plist')
+                'homebrew.*.postgresql.plist', quiet=QUIET)
 
             # Test connection
             # psql template1
@@ -1061,13 +1068,14 @@ def db_postgresql(remote_configuration=None):
 
         if not exists('/usr/local/pgsql/data'):
             run('su - pgsql -c "initdb --locale en_US.UTF-8 '
-                '-E UTF8 -D /usr/local/pgsql/data"')
+                '-E UTF8 -D /usr/local/pgsql/data"', quiet=QUIET)
             append('/usr/local/pgsql/data/postmaster.opts',
                    '/usr/local/bin/postgres -D /usr/local/pgsql/data',
                    use_sudo=True)
-            sudo('chown pgsql:pgsql /usr/local/pgsql/data/postmaster.optparse')
+            sudo('chown pgsql:pgsql /usr/local/pgsql/data/postmaster.optparse',
+                 quiet=QUIET)
             append('/etc/rc.conf', 'postgresql_enable="YES"', use_sudo=True)
-            sudo('/usr/local/etc/rc.d/postgresql start')
+            sudo('/usr/local/etc/rc.d/postgresql start', quiet=QUIET)
 
     elif remote_configuration.is_arch:
         pkg.pkg_add(('postgresql', ))
@@ -1078,11 +1086,11 @@ def db_postgresql(remote_configuration=None):
             # stats_temp_directory = '/run/postgresql'
             #
             run('su - postgres -c "initdb --locale en_US.UTF-8 '
-                '-E UTF8 -D /var/lib/postgres/data"')
+                '-E UTF8 -D /var/lib/postgres/data"', quiet=QUIET)
 
         # This won't hurt beiing done more than once (tested 20140821).
-        sudo('systemctl enable postgresql')
-        sudo('systemctl start postgresql')
+        sudo('systemctl enable postgresql', quiet=QUIET)
+        sudo('systemctl start postgresql', quiet=QUIET)
 
     elif remote_configuration.is_deb:
 
@@ -1105,16 +1113,17 @@ def db_mongodb(remote_configuration=None):
 
     if remote_configuration.is_osx:
         if pkg.pkg_add(('mongodb', )):
-            run('ln -sfv /usr/local/opt/mongodb/*.plist ~/Library/LaunchAgents')
+            run('ln -sfv /usr/local/opt/mongodb/*.plist ~/Library/LaunchAgents',
+                quiet=QUIET)
             run('launchctl load '
-                '~/Library/LaunchAgents/homebrew.*.mongodb.plist')
+                '~/Library/LaunchAgents/homebrew.*.mongodb.plist', quiet=QUIET)
 
     elif remote_configuration.is_arch:
         pkg.pkg_add(('mongodb', ))
 
         # This won't hurt beiing done more than once (tested 20140821).
-        sudo('systemctl enable mongodb')
-        sudo('systemctl start mongodb')
+        sudo('systemctl enable mongodb', quiet=QUIET)
+        sudo('systemctl start mongodb', quiet=QUIET)
 
     elif remote_configuration.is_freebsd:
         pkg.pkg_add(('mongodb', ))
@@ -1296,7 +1305,7 @@ def graph(remote_configuration=None):
         if not exists('/usr/share/icons/Faenza'):
             run(u'wget https://launchpad.net/~tiheum/+archive/equinox/+files/'
                 u'faenza-icon-theme_1.3.1_all.deb -O /tmp/faenza.deb && '
-                u'sudo dpkg -i /tmp/faenza.deb')
+                u'sudo dpkg -i /tmp/faenza.deb', quiet=QUIET)
     else:
         pkg.apt.ppa_pkg('ppa:tiheum/equinox', ('faience-icon-theme',
                         'faenza-icon-theme'), '/usr/share/icons/Faenza')
@@ -1350,7 +1359,7 @@ def clear_osx_cache(remote_configuration=None):
     # because opendirectoryd takes 100% CPU on my MBPr.
     run('dscl . -list Computers | grep -v "^localhost$" '
         '| while read computer_name ; do sudo dscl . -delete '
-        'Computers/"$computer_name" ; done', quiet=True)
+        'Computers/"$computer_name" ; done', quiet=QUIET)
 
 
 @task
@@ -1362,8 +1371,8 @@ def upload_osx_apps(remote_configuration=None):
         .. note:: there is currently no “ clean outdated files ” procedure…
     """
 
-    run('mkdir -p %s' % central_osx_apps.split(':')[1], quiet=True)
-    run('rsync -av %s %s' % (local_osx_apps, central_osx_apps))
+    run('mkdir -p %s' % central_osx_apps.split(':')[1], quiet=QUIET)
+    run('rsync -av %s %s' % (local_osx_apps, central_osx_apps), quiet=QUIET)
 
 # =========================================== My personnal environments
 
@@ -1437,7 +1446,8 @@ def mydotfiles(overwrite=False, locally=False, remote_configuration=None):
 
         if not remote_configuration.is_osx:
             if not exists('.config'):
-                local('mkdir .config') if locally else run('mkdir .config')
+                local('mkdir .config') if locally else run('mkdir .config',
+                                                           quiet=QUIET)
 
             with cd('.config'):
                 # These don't handle the Dropboxed configuration / data
@@ -1485,7 +1495,7 @@ def myfullenv(remote_configuration=None):
             default=False):
         # Reinstall / rebuild the BCM wlan driver.
         # NM should detect and re-connect automatically at the end.
-        sudo('apt-get install --reinstall bcmwl-kernel-source')
+        sudo('apt-get install --reinstall bcmwl-kernel-source', quiet=QUIET)
 
 
 @task(aliases=('mysetup', ))
@@ -1555,7 +1565,7 @@ def lxc_purge(remote_configuration=None):
         # NOTE: don't purge dbus, it's used by the upstart bash completer. Too bad.
         pkg.pkg_del(('man-db', 'ureadahead', ))  # 'dbus', ))
 
-        sudo('apt-get autoremove --purge --yes --force-yes')
+        sudo('apt-get autoremove --purge --yes --force-yes', quiet=QUIET)
 
     print('XXX on Arch/BSD…')
 
