@@ -615,7 +615,7 @@ def dev_postgresql(remote_configuration=None):
         pkg.pkg_add(('postgresql-libs', ))
 
     elif remote_configuration.is_freebsd:
-        pkg.pkg_add(('postgresql94-client', ))
+        pkg.pkg_add(('databases/postgresql94-client', ))
 
     # This should be done in the virtualenv.
     #pkg.pip2_add(('psycopg2', ))
