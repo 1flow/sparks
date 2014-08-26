@@ -695,6 +695,12 @@ class RemoteConfiguration(ConfigurationMixin):
                                           ast.literal_eval(line))))
                 break
 
+            # Python 3.x (tested on ArchLinux 20140826)
+            if line.startswith("posix.uname_result("):
+                self.uname = SimpleObject(from_dict=dict(
+                                          *ast.literal_eval(line[18:])))
+                break
+
         if self.uname is None:
             raise RuntimeError(u'cannot determine uname of {0}, '
                                u'os.uname() reported nothing usable:\n'
