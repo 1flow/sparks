@@ -915,9 +915,14 @@ def dev(remote_configuration=None):
         py3_pkgs = ('python3', 'python3-dev', 'python3-examples',
                     'python3-minimal', 'zlib1g-dev', )
 
+        if int(remote_configuration.lsb.RELEASE.split('.', 1)[0]) > 13:
+            py3_pkgs += ('python3.4', 'python3.4-dev', 'python3.4-examples',
+                         'python3.4-minimal', )
+
         if int(remote_configuration.lsb.RELEASE.split('.', 1)[0]) > 12:
             py3_pkgs += ('python3.3', 'python3.3-dev', 'python3.3-examples',
                          'python3.3-minimal', )
+
 
     elif remote_configuration.is_arch:
         # Arch has already Python 3 as the default.
