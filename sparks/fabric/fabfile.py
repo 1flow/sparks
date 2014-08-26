@@ -919,7 +919,7 @@ def dev(remote_configuration=None):
             py3_pkgs += ('python3.4', 'python3.4-dev', 'python3.4-examples',
                          'python3.4-minimal', )
 
-        if int(remote_configuration.lsb.RELEASE.split('.', 1)[0]) > 12:
+        elif int(remote_configuration.lsb.RELEASE.split('.', 1)[0]) > 12:
             py3_pkgs += ('python3.3', 'python3.3-dev', 'python3.3-examples',
                          'python3.3-minimal', )
 
