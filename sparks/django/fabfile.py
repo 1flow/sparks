@@ -1360,7 +1360,7 @@ def push_translations(remote_configuration=None):
             # Get the translations changes back locally.
             # Don't fail if the local user doesn't have git-up,
             # and try to pull the standard way.
-            local('git up || git pull')
+            local('git up || git pull', capture=QUIET)
 
 
 # •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••• Services
@@ -2029,7 +2029,7 @@ def runable(fast=False, upgrade=False):
 
     # Push everything first.
     # Don't fail if local user doesn't have my aliases.
-    local('git upa || git up || git pa || git push')
+    local('git upa || git up || git pa || git push', capture=QUIET)
 
     if not is_local_environment():
         push_environment()  # already wraps execute_or_not()
