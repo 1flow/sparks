@@ -1219,13 +1219,21 @@ def docker(remote_configuration=None):
 def lxc_host(remote_configuration=None):
     """ LXC local runner (guests manager). """
 
-    if remote_configuration.is_osx:
+    if remote_configuration.is_osx or remote_configuration.is_bsd:
         info("Skipped LXC host setup (not on LSB).")
         return
 
-    print('XXX on Arch/BSD…')
+    pkg.pkg_add(('lxc', ))
 
-    pkg.pkg_add(('lxc', 'cgroup-lite', ))
+    if remote_configuration.is_deb:
+        pkg.pkg_add(('cgroup-lite', 'debootstrap', ))
+
+    if remote_configuration.is_ubuntu:
+        major_distro_version = \
+            int(remote_configuration.lsb.RELEASE.split('.')[0])
+
+        if major_distro_version >= 14:
+            pkg.pkg_add(('lxc-templates', 'lxctl', ))
 
 # ------------------------------------ Client or graphical applications
 
@@ -1575,13 +1583,19 @@ def lxc_purge(remote_configuration=None):
 def lxc_server(remote_configuration=None):
     """ LXC base + server packages (Pg/Mongo/Redis/Memcache). """
 
-    lxc_base()
-    lxc_host()
+    # If someone finds a better way to detect if we are on a physical
+    # host or not, I will be happy to use it. For now I just assume
+    # nobody installs a bootloader inside a container. I found trying
+    # to detect the cgroup, /proc, etc always misleading at some point
+    # because of bind mounts, LXC inside LXCs, and the like.
+    if exists('/boot/grub'):
+        lxc_base()
+        lxc_host()
 
-    db_redis()
-    db_mongodb()
-    db_memcached()
-    db_postgresql()
+    #db_redis()
+    #db_mongodb()
+    #db_memcached()
+    #db_postgresql()
 
     if not exists('/etc/nginx'):
         LOGGER.warning('Install NGINX now :-)')
