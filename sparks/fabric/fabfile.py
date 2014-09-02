@@ -440,7 +440,7 @@ def local_perms(remote_configuration=None):
     """ Re-apply correct permissions on well-known files (eg .ssh/*) """
 
     with lcd(tilde()):
-        local('chmod 700 .ssh; chmod 600 .ssh/*')
+        local('chmod 700 .ssh; chmod 600 .ssh/*', capture=QUIET)
 
 
 @task(aliases=('dupe_perms', 'dupe_acls', 'acls', ))
@@ -1356,7 +1356,7 @@ def graphshortcuts(remote_configuration=None):
 
         # doesn't work with 'run()', because X connection is not here.
         local('dconf write /org/gnome/desktop/wm/keybindings/%s "%s"'
-              % (key, value))
+              % (key, value), capture=QUIET)
 
 
 @task(aliases=('coc', ))
@@ -1459,8 +1459,8 @@ def mydotfiles(overwrite=False, locally=False, remote_configuration=None):
 
         if not remote_configuration.is_osx:
             if not exists('.config'):
-                local('mkdir .config') if locally else run('mkdir .config',
-                                                           quiet=QUIET)
+                local('mkdir .config', capture=QUIET) \
+                    if locally else run('mkdir .config', quiet=QUIET)
 
             with cd('.config'):
                 # These don't handle the Dropboxed configuration / data
