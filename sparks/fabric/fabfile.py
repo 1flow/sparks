@@ -371,7 +371,7 @@ def sys_admin_pkgs(remote_configuration=None):
         pkg.gem_add(('lunchy', ))
 
     elif remote_configuration.lsb:
-        pkg.pkg_add(('acl', 'attr', 'colordiff', 'telnet', 'psmisc', 'host', ))
+        pkg.pkg_add(('fail2ban', 'acl', 'attr', 'colordiff', 'telnet', 'psmisc', 'host', ))
 
     else:
         raise NotImplementedError('implement sysadmin pkgs for BSD.')
@@ -1234,7 +1234,7 @@ def lxc_host(remote_configuration=None):
             int(remote_configuration.lsb.RELEASE.split('.')[0])
 
         if major_distro_version >= 14:
-            pkg.pkg_add(('lxc-templates', 'lxctl', ))
+            pkg.pkg_add(('lxc-templates', ))
 
 # ------------------------------------ Client or graphical applications
 
