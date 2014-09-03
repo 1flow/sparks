@@ -845,12 +845,7 @@ def dev_web_ruby(remote_configuration=None):
         pkg.pkg_add(('ruby21', 'ruby19-gems', 'rubygem-rake', ))
         # install ruby-gdbm too ?
 
-    pkg.gem_add(
-        ('sass',
-         'compass',                   # used in Django-pipeline
-         'bundle',                    # used to build Handlebars or EmberJS
-         )
-    )
+    pkg.gem_add(('bundle', ))
 
 
 @task
