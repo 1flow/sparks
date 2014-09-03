@@ -944,6 +944,7 @@ def dev(remote_configuration=None):
         pkg.pkg_add(('build-essential', 'python-all-dev', ))
 
     pkg.pkg_add(py3_pkgs)
+    pip.pip2_add('git-up')
 
 
 # --------------------------------------------------- Databases recipes
