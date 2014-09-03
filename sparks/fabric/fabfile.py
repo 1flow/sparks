@@ -846,7 +846,8 @@ def dev_web_ruby(remote_configuration=None):
         # install ruby-gdbm too ?
 
     pkg.gem_add(
-        ('compass',                   # used in Django-pipeline
+        ('sass',
+         'compass',                   # used in Django-pipeline
          'bundle',                    # used to build Handlebars or EmberJS
          )
     )
