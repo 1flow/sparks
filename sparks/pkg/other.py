@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from ..fabric import run, sudo
+from ..fabric import QUIET, run, sudo
 from ..fabric.utils import list_or_split
 from .common import is_installed, search
 
@@ -18,7 +18,7 @@ def npm_is_installed(pkg):
 def npm_add(pkgs):
     for pkg in list_or_split(pkgs):
         if not npm_is_installed(pkg):
-            run('npm install %s' % pkg)
+            run('npm install %s' % pkg, quiet=QUIET)
 
 
 def npm_search(pkgs):
@@ -41,7 +41,7 @@ def gem_is_installed(pkg):
 def gem_add(pkgs):
     for pkg in list_or_split(pkgs):
         if not gem_is_installed(pkg):
-            sudo('gem install %s' % pkg)
+            run('gem install %s' % pkg, quiet=QUIET)
 
 
 def gem_search(pkgs):
