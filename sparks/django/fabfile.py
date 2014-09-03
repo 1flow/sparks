@@ -71,6 +71,8 @@ LOGGER = logging.getLogger(__name__)
 env.requirements_dir      = 'config'
 env.requirements_file     = os.path.join(env.requirements_dir,
                                          'requirements.txt')
+env.gem_file              = os.path.join(env.requirements_dir,
+                                         'Gemfile')
 env.dev_requirements_file = os.path.join(env.requirements_dir,
                                          'dev-requirements.txt')
 env.branch                = '<GIT-FLOW-DEPENDANT>'
@@ -1151,6 +1153,14 @@ def requirements_task(fast=False, upgrade=False):
                     u" --requirement {requirements_file}".format(
                     command=command, requirements_file=req,
                     pip_cache=pip_cache), quiet=QUIET)
+
+            # ——————————————————————————————————————————————————————— Ruby gems
+
+            req = os.path.join(env.root, env.gem_file)
+
+            if exists(req):
+                run(u"bundle install --gemfile={gemfile}".format(
+                    gemfile=req), quiet=QUIET)
 
             LOGGER.info('Done checking requirements.')
 
