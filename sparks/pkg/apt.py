@@ -59,7 +59,7 @@ def ppa(src):
     # This package contains `add-apt-repository`…
     apt_add(('python-software-properties', ))
 
-    sudo('add-apt-repository -y "%s"' % src)
+    sudo('add-apt-repository -y "%s"' % src, quiet=QUIET)
     apt_update()
 
 
