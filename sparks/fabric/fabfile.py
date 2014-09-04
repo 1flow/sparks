@@ -371,7 +371,9 @@ def sys_admin_pkgs(remote_configuration=None):
         pkg.gem_add(('lunchy', ))
 
     elif remote_configuration.lsb:
-        pkg.pkg_add(('fail2ban', 'acl', 'attr', 'colordiff', 'telnet', 'psmisc', 'host', ))
+        pkg.pkg_add(('fail2ban', 'acl', 'attr',
+                    'colordiff', 'telnet', 'psmisc', 'host',
+                     'duply', 'ncftp', ))
 
     else:
         raise NotImplementedError('implement sysadmin pkgs for BSD.')

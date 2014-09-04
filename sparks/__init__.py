@@ -2,4 +2,4 @@
 # A handy shortcut. I use it very often.
 from .fabric import local_configuration as platform # NOQA
 
-version = '4.3.1'
+version = '4.3.2'
