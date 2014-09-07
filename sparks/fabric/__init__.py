@@ -92,8 +92,8 @@ except ImportError:
 
 
 # Global way to turn all of this module silent.
-QUIET = not bool(os.environ.get('SPARKS_VERBOSE', False))
 DEBUG = bool(os.environ.get('SPARKS_DEBUG', False))
+QUIET = not DEBUG and not bool(os.environ.get('SPARKS_VERBOSE', False))
 LOGGER = logging.getLogger(__name__)
 remote_configuration = None
 local_configuration  = None
@@ -992,7 +992,16 @@ def find_configuration_type(hostname):
         return RemoteConfiguration(hostname)
 
 
-if not QUIET:
+if QUIET:
+    logging.basicConfig(format=
+                        '%(asctime)s %(name)s[%(levelname)s] %(message)s',
+                        level=logging.WARNING)
+
+    if not os.environ.get('SPARKS_PARAMIKO_VERBOSE', False):
+        # but please, no paramiko, it's just flooding my terminal.
+        logging.getLogger('paramiko').setLevel(logging.ERROR)
+
+else:
     logging.basicConfig(format=
                         '%(asctime)s %(name)s[%(levelname)s] %(message)s',
                         level=logging.INFO)
