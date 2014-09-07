@@ -1260,6 +1260,12 @@ def push_environment(fast=False, force=False):
                        'environment file to any remote host.')
         return
 
+    if u'~' in envs_dir:
+        envs_dir = os.path.expanduser(envs_dir)
+
+    if u'$' in envs_dir:
+        envs_dir = os.path.expandvars(envs_dir)
+
     project_envs_dir = os.path.join(envs_dir, env.project)
 
     if not os.path.exists(project_envs_dir):
