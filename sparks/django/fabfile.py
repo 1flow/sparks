@@ -1173,7 +1173,7 @@ def requirements(fast=False, upgrade=False):
             with other fab tasks which handle it.
     """
 
-    roles_to_run = all_roles
+    roles_to_run = set(all_roles)
 
     for role in roles_to_run:
         execute_or_not(pre_requirements_task, fast=fast,
