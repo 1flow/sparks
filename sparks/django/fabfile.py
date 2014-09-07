@@ -1268,6 +1268,8 @@ def push_environment(fast=False, force=False):
                            env.project))
         return
 
+    LOGGER.info('Pushing environment files…')
+
     # re-wrap the internal task via execute() to catch roledefs.
     execute_or_not(push_environment_task, project_envs_dir, fast=fast,
                    force=force, sparks_roles=all_roles)
