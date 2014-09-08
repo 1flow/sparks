@@ -708,6 +708,11 @@ class ServiceRunner(SimpleObject):
                 self.restart = True
 
         else:
+            gunidestdir = os.path.dirname(gunidest)
+
+            if not exists(gunidestdir):
+                run('mkdir -p "{0}"'.format(gunidestdir), quiet=QUIET)
+
             # copy the default configuration to remote.
             put(guniconf, gunidest)
 
