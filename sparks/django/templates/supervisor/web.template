@@ -1,5 +1,5 @@
 [program:%(program)s]
-command=%(nice)s %(ionice)s %(command_pre_args)s %(user_home)s/.virtualenvs/%(virtualenv)s/bin/gunicorn_django -c %(root)s/config/gunicorn/%(program)s.conf --settings "%(project)s.settings" --pythonpath %(root)s %(command_post_args)s
+command=%(nice)s %(ionice)s %(command_pre_args)s %(user_home)s/.virtualenvs/%(virtualenv)s/bin/gunicorn -c %(root)s/config/gunicorn/%(program)s.conf %(project)s.wsgi:application %(command_post_args)s
 directory=%(root)s
 user=%(user)s
 autostart=true
