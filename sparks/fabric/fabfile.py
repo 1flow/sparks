@@ -373,7 +373,7 @@ def sys_admin_pkgs(remote_configuration=None):
     elif remote_configuration.lsb:
         pkg.pkg_add(('fail2ban', 'acl', 'attr',
                     'colordiff', 'telnet', 'psmisc', 'host',
-                     'duply', 'ncftp', 'arptables', ))
+                     'duply', 'ncftp', 'arptables', 'iptables', ))
 
     else:
         raise NotImplementedError('implement sysadmin pkgs for BSD.')
