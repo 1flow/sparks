@@ -1891,7 +1891,8 @@ def getdata_task(app_model, filename=None, **kwargs):
 
     with open(filename, 'w') as f:
         f.write(django_manage('dumpdata {0} --indent 4 '
-                '--format json --natural'.format(app_model)))
+                '--format json --natural'.format(app_model),
+                combine_stderr=False))
 
 
 @task(task_class=DjangoTask)
