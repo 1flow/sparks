@@ -40,8 +40,6 @@ from sparks.django.templatetags import register
 
 LOGGER = logging.getLogger(__name__)
 
-register = template.Library()
-
 # ———————————————————————————————————————————————————————————— Letters & Colors
 
 letters_colors = {
