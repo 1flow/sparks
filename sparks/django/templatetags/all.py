@@ -19,6 +19,8 @@ License along with sparks.  If not, see http://www.gnu.org/licenses/
 
 """
 
+from sparks.django.templatetags import register  # NOQA
+
 from utils import (  # NOQA
     reverse_active,
     view_name_active,
@@ -30,7 +32,7 @@ from utils import (  # NOQA
 
 from jstags import countdown  # NOQA
 
-from letters_and_colors import (  # NOQA
+from colors_and_letters import (  # NOQA
     html_first_letters,
     html_background_color_for_name,
     html_foreground_color_for_name,

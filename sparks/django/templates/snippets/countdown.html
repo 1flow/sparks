@@ -1,0 +1,90 @@
+    <script type="text/javascript">
+        var countdown_{{ name }}_start = {{ value }} + {{ round_value }};
+        var countdown_{{ name }}_end   = {{ limit }};
+
+        function recompute_countdown_{{ name }}() {
+            // Calculate the number of days left
+            var days = Math.floor(countdown_{{ name }}_start / 86400);
+
+            // After deducting the days calculate the number of hours left
+            var hours = Math.floor((countdown_{{ name }}_start
+                                   - days*86400)/3600);
+
+            // After days and hours, how many minutes are left
+            var minutes = Math.floor((countdown_{{ name }}_start
+                                     - days*86400 - hours*3600) / 60);
+
+            // Finally how many seconds left after removing days, hours and minutes.
+            var seconds = Math.floor(countdown_{{ name }}_start
+                                  - days*86400 - hours*3600 - minutes*60);
+
+            var x = '';
+
+            if (days > 1)
+                x += '<span class="number days">' + days + "</span>"
+                    + '<span class="unit">{{ unit_sep }}{{ units.days }}</span>';
+
+            else if (days > 0)
+                x += '<span class="number days">' + days + "</span>"
+                    + '<span class="unit">{{ unit_sep }}{{ units.day }}</span>';
+
+            if (days > 0 && (hours > 0 || minutes > 0 || seconds > 0))
+                x += "{{ separator }}";
+
+            if (hours > 1)
+                x += '<span class="number hours">' + hours + "</span>"
+                    + '<span class="unit">{{ unit_sep }}{{ units.hours }}</span>';
+
+            else if (hours > 0)
+                x += '<span class="number hours">' + hours + "</span>"
+                    + '<span class="unit">{{ unit_sep }}{{ units.hour }}</span>';
+
+            if (hours > 0 && (minutes > 0
+                {% if show_seconds %} || seconds > 0 {% endif %}))
+                x += "{{ separator }}";
+
+            if (minutes > 1)
+                x += '<span class="number minutes">' + minutes + "</span>"
+                    + '<span class="unit">{{ unit_sep }}{{ units.minutes }}</span>';
+
+            else if (minutes > 0)
+                x += '<span class="number minutes">' + minutes + "</span>"
+                    + '<span class="unit">{{ unit_sep }}{{ units.minute }}</span>';
+
+            {% if show_seconds %}
+
+                if (minutes > 0 && seconds > 0)
+                    x += "{{ separator }}";
+
+                if (seconds > 1)
+                    x += '<span class="number seconds">' + seconds + "</span>"
+                    + '<span class="unit">{{ unit_sep }}{{ units.seconds }}</span>';
+
+                else if (seconds > 0)
+                    x += '<span class="number seconds">' + seconds + "</span>"
+                    + '<span class="unit">{{ unit_sep }}{{ units.second }}</span>';
+
+            {% endif %}
+
+            $('#countdown_{{name}}').html(x);
+
+            // change the operation to make the counter go upwards or downwards
+            countdown_{{ name }}_start = countdown_{{ name }}_start {{ operation }} 1;
+        }
+
+        function update_countdown_{{ name }}(){
+            if(countdown_{{ name }}_start
+               {{ counter_test|safe }}
+               countdown_{{ name }}_end) {
+                recompute_countdown_{{ name }}();
+
+            } else {
+                document.location = "{{ redirect }}";
+            }
+        }
+
+        update_countdown_{{ name }}();
+
+        setInterval(update_countdown_{{ name }}, 1000);
+    </script>
+    <span id='countdown_{{ name }}' class="timer"></span>

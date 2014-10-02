@@ -21,12 +21,11 @@
 
 import re
 
-from django.template import Library, Node, TemplateSyntaxError
+from django.template import Node, TemplateSyntaxError
 from django.utils.encoding import smart_text
 from django.core.urlresolvers import reverse
 
-register = Library()
-
+from sparks.django.templatetags import register
 
 # ——————————————————————————————————————————————————————————————————— Internals
 
