@@ -30,7 +30,7 @@ from utils import (  # NOQA
 
 from jstags import countdown  # NOQA
 
-from letters_and_colors import (  # NOQA
+from colors_and_letters import (  # NOQA
     html_first_letters,
     html_background_color_for_name,
     html_foreground_color_for_name,
