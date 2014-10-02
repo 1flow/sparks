@@ -20,12 +20,11 @@ License along with sparks.  If not, see http://www.gnu.org/licenses/
 """
 
 
-from django.template import Library, TemplateSyntaxError
+from django.template import TemplateSyntaxError
 from django.utils.translation import ugettext_lazy as _
 
 from sparks.foundations import utils as sfu
-
-register = Library()
+from sparks.django.templatetags import register
 
 
 @register.inclusion_tag('snippets/countdown.html')

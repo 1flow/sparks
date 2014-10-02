@@ -36,7 +36,7 @@ import mistune
 
 from math import pow
 
-from django import template
+from sparks.django.templatetags import register
 
 LOGGER = logging.getLogger(__name__)
 
