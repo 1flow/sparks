@@ -19,6 +19,8 @@ License along with sparks.  If not, see http://www.gnu.org/licenses/
 
 """
 
+from sparks.django.templatetags import register  # NOQA
+
 from utils import (  # NOQA
     reverse_active,
     view_name_active,
