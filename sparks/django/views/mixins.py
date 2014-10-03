@@ -161,6 +161,42 @@ class SortMixin(object):
         return context
 
 
+class ListCreateViewMixin(SortMixin, FilterMixin):
+
+    """ Automatically add a list of objects of the main class to context.
+
+    This allows ListCreateViews to get the object_list populated automatically.
+    """
+
+    def get_context_data(self, **kwargs):
+        """ Populate the context with the object list, filtered and sorted. """
+
+        object_list_name = '{0}_list'.format(
+            self.model.__name__.lower())
+
+        if object_list_name in kwargs:
+            raise RuntimeError(u'Multiple instances of {0} in context!'.format(
+                               object_list_name))
+
+        user = self.request.user
+
+        # We build an independant QuerySet; the CreateView part already
+        # handles the main one, which with we must not interfere.
+        qs = self.model.objects.all()
+
+        qs.filter(user=user)
+
+        # Call the SortMixin & FilterMixin methods on this alternate QS.
+        qs = self.sort_queryset(
+            self.filter_queryset(
+                qs, self.get_filter_param()),
+            self.get_sort_params())
+
+        kwargs[object_list_name] = qs
+
+        return super(ListCreateViewMixin, self).get_context_data(**kwargs)
+
+
 class DRFLoggerMixin(object):
 
     """
