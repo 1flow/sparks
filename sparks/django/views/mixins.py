@@ -166,6 +166,8 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
     """ Automatically add a list of objects of the main class to context.
 
     This allows ListCreateViews to get the object_list populated automatically.
+
+    Inspired from http://stackoverflow.com/a/12883683/654755
     """
 
     def get_context_data(self, **kwargs):
