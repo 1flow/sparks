@@ -29,35 +29,6 @@ from .forms import EmailUserChangeForm, EmailUserCreationForm
 
 csrf_protect_m = method_decorator(csrf_protect)
 
-DEFAULT_TRUNCATE_LENGTH = 50
-
-languages = settings.TRANSMETA_LANGUAGES \
-        if hasattr(settings, 'TRANSMETA_LANGUAGES') \
-        else settings.LANGUAGES
-
-
-def truncate_field(cls, field_name, truncate_length=None):
-    """ Returns a callable that will truncate the field content.
-
-        Useful in the Django admin change list. to include long fields
-        without them to eat up all the space or making the page too large.
-    """
-
-    if truncate_length is None:
-        truncate_length = DEFAULT_TRUNCATE_LENGTH
-
-    def wrapped(self, obj):
-        value = getattr(obj, field_name) or u'<NO_VALUE>'
-
-        return value[:truncate_length] + (
-            value[truncate_length:] and u'…')
-
-    wrapped.admin_order_field = field_name
-    wrapped.short_description = cls._meta.get_field_by_name(
-        field_name)[0].verbose_name
-
-    return wrapped
-
 
 class UserAdmin(admin.ModelAdmin):
     """ This class mimics the standard UserAdmin, as seen in Django 1.5 at:
