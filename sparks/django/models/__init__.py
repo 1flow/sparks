@@ -68,7 +68,13 @@ class ModelDiffMixin(models.Model):
                 change = self.is_float_changed(v1, v2)
 
             else:
-                change = v1 != v2
+                try:
+                    change = v1 != v2
+
+                except TypeError:
+                    # Typically:
+                    # “can't compare offset-naive and offset-aware datetimes”
+                    change = True
 
             if change:
                 diffs[k] = (v1, v2)
