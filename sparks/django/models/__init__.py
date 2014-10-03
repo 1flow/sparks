@@ -4,8 +4,7 @@ from django.forms.models import model_to_dict
 from django.db import models
 from decimal import Decimal
 
-
-from emailuser import EmailUser, EmailUserManager  # NOQA
+# from emailuser import EmailUser, EmailUserManager  # NOQA
 
 
 class ModelDiffMixin(models.Model):
