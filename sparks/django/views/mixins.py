@@ -5,6 +5,7 @@ import json
 import logging
 
 from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 
 LOGGER = logging.getLogger(__name__)
 
@@ -188,13 +189,28 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
         # handles the main one, which with we must not interfere.
         qs = self.model.objects.all()
 
+        LOGGER.info('List QS filter on %s: %s', self.__name__,
+                    self.list_queryset_filter)
+
         if self.list_queryset_filter:
             qskw = {}
 
-            for qskey, kwargs_key in self.list_queryset_filter.items():
-                qskw[qskey] = self.kwargs.get(kwargs_key)
+            for qskey, data in self.list_queryset_filter.items():
+                kwargs_key, model, transform = data
+
+                if model:
+                    qskw[qskey] = get_object_or_404(
+                        model, pk=int(self.kwargs.get(kwargs_key)))
+
+                else:
+                    if transform:
+                        qskw[qskey] = transform(self.kwargs.get(kwargs_key))
+
+                    else:
+                        qskw[qskey] = self.kwargs.get(kwargs_key)
 
             qs.filter(**qskw)
+
         else:
             try:
                 qs.filter(user=user)
