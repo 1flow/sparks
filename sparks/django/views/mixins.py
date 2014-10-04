@@ -170,6 +170,8 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
     Inspired from http://stackoverflow.com/a/12883683/654755
     """
 
+    list_queryset_filter = None
+
     def get_context_data(self, **kwargs):
         """ Populate the context with the object list, filtered and sorted. """
 
@@ -186,7 +188,19 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
         # handles the main one, which with we must not interfere.
         qs = self.model.objects.all()
 
-        qs.filter(user=user)
+        if self.list_queryset_filter:
+            qskw = {}
+
+            for qskey, kwargs_key in self.list_queryset_filter:
+                qskw[qskey] = self.kwargs.get(kwargs_key)
+
+            qs.filter(**qskw)
+        else:
+            try:
+                qs.filter(user=user)
+
+            except:
+                pass
 
         # Call the SortMixin & FilterMixin methods on this alternate QS.
         qs = self.sort_queryset(
