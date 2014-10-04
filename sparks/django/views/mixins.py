@@ -206,11 +206,11 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
                     else:
                         qskw[qskey] = self.kwargs.get(kwargs_key)
 
-            qs.filter(**qskw)
+            qs = qs.filter(**qskw)
 
         else:
             try:
-                qs.filter(user=user)
+                qs = qs.filter(user=user)
 
             except:
                 pass
