@@ -188,10 +188,10 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
         # handles the main one, which with we must not interfere.
         qs = self.model.objects.all()
 
-        if self.list_queryset_filter.items():
+        if self.list_queryset_filter:
             qskw = {}
 
-            for qskey, kwargs_key in self.list_queryset_filter:
+            for qskey, kwargs_key in self.list_queryset_filter.items():
                 qskw[qskey] = self.kwargs.get(kwargs_key)
 
             qs.filter(**qskw)
