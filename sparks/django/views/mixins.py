@@ -189,9 +189,6 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
         # handles the main one, which with we must not interfere.
         qs = self.model.objects.all()
 
-        LOGGER.info('List QS filter on %s: %s', self.__name__,
-                    self.list_queryset_filter)
-
         if self.list_queryset_filter:
             qskw = {}
 
