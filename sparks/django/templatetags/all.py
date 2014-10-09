@@ -28,7 +28,7 @@ from utils import (  # NOQA
     firstofas,
     lookup,
     times,
-    naturalfilesize,
+    naturalsize,
 )
 
 from jstags import countdown  # NOQA
