@@ -1185,7 +1185,7 @@ def requirements(fast=False, upgrade=False):
                      post_requirements_task):
 
         execute_or_not(req_task,
-                       fast=fast, upgrade=upgrade
+                       fast=fast, upgrade=upgrade,
                        sparks_roles=roles_to_run)
 
 
