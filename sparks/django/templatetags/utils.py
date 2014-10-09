@@ -224,17 +224,17 @@ def lookup(d, key):
         return d[key]
 
 
-@register.filter(name='naturalfilesize')
-def naturalfilesize(number, type=None):
+@register.filter(name='naturalsize')
+def naturalsize(number, type=None):
     """ Return a humanized (and translated) file size. """
 
     with humanize.i18n.django_language():
         if type is None:
-            return humanize.naturalfilesize(number)
+            return humanize.naturalsize(number)
 
         if type in ('bin', 'binary'):
-            return humanize.naturalfilesize(number, binary=True)
+            return humanize.naturalsize(number, binary=True)
 
         if type in ('gnu', 'GNU'):
-            return humanize.naturalfilesize(number, gnu=True)
+            return humanize.naturalsize(number, gnu=True)
 
