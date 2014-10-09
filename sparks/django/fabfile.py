@@ -1180,17 +1180,14 @@ def requirements(fast=False, upgrade=False):
 
     roles_to_run = set(all_roles)
 
-    for role in roles_to_run:
-        execute_or_not(pre_requirements_task, fast=fast,
-                       upgrade=upgrade, sparks_roles=(role, ))
+    for req_task in (pre_requirements_task,
+                     requirements_task,
+                     post_requirements_task):
 
-    # re-wrap the internal task via execute() to catch roledefs.
-    execute_or_not(requirements_task, fast, upgrade,
-                   sparks_roles=roles_to_run)
+        execute_or_not(req_task,
+                       fast=fast, upgrade=upgrade
+                       sparks_roles=roles_to_run)
 
-    for role in roles_to_run:
-        execute_or_not(post_requirements_task, fast=fast,
-                       upgrade=upgrade, sparks_roles=(role, ))
 
 
 def push_environment_task(project_envs_dir, fast=False, force=False):
