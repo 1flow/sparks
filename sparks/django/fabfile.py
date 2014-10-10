@@ -1180,17 +1180,14 @@ def requirements(fast=False, upgrade=False):
 
     roles_to_run = set(all_roles)
 
-    for role in roles_to_run:
-        execute_or_not(pre_requirements_task, fast=fast,
-                       upgrade=upgrade, sparks_roles=(role, ))
+    for req_task in (pre_requirements_task,
+                     requirements_task,
+                     post_requirements_task):
 
-    # re-wrap the internal task via execute() to catch roledefs.
-    execute_or_not(requirements_task, fast, upgrade,
-                   sparks_roles=roles_to_run)
+        execute_or_not(req_task,
+                       fast=fast, upgrade=upgrade,
+                       sparks_roles=roles_to_run)
 
-    for role in roles_to_run:
-        execute_or_not(post_requirements_task, fast=fast,
-                       upgrade=upgrade, sparks_roles=(role, ))
 
 
 def push_environment_task(project_envs_dir, fast=False, force=False):
@@ -1307,21 +1304,22 @@ def git_pull_task():
     with cd(env.root):
         if not run('git pull', quiet=QUIET).strip().endswith('Already up-to-date.'):
             # reload the configuration to refresh Django settings.
+            #
             # TODO: examine commits HERE and in push_translations()
-            # to reload() only if settings/* changed.
+            #       to reload() only if settings/* changed.
             #
             # We import it manually here, to avoid using the
             # @with_remote_configuration decorator, which would imply
             # implicit fetching of Django settings. On first install/deploy,
             # this would fail because requirements are not yet installed.
-            try:
-                from ..fabric import remote_configuration
+            from ..fabric import remote_configuration
+
+            if remote_configuration is not None:
+                # If it's None, it hasn't been loaded once until now, so there
+                # is no problem because at next load Django settings will be
+                # up to date.
                 remote_configuration.reload()
 
-            except:
-                LOGGER.exception('Cannot reload remote_settings! '
-                                 '(you can safely ignore this warning on '
-                                 'first deploy)')
 
 
 @task(task_class=DjangoTask, aliases=('pull', ))

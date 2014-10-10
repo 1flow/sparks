@@ -20,6 +20,7 @@
 """
 
 import re
+import humanize
 
 from django.template import Node, TemplateSyntaxError
 from django.utils.encoding import smart_text
@@ -221,3 +222,19 @@ def lookup(d, key):
 
     except KeyError:
         return d[key]
+
+
+@register.filter(name='naturalsize')
+def naturalsize(number, type=None):
+    """ Return a humanized (and translated) file size. """
+
+    with humanize.i18n.django_language():
+        if type is None:
+            return humanize.naturalsize(number)
+
+        if type in ('bin', 'binary'):
+            return humanize.naturalsize(number, binary=True)
+
+        if type in ('gnu', 'GNU'):
+            return humanize.naturalsize(number, gnu=True)
+
