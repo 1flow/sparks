@@ -76,6 +76,10 @@ def human_user_agent(request):
     if user_agent.is_pc and user_agent.is_touch_capable:
         return True
 
+    print '>>', user_agent.os.family
+    print '>>', user_agent.browser.family
+    print '>>', user_agent.device.family
+
     #
     # TODO: finish this…
     #
