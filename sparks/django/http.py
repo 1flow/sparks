@@ -73,12 +73,12 @@ def human_user_agent(request):
     if user_agent.is_mobile or user_agent.is_tablet:
         return True
 
-    if user_agent.is_pc and user_agent.is_touch_capable:
-        return True
+    if user_agent.is_pc:
+        if user_agent.is_touch_capable:
+            return True
 
-    print '>>', user_agent.os.family
-    print '>>', user_agent.browser.family
-    print '>>', user_agent.device.family
+        if user_agent.browser.family in ('Firefox', 'Chrome', ):
+            return True
 
     #
     # TODO: finish this…
