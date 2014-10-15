@@ -231,6 +231,7 @@ class OwnerQuerySetMixin(object):
     """ Now update/delete views filter owner's objects only. """
 
     superuser_gets_full_queryset = False
+    ownerqueryset_filter = None
 
     def get_queryset(self):
         """ Allow only owner to delete its own objects. """
@@ -240,7 +241,12 @@ class OwnerQuerySetMixin(object):
         if self.superuser_gets_full_queryset and self.request.user.is_superuser:
             return qs
 
-        return qs.filter(user=self.request.user)
+        if self.ownerqueryset_filter:
+            kwargs = {self.ownerqueryset_filter: self.request.user}
+        else:
+            kwargs = {'user': self.request.user}
+
+        return qs.filter(**kwargs)
 
 
 class DRFLoggerMixin(object):
