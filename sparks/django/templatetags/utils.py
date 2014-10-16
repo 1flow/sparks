@@ -252,8 +252,8 @@ def naturalsize(number, type=None):
             return humanize.naturalsize(number, gnu=True)
 
 
-@register.filter(name='nextcurprev')
-def nextcurprev(orig):
+@register.filter(name='prevcurnext')
+def prevcurnext(orig):
     """ From an iterable, return another 3-tuples one for prev/next access.
 
     Reference: http://stackoverflow.com/a/10078809/654755
