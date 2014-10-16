@@ -25,6 +25,7 @@ import humanize
 from django.template import Node, TemplateSyntaxError
 from django.utils.encoding import smart_text
 from django.core.urlresolvers import reverse
+from django.db.models.query import QuerySet
 
 from sparks.django.templatetags import register
 
@@ -238,3 +239,22 @@ def naturalsize(number, type=None):
         if type in ('gnu', 'GNU'):
             return humanize.naturalsize(number, gnu=True)
 
+
+@register.filter(name='nextcurprev')
+def nextcurprev(orig):
+    """ From an iterable, return another 3-tuples one for prev/next access.
+
+    Reference: http://stackoverflow.com/a/10078809/654755
+    How elegant (and expensive) it is.
+    """
+
+    if isinstance(orig, QuerySet):
+        # Too bad QuerySet doesn't support negative indexing,
+        # this makes this filter really very expensive.
+        orig = list(orig)
+
+    return (
+        [(None, orig[0], orig[1])]
+        + zip(orig, orig[1:], orig[2:])
+        + [(orig[-2], orig[-1], None)]
+    )
