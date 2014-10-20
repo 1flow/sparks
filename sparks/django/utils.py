@@ -53,7 +53,7 @@ def truncate_field(cls, field_name, truncate_length=None):
     return wrapped
 
 
-def NamedTupleChoices(name, choices_tuple):
+def NamedTupleChoices(name, *choices):
     """Factory function for quickly making a namedtuple.
 
     This namedtuple is suitable for use in a Django model as a choices
@@ -91,12 +91,12 @@ def NamedTupleChoices(name, choices_tuple):
     """
 
     class Choices(namedtuple(name,
-                  tuple(aname for aname, value, descr in choices_tuple))):
+                  tuple(aname for aname, value, descr in choices))):
 
         __slots__ = ()
-        _choices = tuple(descr for aname, value, descr in choices_tuple)
+        _choices = tuple(descr for aname, value, descr in choices)
 
         def get_choices(self):
             return zip(tuple(self), self._choices)
 
-    return Choices._make(tuple(value for aname, value, descr in choices_tuple))
+    return Choices._make(tuple(value for aname, value, descr in choices))
