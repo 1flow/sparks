@@ -62,10 +62,10 @@ def NamedTupleChoices(name, *choices):
     Usage::
 
         class MyModel(models.Model):
-            COLORS = NamedTupleChoices('COLORS', (
+            COLORS = NamedTupleChoices('COLORS',
                 ('BLACK', 0, _(u'Black')),
                 ('WHITE', 1, _(u'White')),
-            ))
+            )
             colors = models.PositiveIntegerField(choices=COLORS)
 
         >>> MyModel.COLORS.BLACK
@@ -74,10 +74,10 @@ def NamedTupleChoices(name, *choices):
         [(0, 'Black'), (1, 'White')]
 
         class OtherModel(models.Model):
-            GRADES = NamedTupleChoices('GRADES', (
+            GRADES = NamedTupleChoices('GRADES',
                 ('FR', 'FR', _(u'Freshman')),
                 ('SR', 'SR', _(u'Senior')),
-            ))
+            )
             grade = models.CharField(max_length=2, choices=GRADES)
 
         >>> OtherModel.GRADES.FR
