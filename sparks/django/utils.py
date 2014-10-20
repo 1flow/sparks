@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """ Sparks Django utils. """
 
+from collections import namedtuple
+
 from django.http import HttpResponse
 from django.conf import settings
 
@@ -49,3 +51,52 @@ def truncate_field(cls, field_name, truncate_length=None):
         field_name)[0].verbose_name
 
     return wrapped
+
+
+def NamedTupleChoices(name, choices_tuple):
+    """Factory function for quickly making a namedtuple.
+
+    This namedtuple is suitable for use in a Django model as a choices
+    attribute on a field. It will preserve order.
+
+    Usage::
+
+        class MyModel(models.Model):
+            COLORS = NamedTupleChoices('COLORS', (
+                ('BLACK', 0, _(u'Black')),
+                ('WHITE', 1, _(u'White')),
+            ))
+            colors = models.PositiveIntegerField(choices=COLORS)
+
+        >>> MyModel.COLORS.BLACK
+        0
+        >>> MyModel.COLORS.get_choices()
+        [(0, 'Black'), (1, 'White')]
+
+        class OtherModel(models.Model):
+            GRADES = NamedTupleChoices('GRADES', (
+                ('FR', 'FR', _(u'Freshman')),
+                ('SR', 'SR', _(u'Senior')),
+            ))
+            grade = models.CharField(max_length=2, choices=GRADES)
+
+        >>> OtherModel.GRADES.FR
+        'FR'
+        >>> OtherModel.GRADES.get_choices()
+        [('FR', 'Freshman'), ('SR', 'Senior')]
+
+    Inspired from https://djangosnippets.org/snippets/2402/
+    The Django snipplet has been cleaned up and used differently
+    (names come first, I prefer).
+    """
+
+    class Choices(namedtuple(name,
+                  tuple(aname for aname, value, descr in choices_tuple))):
+
+        __slots__ = ()
+        _choices = tuple(descr for aname, value, descr in choices_tuple)
+
+        def get_choices(self):
+            return zip(tuple(self), self._choices)
+
+    return Choices._make(tuple(value for aname, value, descr in choices_tuple))
