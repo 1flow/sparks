@@ -7,10 +7,13 @@ from decimal import Decimal
 # from emailuser import EmailUser, EmailUserManager  # NOQA
 
 
-class ModelDiffMixin(models.Model):
+class DiffMixin(object):
 
     """
-    A model mixin that tracks model fields' values changes.
+    A mixin that tracks fields' values changes.
+
+    This version is meant to be mixinized with any other base model class,
+    eg. models.Model, models.MPTTModel or polymorphic.PolymorphicModel.
 
     It also provides useful API to know what fields have been changed.
 
@@ -38,7 +41,7 @@ class ModelDiffMixin(models.Model):
     def __init__(self, *args, **kwargs):
         """ A nice init method. """
 
-        super(ModelDiffMixin, self).__init__(*args, **kwargs)
+        super(DiffMixin, self).__init__(*args, **kwargs)
         self.__initial_state = self._dict
 
     @property
@@ -109,13 +112,22 @@ class ModelDiffMixin(models.Model):
     def save(self, *args, **kwargs):
         """ Save model and reset initial state. """
 
-        super(ModelDiffMixin, self).save(*args, **kwargs)
+        super(DiffMixin, self).save(*args, **kwargs)
         self.__initial_state = self._dict
 
     @property
     def _dict(self):
         return model_to_dict(self, fields=[field.name for field in
                              self._meta.fields])
+
+
+class ModelDiffMixin(DiffMixin, models.Model):
+
+    """
+    The same, but already subclassing Django's models.Model.
+
+    Ready to use.
+    """
 
     class Meta:
         abstract = True

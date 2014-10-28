@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
 """
-    Copyright 2012-2014 Olivier Cortès <oc@1flow.io>
+Copyright 2012-2014 Olivier Cortès <oc@1flow.io>.
 
-    This file is part of the 1flow project.
+This file is part of the 1flow project.
 
-    1flow is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as
-    published by the Free Software Foundation, either version 3 of
-    the License, or (at your option) any later version.
+1flow is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of
+the License, or (at your option) any later version.
 
-    1flow is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
+1flow is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
 
-    You should have received a copy of the GNU Affero General Public
-    License along with 1flow.  If not, see http://www.gnu.org/licenses/
+You should have received a copy of the GNU Affero General Public
+License along with 1flow.  If not, see http://www.gnu.org/licenses/
 
 """
 
@@ -25,6 +25,7 @@ import humanize
 from django.template import Node, TemplateSyntaxError
 from django.utils.encoding import smart_text
 from django.core.urlresolvers import reverse
+from django.db.models.query import QuerySet
 
 from sparks.django.templatetags import register
 
@@ -50,11 +51,17 @@ def get_view_name(context):
 
 class CaptureasNode(Node):
 
+    """ Parsing node for “captureas” tag. """
+
     def __init__(self, nodelist, varname):
+        """ Hello, pep257. Stop boring me with 2-lines __init__ methods. """
+
         self.nodelist = nodelist
         self.varname  = varname
 
     def render(self, context):
+        """ Hello, pep257. Stop boring me with 2-lines methods. """
+
         output = self.nodelist.render(context)
         context[self.varname] = output
         return ''
@@ -62,11 +69,17 @@ class CaptureasNode(Node):
 
 class FirstOfAsNode(Node):
 
+    """ Parsing node for “firstofas” tag. """
+
     def __init__(self, args, variable_name=None):
+        """ Hello, pep257. Stop boring me with 2-lines __init__ methods. """
+
         self.vars = args
         self.variable_name = variable_name
 
     def render(self, context):
+        """ Resolve the first resolvable argument and store it in context. """
+
         for var in self.vars:
             value = var.resolve(context, True)
 
@@ -238,3 +251,22 @@ def naturalsize(number, type=None):
         if type in ('gnu', 'GNU'):
             return humanize.naturalsize(number, gnu=True)
 
+
+@register.filter(name='prevcurnext')
+def prevcurnext(orig):
+    """ From an iterable, return another 3-tuples one for prev/next access.
+
+    Reference: http://stackoverflow.com/a/10078809/654755
+    How elegant (and expensive) it is.
+    """
+
+    if isinstance(orig, QuerySet):
+        # Too bad QuerySet doesn't support negative indexing,
+        # this makes this filter really very expensive.
+        orig = list(orig)
+
+    return (
+        [(None, orig[0], orig[1])]
+        + zip(orig, orig[1:], orig[2:])
+        + [(orig[-2], orig[-1], None)]
+    )

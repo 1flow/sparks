@@ -2157,7 +2157,9 @@ def role(*roles):
 
     # This special case requires a special patch ;-)
     if len(env.roledefs.get('beat', [])) == 0:
-        env.sparks_options['no_warn_for_missing_beat'] = True
+        sparks_options = getattr(env, 'sparks_options', {})
+        sparks_options['no_warn_for_missing_beat'] = True
+        env.sparks_options = sparks_options
 
     #LOGGER.info('after role-picking: %s %s', env.roledefs.keys())
 
@@ -2204,4 +2206,6 @@ def pick(*machines):
 
     # This special case requires a special patch ;-)
     if len(env.roledefs.get('beat', [])) == 0:
-        env.sparks_options['no_warn_for_missing_beat'] = True
+        sparks_options = getattr(env, 'sparks_options', {})
+        sparks_options['no_warn_for_missing_beat'] = True
+        env.sparks_options = sparks_options

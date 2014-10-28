@@ -226,6 +226,29 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
         return super(ListCreateViewMixin, self).get_context_data(**kwargs)
 
 
+class OwnerQuerySetMixin(object):
+
+    """ Now update/delete views filter owner's objects only. """
+
+    superuser_gets_full_queryset = False
+    ownerqueryset_filter = None
+
+    def get_queryset(self):
+        """ Allow only owner to delete its own objects. """
+
+        qs = super(OwnerQuerySetMixin, self).get_queryset()
+
+        if self.superuser_gets_full_queryset and self.request.user.is_superuser:
+            return qs
+
+        if self.ownerqueryset_filter:
+            kwargs = {self.ownerqueryset_filter: self.request.user}
+        else:
+            kwargs = {'user': self.request.user}
+
+        return qs.filter(**kwargs)
+
+
 class DRFLoggerMixin(object):
 
     """
