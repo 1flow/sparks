@@ -24,7 +24,8 @@ setup(
     url="https://github.com/Karmak23/sparks",
     packages=find_packages(),
     install_requires=['Fabric', 'paramiko', 'mistune',
-                      'pyyaml', 'ua-parser', 'user-agents'],
+                      'pyyaml', 'ua-parser', 'user-agents'
+                      'djangorestframework', ],
     keywords=(
         'installation',
         'management',
