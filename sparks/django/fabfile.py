@@ -1,29 +1,29 @@
 # -*- coding: utf-8 -*-
-"""
-    Fabric common rules for a Django project.
+u"""
+Fabric common rules for a Django project.
 
-    Handles deployment and service installation / run via supervisor.
+Handles deployment and service installation / run via supervisor.
 
-    Supported roles names:
+Supported roles names:
 
-    - ``web``: a gunicorn web server,
-    - ``worker``: a simple celery worker that operate on the default queue,
-    - ``worker_{low,medium,high}``: a combination
-      of two or three celery workers (can be combined with
-      simple ``worker`` too, for fine grained scheduling on
-      small architectures),
-    - ``worker_{io,net,…}`` and all their ``_{low,medium,high}`` variants:
-      same idea as above, but with even more fine-graining to suit your need.
-    - ``worker_{solo,duo,trio,swarm}`` and their ``_{low,medium,high}``
-      variants: do you get the idea? All these worker classes are completely
-      configurable in terms of concurrency and max-tasks-per-child.
-    - ``flower``: a flower (celery monitoring) service,
-    - ``beat``: the Celery **beat** service,
-    - ``shell``: an iPython notebooks shell service (on 127.0.0.1; up to
-      you to get access to it via an SSH tunnel),
+- ``web``: a gunicorn web server,
+- ``worker``: a simple celery worker that operate on the default queue,
+- ``worker_{low,medium,high}``: a combination
+  of two or three celery workers (can be combined with
+  simple ``worker`` too, for fine grained scheduling on
+  small architectures),
+- ``worker_{io,net,…}`` and all their ``_{low,medium,high}`` variants:
+  same idea as above, but with even more fine-graining to suit your need.
+- ``worker_{solo,duo,trio,swarm}`` and their ``_{low,medium,high}``
+  variants: do you get the idea? All these worker classes are completely
+  configurable in terms of concurrency and max-tasks-per-child.
+- ``flower``: a flower (celery monitoring) service,
+- ``beat``: the Celery **beat** service,
+- ``shell``: an iPython notebooks shell service (on 127.0.0.1; up to
+  you to get access to it via an SSH tunnel),
 
-    For more information, jump to :class:`DjangoTask` and see ``all_roles``
-    definition in :file:`sparks/fabric/__init__.py`.
+For more information, jump to :class:`DjangoTask` and see ``all_roles``
+definition in :file:`sparks/fabric/__init__.py`.
 
 """
 
@@ -33,11 +33,11 @@ import logging
 import datetime
 
 try:
-    from fabric.api              import (env, run, sudo, task,
-                                         local, execute, serial)
-    from fabric.tasks            import Task
-    from fabric.operations       import put, prompt
-    from fabric.contrib.files    import exists, upload_template, sed
+    from fabric.api import (env, run, sudo, task,
+                            local, execute, serial)
+    from fabric.tasks import Task
+    from fabric.operations import put, prompt
+    from fabric.contrib.files import exists, upload_template, sed
     from fabric.context_managers import cd, prefix, settings
 
 except ImportError:
@@ -83,27 +83,30 @@ env.use_ssh_config        = True
 
 
 class DjangoTask(Task):
-    """ A Simple task wrapper that will ensure you are running your sparks
-        Django tasks from near your :file:`manage.py`. This ensures that
-        paths are always correctly set, which is too difficult to ensure
-        otherwise.
 
-        Sparks Django tasks assume the following project structure:
+    u""" A Simple task wrapper.
 
-            $repository_root/
-                config/
-                    *requirements.txt
-                $django_project_root/
-                    settings/                 # or settings.py, to your liking.
-                    $django_app1/
-                    …
-                manage.py
-                fabfile.py
-                Procfile.*
+    It will ensure you are running your sparks
+    Django tasks from near your :file:`manage.py`. This ensures that
+    paths are always correctly set, which is too difficult to ensure
+    otherwise.
 
-        .. versionadded:: in sparks 1.16.2. This is odd and doesn't conform
-            to `Semantic Versioning  <http://semver.org/>`_. Sorry for that,
-            it should have had. Next time it will do a better job.
+    Sparks Django tasks assume the following project structure:
+
+        $repository_root/
+            config/
+                *requirements.txt
+            $django_project_root/
+                settings/                 # or settings.py, to your liking.
+                $django_app1/
+                …
+            manage.py
+            fabfile.py
+            Procfile.*
+
+    .. versionadded:: in sparks 1.16.2. This is odd and doesn't conform
+        to `Semantic Versioning  <http://semver.org/>`_. Sorry for that,
+        it should have had. Next time it will do a better job.
     """
 
     def __init__(self, func, *args, **kwargs):
@@ -725,12 +728,14 @@ class ServiceRunner(SimpleObject):
 
 @task(aliases=('command', 'cmd'))
 def run_command(cmd):
-    """ Run a command on the remote side, inside the virtualenv and ch'ed
-        into ``env.root``. Use like this (but don't do this in production):
+    """ Run a command on the remote side.
 
-        fab test cmd:'./manage.py reset admin --noinput'
+    The command will be run inside the virtualenv and ch'ed
+    into ``env.root``. Use like this (but don't do this in production):
 
-        .. versionadded:: in 2.0.
+    fab test cmd:'./manage.py reset admin --noinput'
+
+    .. versionadded:: in 2.0.
     """
 
     # Wrap the real task to eventually run on all hosts it none specified.
@@ -739,6 +744,7 @@ def run_command(cmd):
 
 @task
 def sed_command_task(*args, **kwargs):
+    """ Fabric task for a :prog:`sed` command. """
 
     with activate_venv():
         with cd(env.root):
@@ -747,21 +753,23 @@ def sed_command_task(*args, **kwargs):
 
 @task(aliases=('sed', ))
 def sed_command(*args, **kwargs):
-    """ Run a Fabric sed command on the remote side, inside the virtualenv
-        and ch'ed into ``env.root``. Use like this (but don't do this in
-        production)::
+    """ Run a :prog:`sed` command on the remote side.
 
-            # In fact, this WON'T work because of spaces and equals signs.
-            #   fab test sed:.git/config,'url = olive@','url = git@'
-            # You should try avoiding them, and this should work:
-            fab test sdf.sed:.git/config,'(url.*)olive@','\1git@'
+    Inside the virtualenv
+    and ch'ed into ``env.root``. Use like this (but don't do this in
+    production)::
 
-        Reminder of Fabric 1.6.1 ``sed`` function arguments::
+        # In fact, this WON'T work because of spaces and equals signs.
+        #   fab test sed:.git/config,'url = olive@','url = git@'
+        # You should try avoiding them, and this should work:
+        fab test sdf.sed:.git/config,'(url.*)olive@','\1git@'
 
-            filename, before, after, limit='', use_sudo=False,
-            backup='.bak', flags='', shell=False
+    Reminder of Fabric 1.6.1 ``sed`` function arguments::
 
-        .. versionadded:: in 2.8.
+        filename, before, after, limit='', use_sudo=False,
+        backup='.bak', flags='', shell=False
+
+    .. versionadded:: in 2.8.
     """
 
     # Wrap the real task to eventually run on all hosts it none specified.
@@ -1293,7 +1301,7 @@ def git_update():
 
 
 @serial
-@task(alias='pull')
+@task(alias='pull_task')
 def git_pull_task():
     """ Pull latest code from origin to remote,
         reload sparks settings if changes.
@@ -1302,28 +1310,11 @@ def git_pull_task():
     """
 
     with cd(env.root):
-        if not run('git pull', quiet=QUIET).strip().endswith('Already up-to-date.'):
-            # reload the configuration to refresh Django settings.
-            #
-            # TODO: examine commits HERE and in push_translations()
-            #       to reload() only if settings/* changed.
-            #
-            # We import it manually here, to avoid using the
-            # @with_remote_configuration decorator, which would imply
-            # implicit fetching of Django settings. On first install/deploy,
-            # this would fail because requirements are not yet installed.
-            from ..fabric import remote_configuration
-
-            if remote_configuration is not None:
-                # If it's None, it hasn't been loaded once until now, so there
-                # is no problem because at next load Django settings will be
-                # up to date.
-                remote_configuration.reload()
-
-
+        run('git pull', quiet=QUIET)
 
 @task(task_class=DjangoTask, aliases=('pull', ))
 def git_pull(filename=None, confirm=True):
+    """ Sparks wrapper task for :func:`git_pull_task`. """
 
     # re-wrap the internal task via execute() to catch roledefs.
     # TODO: roles should be "__any__".except('db')
@@ -1332,8 +1323,8 @@ def git_pull(filename=None, confirm=True):
 
 
 @serial
-@task(alias='clean')
-def git_clean():
+@task(alias='clean_task')
+def git_clean_task():
     """ clean old Python compiled files. To avoid crashes like this one:
 
         http://dev.1flow.net/webapps/obi1flow/group/783/
@@ -1346,6 +1337,15 @@ def git_clean():
         run("find . \( -name '*.pyc' -or -name '*.pyo' \) -print0 "
             " | xargs -0 rm -f", warn_only=True, quiet=QUIET)
 
+
+@task(task_class=DjangoTask, aliases=('clean', ))
+def git_clean():
+    """ Sparks wrapper task for :func:`git_clean_task`. """
+
+    # re-wrap the internal task via execute() to catch roledefs.
+    # TODO: roles should be "__any__".except('db')
+    execute_or_not(git_clean_task, sparks_roles=['web'] + worker_roles[:]
+                   + ['beat', 'flower', 'shell'])
 
 @task(alias='getlangs')
 @with_remote_configuration
@@ -1675,14 +1675,34 @@ def handlemessages(remote_configuration=None, mode=None):
                             compile_internal(run_from='../../')
 
 
+@task
+def makemessages_task():
+    """ Django compile messages dirty job. """
+
+    handlemessages(mode='make')
+
+
 @task(task_class=DjangoTask, alias='messages')
 def makemessages():
-    handlemessages(mode='make')
+    """ The sparks wrapper for make message fabric task. """
+
+    execute_or_not(makemessages_task, sparks_roles=['web'] + worker_roles[:])
+    # NO NEED: + ['beat', 'flower', 'shell'])
+
+
+@task
+def compilemessages_task():
+    """ Django compile messages dirty job. """
+
+    handlemessages(mode='compile')
 
 
 @task(task_class=DjangoTask, alias='compile')
 def compilemessages():
-    handlemessages(mode='compile')
+    """ The sparks wrapper for compile message fabric task. """
+
+    execute_or_not(compilemessages_task, sparks_roles=['web'] + worker_roles[:])
+    # NO NEED: + ['beat', 'flower', 'shell'])
 
 
 @task(task_class=DjangoTask)
@@ -1793,7 +1813,10 @@ local    all    <MYUSERNAME>    trust
 
 @task(task_class=DjangoTask)
 def syncdb():
-    """ Run the Django syndb management command. """
+    """ Run the Django syncdb management command.
+
+    .. todo:: avoid if Django >= 1.7 (obsolete).
+    """
 
     with activate_venv():
         with cd(env.root):
@@ -1837,10 +1860,18 @@ def migrate(remote_configuration=None, args=None):
 
 
 @task(task_class=DjangoTask, alias='static')
+def collectstatic(fast=True):
+    """ The sparks wrapper for Fabric's collectstatic_task. """
+
+    execute_or_not(collectstatic_task, fast=fast, sparks_roles=('web', ))
+
+
 @with_remote_configuration
-def collectstatic(remote_configuration=None, fast=True):
-    """ Run the Django collectstatic management command. If :param:`fast`
-        is ``False``, the ``STATIC_ROOT`` will be erased first. """
+def collectstatic_task(remote_configuration=None, fast=True):
+    """ Run the Django collectstatic management command.
+
+    If :param:`fast` is ``False``, the ``STATIC_ROOT`` will be erased first.
+    """
 
     if remote_configuration.django_settings.DEBUG:
         LOGGER.info('NOT running collectstatic on %s because `DEBUG=True`.',
@@ -1888,9 +1919,9 @@ def getdata_task(app_model, filename=None, **kwargs):
         print('Dump data stored in {0}'.format(filename))
 
     with open(filename, 'w') as f:
-        f.write(django_manage('dumpdata {0} --indent 4 '
-                '--format json --natural'.format(app_model),
-                combine_stderr=False))
+        f.write(django_manage(
+            'dumpdata {0} --indent 4 --format json --natural'.format(app_model),
+            combine_stderr=False))
 
 
 @task(task_class=DjangoTask)
@@ -2064,18 +2095,15 @@ def runable(fast=False, upgrade=False):
             # avoid source repository desynchronization.
             execute_or_not(push_translations, sparks_roles=('lang', ))
 
-        execute_or_not(git_pull, sparks_roles=['web'] + worker_roles[:]
-                       + ['beat', 'flower', 'shell'])
+        git_pull()  # already wraps execute_or_not()
 
-    execute_or_not(git_clean, sparks_roles=['web'] + worker_roles[:]
-                   + ['beat', 'flower', 'shell'])
+    git_clean()  # already wraps execute_or_not()
 
     requirements(fast=fast, upgrade=upgrade)  # already wraps execute_or_not()
 
-    execute_or_not(compilemessages, sparks_roles=['web'] + worker_roles[:])
-                   # NO NEED: + ['beat', 'flower', 'shell'])
+    compilemessages()  # already wraps execute_or_not()
 
-    execute_or_not(collectstatic, fast=fast, sparks_roles=('web', ))
+    collectstatic(fast=fast)
 
     #
     # TODO: add 'mysql' and others.

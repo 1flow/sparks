@@ -35,12 +35,15 @@ def create_admin_user(username=None, email=None, password=None):
             except IntegrityError as e:
                 try:
                     if User.objects.get(username=admin_username,
-                                        email=admin_email,
                                         is_superuser=True):
                         pass
 
                     else:
-                        raise
+                        admin = User.objects.get(username=admin_username)
+                        admin.is_superuser = True
+                        admin.save()
+
+                        LOGGER.warning('Admin user was not super user!')
 
                 except:
                     LOGGER.exception(u'Could not check existing admin user'
