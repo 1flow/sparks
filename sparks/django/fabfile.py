@@ -1301,7 +1301,7 @@ def git_update():
 
 
 @serial
-@task(alias='pull')
+@task(alias='pull_task')
 def git_pull_task():
     """ Pull latest code from origin to remote,
         reload sparks settings if changes.
@@ -1323,8 +1323,8 @@ def git_pull(filename=None, confirm=True):
 
 
 @serial
-@task(alias='clean')
-def git_clean():
+@task(alias='clean_task')
+def git_clean_task():
     """ clean old Python compiled files. To avoid crashes like this one:
 
         http://dev.1flow.net/webapps/obi1flow/group/783/
@@ -1337,6 +1337,15 @@ def git_clean():
         run("find . \( -name '*.pyc' -or -name '*.pyo' \) -print0 "
             " | xargs -0 rm -f", warn_only=True, quiet=QUIET)
 
+
+@task(task_class=DjangoTask, aliases=('clean', ))
+def git_clean():
+    """ Sparks wrapper task for :func:`git_clean_task`. """
+
+    # re-wrap the internal task via execute() to catch roledefs.
+    # TODO: roles should be "__any__".except('db')
+    execute_or_not(git_clean_task, sparks_roles=['web'] + worker_roles[:]
+                   + ['beat', 'flower', 'shell'])
 
 @task(alias='getlangs')
 @with_remote_configuration
@@ -1666,14 +1675,34 @@ def handlemessages(remote_configuration=None, mode=None):
                             compile_internal(run_from='../../')
 
 
+@task
+def makemessages_task():
+    """ Django compile messages dirty job. """
+
+    handlemessages(mode='make')
+
+
 @task(task_class=DjangoTask, alias='messages')
 def makemessages():
-    handlemessages(mode='make')
+    """ The sparks wrapper for make message fabric task. """
+
+    execute_or_not(makemessages_task, sparks_roles=['web'] + worker_roles[:])
+    # NO NEED: + ['beat', 'flower', 'shell'])
+
+
+@task
+def compilemessages_task():
+    """ Django compile messages dirty job. """
+
+    handlemessages(mode='compile')
 
 
 @task(task_class=DjangoTask, alias='compile')
 def compilemessages():
-    handlemessages(mode='compile')
+    """ The sparks wrapper for compile message fabric task. """
+
+    execute_or_not(compilemessages_task, sparks_roles=['web'] + worker_roles[:])
+    # NO NEED: + ['beat', 'flower', 'shell'])
 
 
 @task(task_class=DjangoTask)
@@ -1784,7 +1813,10 @@ local    all    <MYUSERNAME>    trust
 
 @task(task_class=DjangoTask)
 def syncdb():
-    """ Run the Django syndb management command. """
+    """ Run the Django syncdb management command.
+
+    .. todo:: avoid if Django >= 1.7 (obsolete).
+    """
 
     with activate_venv():
         with cd(env.root):
@@ -1828,10 +1860,18 @@ def migrate(remote_configuration=None, args=None):
 
 
 @task(task_class=DjangoTask, alias='static')
+def collectstatic(fast=True):
+    """ The sparks wrapper for Fabric's collectstatic_task. """
+
+    execute_or_not(collectstatic_task, fast=fast, sparks_roles=('web', ))
+
+
 @with_remote_configuration
-def collectstatic(remote_configuration=None, fast=True):
-    """ Run the Django collectstatic management command. If :param:`fast`
-        is ``False``, the ``STATIC_ROOT`` will be erased first. """
+def collectstatic_task(remote_configuration=None, fast=True):
+    """ Run the Django collectstatic management command.
+
+    If :param:`fast` is ``False``, the ``STATIC_ROOT`` will be erased first.
+    """
 
     if remote_configuration.django_settings.DEBUG:
         LOGGER.info('NOT running collectstatic on %s because `DEBUG=True`.',
@@ -1879,9 +1919,9 @@ def getdata_task(app_model, filename=None, **kwargs):
         print('Dump data stored in {0}'.format(filename))
 
     with open(filename, 'w') as f:
-        f.write(django_manage('dumpdata {0} --indent 4 '
-                '--format json --natural'.format(app_model),
-                combine_stderr=False))
+        f.write(django_manage(
+            'dumpdata {0} --indent 4 --format json --natural'.format(app_model),
+            combine_stderr=False))
 
 
 @task(task_class=DjangoTask)
@@ -2055,18 +2095,15 @@ def runable(fast=False, upgrade=False):
             # avoid source repository desynchronization.
             execute_or_not(push_translations, sparks_roles=('lang', ))
 
-        execute_or_not(git_pull, sparks_roles=['web'] + worker_roles[:]
-                       + ['beat', 'flower', 'shell'])
+        git_pull()  # already wraps execute_or_not()
 
-    execute_or_not(git_clean, sparks_roles=['web'] + worker_roles[:]
-                   + ['beat', 'flower', 'shell'])
+    git_clean()  # already wraps execute_or_not()
 
     requirements(fast=fast, upgrade=upgrade)  # already wraps execute_or_not()
 
-    execute_or_not(compilemessages, sparks_roles=['web'] + worker_roles[:])
-                   # NO NEED: + ['beat', 'flower', 'shell'])
+    compilemessages()  # already wraps execute_or_not()
 
-    execute_or_not(collectstatic, fast=fast, sparks_roles=('web', ))
+    collectstatic(fast=fast)
 
     #
     # TODO: add 'mysql' and others.
