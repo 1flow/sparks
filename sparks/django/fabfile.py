@@ -1310,25 +1310,7 @@ def git_pull_task():
     """
 
     with cd(env.root):
-        if not run('git pull', quiet=QUIET).strip().endswith('Already up-to-date.'):
-            # reload the configuration to refresh Django settings.
-            #
-            # TODO: examine commits HERE and in push_translations()
-            #       to reload() only if settings/* changed.
-            #
-            # We import it manually here, to avoid using the
-            # @with_remote_configuration decorator, which would imply
-            # implicit fetching of Django settings. On first install/deploy,
-            # this would fail because requirements are not yet installed.
-            from ..fabric import remote_configuration
-
-            if remote_configuration is not None:
-                # If it's None, it hasn't been loaded once until now, so there
-                # is no problem because at next load Django settings will be
-                # up to date.
-                remote_configuration.reload()
-
-
+        run('git pull', quiet=QUIET)
 
 @task(task_class=DjangoTask, aliases=('pull', ))
 def git_pull(filename=None, confirm=True):
