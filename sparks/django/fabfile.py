@@ -1534,7 +1534,13 @@ def worker_options(context, has_djsettings, remote_configuration):
 
         elif broker.startswith('amqp://'):
             # And for AMQP: http://stackoverflow.com/a/25943620/654755
-            broker_api = broker.rsplit('/', 1)[0] + '/api'
+
+            # Replace amqp:// by http:// ; replace vhost by /api.
+            broker_api = 'http' + broker.rsplit('/', 1)[0][4:] + '/api'
+
+            # Port is 15672 instead of 5672
+            broker_api.replace(':', ':1')
+
             command_post_args += ' --broker_api={0}'.format(broker_api)
 
         else:
