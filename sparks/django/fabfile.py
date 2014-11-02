@@ -1538,8 +1538,9 @@ def worker_options(context, has_djsettings, remote_configuration):
             # Replace amqp:// by http:// ; replace vhost by /api.
             broker_api = 'http' + broker.rsplit('/', 1)[0][4:] + '/api'
 
-            # Port is 15672 instead of 5672
-            broker_api.replace(':', ':1')
+            # Port is 55672 instead of 5672 (RabbitMQ 2.7 on Ubuntu 12.04 LTS)
+            # Else it's 15672 on ArchLinux (version 3.4…)
+            broker_api.replace(':', ':5')
 
             command_post_args += ' --broker_api={0}'.format(broker_api)
 
