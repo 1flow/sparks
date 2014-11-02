@@ -1532,6 +1532,15 @@ def worker_options(context, has_djsettings, remote_configuration):
             # messages, which is better than nothing).
             command_post_args += ' --broker_api={0}'.format(broker)
 
+        elif broker.startswith('amqp://'):
+            # And for AMQP: http://stackoverflow.com/a/25943620/654755
+            broker_api = broker.rsplit('/', 1)[0] + '/api'
+            command_post_args += ' --broker_api={0}'.format(broker_api)
+
+        else:
+            LOGGER.warning(u'Unsupported broker, BROKER_API will be empty. '
+                           u'Flower will probably not work correctly.')
+
     context.update({
         'command_pre_args': command_pre_args,
         'command_post_args': command_post_args,
