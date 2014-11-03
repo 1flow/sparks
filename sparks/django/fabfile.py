@@ -1530,7 +1530,7 @@ def worker_options(context, has_djsettings, remote_configuration):
             # work "again" as expected (as much as possible, because many
             # columns are still empty, but at least we got the number of
             # messages, which is better than nothing).
-            command_post_args += ' --broker_api={0}'.format(broker)
+            command_post_args += ' --broker={0} --broker_api={0}'.format(broker)
 
         elif broker.startswith('amqp://'):
             # And for AMQP: http://stackoverflow.com/a/25943620/654755
@@ -1540,9 +1540,10 @@ def worker_options(context, has_djsettings, remote_configuration):
 
             # Port is 55672 instead of 5672 (RabbitMQ 2.7 on Ubuntu 12.04 LTS)
             # Else it's 15672 on ArchLinux (version 3.4…)
-            broker_api.replace(':', ':5')
+            broker_api = broker_api.replace(':', ':5')
 
-            command_post_args += ' --broker_api={0}'.format(broker_api)
+            command_post_args += ' --broker={0} --broker_api={1}'.format(
+                broker, broker_api)
 
         else:
             LOGGER.warning(u'Unsupported broker, BROKER_API will be empty. '
