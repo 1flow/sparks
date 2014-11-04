@@ -1300,7 +1300,7 @@ def git_update_task():
             run('git checkout %s' % get_git_branch(), quiet=QUIET)
 
 
-@task(task_class=DjangoTask, aliases=('update', 'checkout' ))
+@task(task_class=DjangoTask, aliases=('update', 'checkout', ))
 def git_update():
     """ Sparks wrapper task for :func:`git_update_task`. """
 
@@ -1358,6 +1358,7 @@ def git_clean():
     execute_or_not(git_clean_task, sparks_roles=['web'] + worker_roles[:]
                    + ['beat', 'flower', 'shell'])
 
+
 @task(alias='getlangs')
 @with_remote_configuration
 def push_translations(remote_configuration=None):
@@ -1382,11 +1383,11 @@ def push_translations(remote_configuration=None):
                "|| true", quiet=QUIET) != '':
             run(('git add -u \*locale\*po '
                 '&& git commit -m "{0}" '
-                # If there are pending commits in the central, `git push` will
-                # fail if we don't pull them prior to pushing local changes.
-                '&& (git up || git pull) && git push').format(
-                'Automated l10n translations from {0} on {1}.').format(
-                env.host_string, datetime.datetime.now().isoformat()),
+                 # If there are pending commits in the central, `git push` will
+                 # fail if we don't pull them prior to pushing local changes.
+                 '&& (git up || git pull) && git push').format(
+                     'Automated l10n translations from {0} on {1}.').format(
+                         env.host_string, datetime.datetime.now().isoformat()),
                 quiet=QUIET)
 
             # Get the translations changes back locally.
