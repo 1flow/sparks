@@ -1540,7 +1540,7 @@ def worker_options(context, has_djsettings, remote_configuration):
 
             # Port is 55672 instead of 5672 (RabbitMQ 2.7 on Ubuntu 12.04 LTS)
             # Else it's 15672 on ArchLinux (version 3.4…)
-            broker_api = broker_api.replace(':', ':5')
+            broker_api = broker_api.replace(':5', ':55')
 
             command_post_args += ' --broker={0} --broker_api={1}'.format(
                 broker, broker_api)
