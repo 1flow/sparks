@@ -1855,17 +1855,18 @@ def syncdb():
     django_manage('syncdb --noinput')
 
 
-@task(task_class=DjangoTask)
+@task(alias='migrate_task')
 @with_remote_configuration
-def migrate(remote_configuration=None, args=None):
-    """ Run the Django migrate management command, and the Transmeta one
-        if ``django-transmeta`` is installed.
+def migrate_task(remote_configuration=None, args=None):
+    """ Run the Django migrate management command, and the Transmeta one.
 
-        .. versionchanged:: in 1.16 the function checks if ``transmeta`` is
-            installed remotely and runs the command properly. before, it just
-            ran the command inconditionnaly with ``warn_only=True``, which
-            was less than ideal in case of a problem because the fab procedure
-            didn't stop.
+    (only if ``django-transmeta`` is installed).
+
+    .. versionchanged:: in 1.16 the function checks if ``transmeta`` is
+        installed remotely and runs the command properly. before, it just
+        ran the command inconditionnaly with ``warn_only=True``, which
+        was less than ideal in case of a problem because the fab procedure
+        didn't stop.
     """
 
     # Sometimes, we've got:
@@ -1886,6 +1887,13 @@ def migrate(remote_configuration=None, args=None):
 
     if 'transmeta' in remote_configuration.django_settings.INSTALLED_APPS:
         django_manage('sync_transmeta_db', prefix='yes | ')
+
+
+@task(task_class=DjangoTask)
+def migrate(args):
+    """ The sparks wrapper for Fabric's migrate_task. """
+
+    execute_or_not(migrate_task, args, sparks_roles=('db', 'pg', ))
 
 
 @task(task_class=DjangoTask, alias='static')
@@ -2143,7 +2151,7 @@ def runable(fast=False, upgrade=False):
     # TODO: test if Django 1.7+, and don't run in this case.
     execute_or_not(syncdb, sparks_roles=('db', 'pg', ))
 
-    execute_or_not(migrate, sparks_roles=('db', 'pg', ))
+    migrate()  # already wraps execute_or_not()
 
 
 @task(aliases=('fast', 'fastdeploy', ))
