@@ -1291,13 +1291,23 @@ def push_environment(fast=False, force=False):
                    force=force, sparks_roles=all_roles)
 
 
-@task(alias='update')
-def git_update():
+@task(alias='update_task')
+def git_update_task():
     """ Push latest code from local to origin, checkout branch on remote. """
 
     with cd(env.root):
         if not is_local_environment():
             run('git checkout %s' % get_git_branch(), quiet=QUIET)
+
+
+@task(task_class=DjangoTask, aliases=('update', 'checkout' ))
+def git_update():
+    """ Sparks wrapper task for :func:`git_update_task`. """
+
+    execute_or_not(git_update_task,
+                   sparks_roles=['web']
+                   + worker_roles[:]
+                   + ['beat', 'flower', 'shell'])
 
 
 @serial
@@ -1311,6 +1321,7 @@ def git_pull_task():
 
     with cd(env.root):
         run('git pull', quiet=QUIET)
+
 
 @task(task_class=DjangoTask, aliases=('pull', ))
 def git_pull(filename=None, confirm=True):
@@ -2104,8 +2115,7 @@ def runable(fast=False, upgrade=False):
     if not is_local_environment():
         push_environment()  # already wraps execute_or_not()
 
-        execute_or_not(git_update, sparks_roles=['web'] + worker_roles[:]
-                       + ['beat', 'flower', 'shell'])
+        git_update()  # already wraps execute_or_not()
 
         if not is_production_environment():
             # fast or not, we must catch this one to
@@ -2129,7 +2139,9 @@ def runable(fast=False, upgrade=False):
     if not fast:
         execute_or_not(createdb, sparks_roles=('db', 'pg', ))
 
+    # TODO: test if Django 1.7+, and don't run in this case.
     execute_or_not(syncdb, sparks_roles=('db', 'pg', ))
+
     execute_or_not(migrate, sparks_roles=('db', 'pg', ))
 
 
