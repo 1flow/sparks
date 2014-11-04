@@ -1890,7 +1890,7 @@ def migrate_task(remote_configuration=None, args=None):
 
 
 @task(task_class=DjangoTask)
-def migrate(args):
+def migrate(args=None):
     """ The sparks wrapper for Fabric's migrate_task. """
 
     execute_or_not(migrate_task, args, sparks_roles=('db', 'pg', ))
