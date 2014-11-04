@@ -1893,7 +1893,7 @@ def migrate_task(remote_configuration=None, args=None):
 def migrate(args=None):
     """ The sparks wrapper for Fabric's migrate_task. """
 
-    execute_or_not(migrate_task, args, sparks_roles=('db', 'pg', ))
+    execute_or_not(migrate_task, args=args, sparks_roles=('db', 'pg', ))
 
 
 @task(task_class=DjangoTask, alias='static')
