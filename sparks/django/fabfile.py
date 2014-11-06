@@ -1547,12 +1547,16 @@ def worker_options(context, has_djsettings, remote_configuration):
         elif broker.startswith('amqp://'):
             # And for AMQP: http://stackoverflow.com/a/25943620/654755
 
-            # Replace amqp:// by http:// ; replace vhost by /api.
-            broker_api = 'http' + broker.rsplit('/', 1)[0][4:] + '/api'
+            broker_api = os.environ.get('BROKER_API', None)
 
-            # Port is 55672 instead of 5672 (RabbitMQ 2.7 on Ubuntu 12.04 LTS)
-            # Else it's 15672 on ArchLinux (version 3.4…)
-            broker_api = broker_api.replace(':5', ':55')
+            if broker_api is None:
+                # Replace amqp:// by http:// ; replace vhost by /api.
+                broker_api = 'http' + broker.rsplit('/', 1)[0][4:] + '/api'
+
+                # Port is 55672 instead of 5672 (RabbitMQ 2.7
+                # on Ubuntu 12.04 LTS), else it's 15672 on
+                # ArchLinux (version 3.4…)
+                broker_api = broker_api.replace(':5', ':55')
 
             command_post_args += ' --broker={0} --broker_api={1}'.format(
                 broker, broker_api)
