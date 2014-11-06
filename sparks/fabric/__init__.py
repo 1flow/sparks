@@ -119,6 +119,7 @@ for worker_type, worker_name in (
     ('worker_trio',       'Tri-process'),
     ('worker_default',    'Default'),
     ('worker_swarm',      'Swarm-processing'),
+    ('worker_check',      'Checker'),
     ('worker_create',     'Create'),
     ('worker_refresh',    'Refresher'),
     ('worker_fetch',      'Fetcher'),
