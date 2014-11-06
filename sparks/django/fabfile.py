@@ -1291,13 +1291,23 @@ def push_environment(fast=False, force=False):
                    force=force, sparks_roles=all_roles)
 
 
-@task(alias='update')
-def git_update():
+@task(alias='update_task')
+def git_update_task():
     """ Push latest code from local to origin, checkout branch on remote. """
 
     with cd(env.root):
         if not is_local_environment():
             run('git checkout %s' % get_git_branch(), quiet=QUIET)
+
+
+@task(task_class=DjangoTask, aliases=('update', 'checkout', ))
+def git_update():
+    """ Sparks wrapper task for :func:`git_update_task`. """
+
+    execute_or_not(git_update_task,
+                   sparks_roles=['web']
+                   + worker_roles[:]
+                   + ['beat', 'flower', 'shell'])
 
 
 @serial
@@ -1311,6 +1321,7 @@ def git_pull_task():
 
     with cd(env.root):
         run('git pull', quiet=QUIET)
+
 
 @task(task_class=DjangoTask, aliases=('pull', ))
 def git_pull(filename=None, confirm=True):
@@ -1347,6 +1358,7 @@ def git_clean():
     execute_or_not(git_clean_task, sparks_roles=['web'] + worker_roles[:]
                    + ['beat', 'flower', 'shell'])
 
+
 @task(alias='getlangs')
 @with_remote_configuration
 def push_translations(remote_configuration=None):
@@ -1371,11 +1383,11 @@ def push_translations(remote_configuration=None):
                "|| true", quiet=QUIET) != '':
             run(('git add -u \*locale\*po '
                 '&& git commit -m "{0}" '
-                # If there are pending commits in the central, `git push` will
-                # fail if we don't pull them prior to pushing local changes.
-                '&& (git up || git pull) && git push').format(
-                'Automated l10n translations from {0} on {1}.').format(
-                env.host_string, datetime.datetime.now().isoformat()),
+                 # If there are pending commits in the central, `git push` will
+                 # fail if we don't pull them prior to pushing local changes.
+                 '&& (git up || git pull) && git push').format(
+                     'Automated l10n translations from {0} on {1}.').format(
+                         env.host_string, datetime.datetime.now().isoformat()),
                 quiet=QUIET)
 
             # Get the translations changes back locally.
@@ -1535,12 +1547,16 @@ def worker_options(context, has_djsettings, remote_configuration):
         elif broker.startswith('amqp://'):
             # And for AMQP: http://stackoverflow.com/a/25943620/654755
 
-            # Replace amqp:// by http:// ; replace vhost by /api.
-            broker_api = 'http' + broker.rsplit('/', 1)[0][4:] + '/api'
+            broker_api = os.environ.get('BROKER_API', None)
 
-            # Port is 55672 instead of 5672 (RabbitMQ 2.7 on Ubuntu 12.04 LTS)
-            # Else it's 15672 on ArchLinux (version 3.4…)
-            broker_api = broker_api.replace(':', ':5')
+            if broker_api is None:
+                # Replace amqp:// by http:// ; replace vhost by /api.
+                broker_api = 'http' + broker.rsplit('/', 1)[0][4:] + '/api'
+
+                # Port is 55672 instead of 5672 (RabbitMQ 2.7
+                # on Ubuntu 12.04 LTS), else it's 15672 on
+                # ArchLinux (version 3.4…)
+                broker_api = broker_api.replace(':5', ':55')
 
             command_post_args += ' --broker={0} --broker_api={1}'.format(
                 broker, broker_api)
@@ -1843,17 +1859,18 @@ def syncdb():
     django_manage('syncdb --noinput')
 
 
-@task(task_class=DjangoTask)
+@task(alias='migrate_task')
 @with_remote_configuration
-def migrate(remote_configuration=None, args=None):
-    """ Run the Django migrate management command, and the Transmeta one
-        if ``django-transmeta`` is installed.
+def migrate_task(remote_configuration=None, args=None):
+    """ Run the Django migrate management command, and the Transmeta one.
 
-        .. versionchanged:: in 1.16 the function checks if ``transmeta`` is
-            installed remotely and runs the command properly. before, it just
-            ran the command inconditionnaly with ``warn_only=True``, which
-            was less than ideal in case of a problem because the fab procedure
-            didn't stop.
+    (only if ``django-transmeta`` is installed).
+
+    .. versionchanged:: in 1.16 the function checks if ``transmeta`` is
+        installed remotely and runs the command properly. before, it just
+        ran the command inconditionnaly with ``warn_only=True``, which
+        was less than ideal in case of a problem because the fab procedure
+        didn't stop.
     """
 
     # Sometimes, we've got:
@@ -1874,6 +1891,13 @@ def migrate(remote_configuration=None, args=None):
 
     if 'transmeta' in remote_configuration.django_settings.INSTALLED_APPS:
         django_manage('sync_transmeta_db', prefix='yes | ')
+
+
+@task(task_class=DjangoTask)
+def migrate(args=None):
+    """ The sparks wrapper for Fabric's migrate_task. """
+
+    execute_or_not(migrate_task, args=args, sparks_roles=('db', 'pg', ))
 
 
 @task(task_class=DjangoTask, alias='static')
@@ -2104,8 +2128,7 @@ def runable(fast=False, upgrade=False):
     if not is_local_environment():
         push_environment()  # already wraps execute_or_not()
 
-        execute_or_not(git_update, sparks_roles=['web'] + worker_roles[:]
-                       + ['beat', 'flower', 'shell'])
+        git_update()  # already wraps execute_or_not()
 
         if not is_production_environment():
             # fast or not, we must catch this one to
@@ -2129,8 +2152,10 @@ def runable(fast=False, upgrade=False):
     if not fast:
         execute_or_not(createdb, sparks_roles=('db', 'pg', ))
 
+    # TODO: test if Django 1.7+, and don't run in this case.
     execute_or_not(syncdb, sparks_roles=('db', 'pg', ))
-    execute_or_not(migrate, sparks_roles=('db', 'pg', ))
+
+    migrate()  # already wraps execute_or_not()
 
 
 @task(aliases=('fast', 'fastdeploy', ))
