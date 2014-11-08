@@ -1512,18 +1512,18 @@ def worker_options(context, has_djsettings, remote_configuration):
         # TODO: '5' should be 'if remote_configuration.is_lxc'
         # but we don't have this configuration attribute yet.
 
-        for dict_name, opt_string, default in (
-            ('worker_pool',            ' -P {0}',                 False),
+        for dict_name, opt_string, use_all in (
+            ('worker_pool',            ' -P {0}',                 True),
             ('worker_time_limit',      ' --time-limit {0}',       True),
             ('worker_soft_time_limit', ' --soft-time-limit {0}',  True),
             ('worker_concurrency',     ' -c {0}',                 True),
             ('autoscale',              ' --autoscale {0}',        True),
             ('max_tasks_per_child',    ' --maxtasksperchild={0}', True),
-            ('custom_arguments',       ' {0}',                    False),
+            ('custom_arguments',       ' {0}',                    True),
         ):
 
             opt_value = get_option(sparks_options.get(dict_name, {}),
-                                   role_name, use__all__=default)
+                                   role_name, use__all__=use_all)
 
             if opt_value:
                 command_post_args += opt_string.format(opt_value)
