@@ -1528,7 +1528,7 @@ def worker_options(context, has_djsettings, remote_configuration):
             if opt_value:
                 command_post_args += opt_string.format(opt_value)
 
-    if role_name == 'flower':
+    elif role_name == 'flower':
         try:
             broker = remote_configuration.django_settings.BROKER_URL
 
@@ -1564,6 +1564,13 @@ def worker_options(context, has_djsettings, remote_configuration):
         else:
             LOGGER.warning(u'Unsupported broker, BROKER_API will be empty. '
                            u'Flower will probably not work correctly.')
+
+    elif role_name == 'shell':
+        sparks_options = getattr(env, 'sparks_options', {})
+        shell_arguments = sparks_options.get('shell_arguments', {})
+
+        command_pre_args += ' ' + shell_arguments.get('command_pre_args', '')
+        command_post_args += ' ' + shell_arguments.get('command_post_args', '')
 
     context.update({
         'command_pre_args': command_pre_args,
