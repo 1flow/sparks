@@ -265,6 +265,11 @@ def prevcurnext(orig):
         # this makes this filter really very expensive.
         orig = list(orig)
 
+    if len(orig) == 1:
+        return (
+            [(None, orig[0], None)]
+        )
+
     return (
         [(None, orig[0], orig[1])]
         + zip(orig, orig[1:], orig[2:])
