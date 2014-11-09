@@ -5,7 +5,6 @@ import json
 import logging
 
 from django.http import HttpResponseRedirect
-from django.shortcuts import get_object_or_404
 
 LOGGER = logging.getLogger(__name__)
 
@@ -169,12 +168,26 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
     This allows ListCreateViews to get the object_list populated automatically.
 
     Inspired from http://stackoverflow.com/a/12883683/654755
+
+    You can specify:
+
+    - a :meth:`list_queryset_filter(self, qs)` method, that will
+      filter the model queryset exactly how you want.
+    - class.list_queryset_filter_user to ``False`` if you do not want to
+      filter the QS on the user field, against the self.request.user value.
+      This filter is so common (only superusers get all "things") that it
+      defaults to ``True``.
+
     """
 
-    list_queryset_filter = None
+    list_queryset_filter_user = True
 
     def get_context_data(self, **kwargs):
-        """ Populate the context with the object list, filtered and sorted. """
+        """ Populate the context with the object list, filtered and sorted.
+
+        The method will honor :attr:`list_queryset_filter_user` and will
+        filter with :meth:`list_queryset_filter` if it exists.
+        """
 
         object_list_name = '{0}_list'.format(
             self.model.__name__.lower())
@@ -183,37 +196,9 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
             raise RuntimeError(u'Multiple instances of {0} in context!'.format(
                                object_list_name))
 
-        user = self.request.user
-
         # We build an independant QuerySet; the CreateView part already
         # handles the main one, which with we must not interfere.
         qs = self.model.objects.all()
-
-        if self.list_queryset_filter:
-            qskw = {}
-
-            for qskey, data in self.list_queryset_filter.items():
-                kwargs_key, model, transform = data
-
-                if model:
-                    qskw[qskey] = get_object_or_404(
-                        model, pk=int(self.kwargs.get(kwargs_key)))
-
-                else:
-                    if transform:
-                        qskw[qskey] = transform(self.kwargs.get(kwargs_key))
-
-                    else:
-                        qskw[qskey] = self.kwargs.get(kwargs_key)
-
-            qs = qs.filter(**qskw)
-
-        else:
-            try:
-                qs = qs.filter(user=user)
-
-            except:
-                pass
 
         # Call the SortMixin & FilterMixin methods on this alternate QS.
         qs = self.sort_queryset(
@@ -221,7 +206,19 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
                 qs, self.get_filter_param()),
             self.get_sort_params())
 
-        kwargs[object_list_name] = qs
+        if self.list_queryset_filter_user:
+            try:
+                qs = qs.filter(user=self.request.user)
+
+            except:
+                LOGGER.exception(u'Could not filter %s on user field '
+                                 u'against %s', qs, self.request.user)
+
+        try:
+            kwargs[object_list_name] = self.list_queryset_filter(qs)
+
+        except AttributeError:
+            kwargs[object_list_name] = qs
 
         return super(ListCreateViewMixin, self).get_context_data(**kwargs)
 
@@ -251,7 +248,7 @@ class OwnerQuerySetMixin(object):
 
 class DRFLoggerMixin(object):
 
-    """
+    u"""
     Allows us to log any incoming request and to know what's in it.
 
     Usage:
