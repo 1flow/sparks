@@ -2166,12 +2166,12 @@ def runable(fast=False, upgrade=False):
 
 
 @task(aliases=('fast', 'fastdeploy', ))
-def fast_deploy():
+def fast_deploy(upgrade=True):
     """ Deploy FAST! For templates / static changes only. """
 
     # not our execute_or_not(), here we want Fabric
     # to handle its classic execution model.
-    execute(deploy, fast=True)
+    execute(deploy, fast=True, upgrade=upgrade)
 
 
 @task(default=True, aliases=('fulldeploy', 'full_deploy', ))
