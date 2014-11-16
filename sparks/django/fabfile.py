@@ -1333,7 +1333,6 @@ def git_pull(filename=None, confirm=True):
                    + ['beat', 'flower', 'shell'])
 
 
-@serial
 @task(alias='clean_task')
 def git_clean_task():
     """ clean old Python compiled files. To avoid crashes like this one:
