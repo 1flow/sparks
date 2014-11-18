@@ -4,12 +4,12 @@ from django.forms.models import model_to_dict
 from django.db import models
 from decimal import Decimal
 
-# from emailuser import EmailUser, EmailUserManager  # NOQA
+from emailuser import EmailUser, EmailUserManager  # NOQA
 
 
 class DiffMixin(object):
 
-    """
+    u"""
     A mixin that tracks fields' values changes.
 
     This version is meant to be mixinized with any other base model class,
