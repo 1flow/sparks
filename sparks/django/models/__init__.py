@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """ Sparks models & mixins. """
 
-from mixins import *  # NOQA
-from emailuser import EmailUser, EmailUserManager  # NOQA
+#
+# LEAVE EMPTY, sparks is not a django app.
+# Models are meant to be manually imported in external apps, once needed.
+#
