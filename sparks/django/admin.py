@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-    Sparks helpers, functions and classes for the Django admin.
+Sparks helpers, functions and classes for the Django admin.
 
-    .. note:: this module will need to import django settings.
-        Make sure it is available and set before importing.
+.. note:: this module will need to import django settings.
+    Make sure it is available and set before importing.
 
-    .. versionadded:: 1.17
+.. versionadded:: 1.17
 """
 
 
@@ -31,10 +31,12 @@ csrf_protect_m = method_decorator(csrf_protect)
 
 
 class UserAdmin(admin.ModelAdmin):
-    """ This class mimics the standard UserAdmin, as seen in Django 1.5 at:
-        https://raw.github.com/django/django/master/django/contrib/auth/admin.py
 
-        We add it in case you would like to include oneflow.base in other apps.
+    """ Mimic the standard UserAdmin, as seen in Django 1.5.
+
+    At: https://raw.github.com/django/django/master/django/contrib/auth/admin.py
+
+    We add it in case you would like to include oneflow.base in other apps.
     """
 
     add_form_template = 'admin/auth/user/add_form.html'
@@ -61,12 +63,14 @@ class UserAdmin(admin.ModelAdmin):
     filter_horizontal = ('groups', 'user_permissions', )
 
     def get_fieldsets(self, request, obj=None):
+        """ Hello my pep257 love. """
+
         if not obj:
             return self.add_fieldsets
         return super(UserAdmin, self).get_fieldsets(request, obj)
 
     def get_form(self, request, obj=None, **kwargs):
-        """ Use special form during user creation """
+        """ Use special form during user creation. """
 
         defaults = {}
         if obj is None:
@@ -78,6 +82,8 @@ class UserAdmin(admin.ModelAdmin):
         return super(UserAdmin, self).get_form(request, obj, **defaults)
 
     def get_urls(self):
+        """ Hello my pep257 love. """
+
         from django.conf.urls import patterns
         return patterns('',
                         (r'^(\d+)/password/$',
@@ -85,6 +91,8 @@ class UserAdmin(admin.ModelAdmin):
                         ) + super(UserAdmin, self).get_urls()
 
     def lookup_allowed(self, lookup, value):
+        """ Hello my pep257 love. """
+
         # See #20078: we don't want to allow any lookups involving passwords.
         if lookup.startswith('password'):
             return False
@@ -94,6 +102,8 @@ class UserAdmin(admin.ModelAdmin):
     @csrf_protect_m
     @transaction.commit_on_success
     def add_view(self, request, form_url='', extra_context=None):
+        """ Check user permissions. """
+
         # It's an error for a user to have add permission but NOT change
         # permission for users. If we allowed such users to add users, they
         # could create superusers, which would mean they would essentially have
@@ -109,29 +119,40 @@ class UserAdmin(admin.ModelAdmin):
                     'order to add users, Django requires that your user '
                     'account have both the "Add user" and "Change user" '
                     'permissions set.')
+
             raise PermissionDenied
+
         if extra_context is None:
             extra_context = {}
+
         username_field = self.model._meta.get_field(self.model.USERNAME_FIELD)
         defaults = {
             'auto_populated_fields': (),
             'username_help_text': username_field.help_text,
         }
+
         extra_context.update(defaults)
+
         return super(UserAdmin, self).add_view(request, form_url,
                                                extra_context)
 
     @sensitive_post_parameters()
     def user_change_password(self, request, id, form_url=''):
+        """ Change password template . """
+
         if not self.has_change_permission(request):
             raise PermissionDenied
+
         user = get_object_or_404(self.queryset(request), pk=id)
+
         if request.method == 'POST':
             form = self.change_password_form(user, request.POST)
+
             if form.is_valid():
                 form.save()
                 msg = ugettext('Password changed successfully.')
                 messages.success(request, msg)
+
                 return HttpResponseRedirect('..')
         else:
             form = self.change_password_form(user)
@@ -155,16 +176,17 @@ class UserAdmin(admin.ModelAdmin):
             'save_as': False,
             'show_save': True,
         }
+
         return TemplateResponse(request,
                                 self.change_user_password_template or
                                 'admin/auth/user/change_password.html',
                                 context, current_app=self.admin_site.name)
 
     def response_add(self, request, obj, post_url_continue=None):
-        """
-        Determines the HttpResponse for the add_view stage. It mostly defers to
-        its superclass implementation but is customized because the User model
-        has a slightly different workflow.
+        """ Determine the HttpResponse for the add_view stage.
+
+        It mostly defers to its superclass implementation but is customized
+        because the User model has a slightly different workflow.
         """
         # We should allow further modification of the user just added i.e. the
         # 'Save' button should behave like the 'Save and continue editing'
@@ -173,5 +195,6 @@ class UserAdmin(admin.ModelAdmin):
         # * We are adding a user in a popup
         if '_addanother' not in request.POST and '_popup' not in request.POST:
             request.POST['_continue'] = 1
+
         return super(UserAdmin, self).response_add(request, obj,
                                                    post_url_continue)
