@@ -124,6 +124,7 @@ for worker_type, worker_name in (
     ('worker_sync',       'Synchronization'),
     ('worker_articles',   'Articles'),
     ('worker_longtasks',  'Long tasks'),
+    ('worker_permanent',  'Permanent tasks'),
     ('worker_swarm',      'Swarm-processing'),
     ('worker_check',      'Checker'),
     ('worker_create',     'Create'),
