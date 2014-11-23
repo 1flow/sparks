@@ -93,7 +93,7 @@ except ImportError:
 
 # Global way to turn all of this module silent.
 DEBUG = bool(os.environ.get('SPARKS_DEBUG', False))
-QUIET = not DEBUG and not bool(os.environ.get('SPARKS_VERBOSE', False))
+QUIET = not DEBUG and not bool(os.environ.get('SPARKS_VERBOSE', True))
 LOGGER = logging.getLogger(__name__)
 remote_configuration = None
 local_configuration  = None
