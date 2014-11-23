@@ -739,7 +739,7 @@ def run_command(cmd):
     """
 
     # Wrap the real task to eventually run on all hosts it none specified.
-    execute_or_not(run_command_task, cmd, *args, **kwargs)
+    execute_or_not(run_command_task, cmd)
 
 
 @task
@@ -1197,8 +1197,8 @@ def requirements(fast=False, upgrade=False):
                        sparks_roles=roles_to_run)
 
 
-
 def push_environment_task(project_envs_dir, fast=False, force=False):
+    """ Push environment file (Fabric task). """
 
     role_name = get_current_role()
 
