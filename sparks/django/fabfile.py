@@ -2221,7 +2221,8 @@ def role(*roles):
 
     """
 
-    #LOGGER.info('before role-picking: %s %s', env.roledefs.keys(), roles)
+    LOGGER.debug(u'before role-picking: env.roledefs=%s roles=%s',
+                 env.roledefs.keys(), roles)
 
     # Don't use 'in env.roledefs', or only if you want to hit
     # 'RuntimeError: dictionary changed size during iteration'
@@ -2237,7 +2238,7 @@ def role(*roles):
         sparks_options['no_warn_for_missing_beat'] = True
         env.sparks_options = sparks_options
 
-    #LOGGER.info('after role-picking: %s %s', env.roledefs.keys())
+    LOGGER.debug('after role-picking: env.roledefs=%s', env.roledefs.keys())
 
 
 @task(aliases=('cherry-pick', 'select', 'hosts', 'H'))
@@ -2268,6 +2269,9 @@ def pick(*machines):
             if he reads too fast. Jeff, I just **loooove** ``Fabric`` ;-)
     """
 
+    LOGGER.debug('before machines-picking: env.roledefs=%s machines=%s',
+                 env.roledefs.keys(), machines)
+
     if len(machines) == 1:
         # Avoid messing with my fabfile switching
         # this on and off everytime something fails.
@@ -2285,3 +2289,6 @@ def pick(*machines):
         sparks_options = getattr(env, 'sparks_options', {})
         sparks_options['no_warn_for_missing_beat'] = True
         env.sparks_options = sparks_options
+
+    LOGGER.debug('after machines-picking: env.roledefs=%s',
+                 env.roledefs.keys())
