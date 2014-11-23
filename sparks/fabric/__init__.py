@@ -160,6 +160,14 @@ worker_roles = [r for r in all_roles if r.startswith('worker')]
 
 # ===================================================== Fabric helper functions
 
+def custom_roles():
+    """ Return custom roles defined in the fabfile, in `worker_information`. """
+
+    return [role for role in getattr(
+            env, 'sparks_options', {}).get(
+            'worker_information', {}).keys() if role.startswith('worker')]
+
+
 def execute_or_not(task, *args, **kwargs):
     """ Run Fabric's execute(), but only if there are hosts/roles to run it on.
         Else, just discard the task, and print a warning message.
