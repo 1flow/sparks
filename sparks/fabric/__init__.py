@@ -270,12 +270,14 @@ def merge_roles_hosts():
     """ Get an exhaustive list of all machines listed
         in the current ``env.roledefs``. """
 
-    merged = []
+    merged = set()
 
-    for role in env.roledefs:
-        merged.extend(env.roledefs[role])
+    for role, hosts in env.roledefs.items():
+        merged.union(hosts)
 
-    return merged
+    LOGGER.debug(u'Merged host list: %s', u', '.join(merged))
+
+    return list(merged)
 
 
 def set_roledefs_and_parallel(roledefs, parallel=False):
@@ -322,6 +324,9 @@ def set_roledefs_and_parallel(roledefs, parallel=False):
     #   Fatal error: The following specified roles do not exist:
     #       worker
     for key in all_roles:
+        env.roledefs.setdefault(key, [])
+
+    for key in custom_roles():
         env.roledefs.setdefault(key, [])
 
     # merge all hosts for tasks that can run on any of them.
