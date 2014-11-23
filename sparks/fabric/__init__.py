@@ -217,18 +217,20 @@ def execute_or_not(task, *args, **kwargs):
     roles = kwargs.pop('sparks_roles', ['__all__'])
     non_empty = non_empty_roles(roles)
 
-    # If execute_or_not() is called without sparks_roles, there is a chance
-    # the user picked some roles / hosts manually with “R:” / “H:” fabric
-    # pseudo-tasks. In this case, pick them on-the-fly, else we won't have
-    # any host to run on, while in fact the user has selected some.
-    if not non_empty \
+    # If execute_or_not() is called without `sparks_roles`, there is a
+    # chance the user picked some roles / hosts manually with “R:” / “H:”
+    # fabric pseudo-tasks. In this case, pick them on-the-fly, else we
+    # won't have any host to run on, while in fact the user has selected
+    # some.
+    if not non_empty and roles == ['__all__'] \
         and getattr(env, 'roles_picked', False) \
             or getattr(env, 'hosts_picked', False):
         non_empty = non_empty_roles(env.roledefs.keys())
 
     LOGGER.debug(u'Running task %s on roles: %s, current_context: %s, '
-                 u'matching: %s', task.func_name, roles, non_empty,
-                 env.roledefs.get(roles[0], []))
+                 u'matching: %s',
+                 task.func_name if hasattr(task, 'func_name') else task,
+                 roles, non_empty, env.roledefs.get(roles[0], []))
 
     # Reset in case. The role should be found preferably in
     # env.host_string.role, but in ONE case (when running sparks
