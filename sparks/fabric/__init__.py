@@ -170,9 +170,27 @@ def custom_roles():
                 'worker_information', {}).keys() if role.startswith('worker')
     ]
 
-    LOGGER.debug(u'Custom roles: %s', u', '.join(custom_roles))
+    LOGGER.debug(u'Custom roles picked: %s', u', '.join(custom_roles))
 
     return custom_roles
+
+
+def non_empty_roles(roles):
+    """ Keep only non-empty roles. """
+
+    non_empty = []
+
+    # LOGGER.debug(u'__all__ is: %s', env.roledefs.get('__all__'))
+    # LOGGER.debug(u'roles is: %s', roles)
+
+    for role in roles:
+        if env.roledefs.get(role, []) != []:
+            non_empty.append(role)
+
+        # else:
+        #     LOGGER.debug(u'Role %s has no host, removing.', role)
+
+    return non_empty
 
 
 def execute_or_not(task, *args, **kwargs):
@@ -194,12 +212,22 @@ def execute_or_not(task, *args, **kwargs):
 
     # execute kwargs: host, hosts, role, roles and exclude_hosts
 
-    roles = kwargs.pop('sparks_roles', ['__all__'])
-    non_empty = [role for role in roles if env.roledefs.get(role, []) != []]
+    # LOGGER.debug(u'ROLEDEFS AT execute_or_not(): %s', env.roledefs)
 
-    # LOGGER.warning('roledefs: %s', env.roledefs)
+    roles = kwargs.pop('sparks_roles', ['__all__'])
+    non_empty = non_empty_roles(roles)
+
+    # If execute_or_not() is called without sparks_roles, there is a chance
+    # the user picked some roles / hosts manually with “R:” / “H:” fabric
+    # pseudo-tasks. In this case, pick them on-the-fly, else we won't have
+    # any host to run on, while in fact the user has selected some.
+    if not non_empty \
+        and getattr(env, 'roles_picked', False) \
+            or getattr(env, 'hosts_picked', False):
+        non_empty = non_empty_roles(env.roledefs.keys())
+
     LOGGER.debug(u'Running task %s on roles: %s, current_context: %s, '
-                 u'matching: %s', task, roles, non_empty,
+                 u'matching: %s', task.func_name, roles, non_empty,
                  env.roledefs.get(roles[0], []))
 
     # Reset in case. The role should be found preferably in
@@ -266,18 +294,20 @@ def execute_or_not(task, *args, **kwargs):
                          args, kwargs, ', '.join(roles))
 
 
-def merge_roles_hosts():
+def merge_roles_hosts(roledefs):
     """ Get an exhaustive list of all machines listed
         in the current ``env.roledefs``. """
 
     merged = set()
 
-    for role in env.roledefs.keys():
-        merged.union(env.roledefs[role])
+    # LOGGER.debug(u'Roles to merge: %s', u', '.join(roledefs.keys()))
 
-    LOGGER.debug(u'Merged host list: %s', u', '.join(merged))
+    for role in roledefs.keys():
+        merged |= set(roledefs[role])
 
-    return list(merged)
+    # LOGGER.debug(u'Merged host list: %s', u', '.join(merged))
+
+    return sorted(list(merged))
 
 
 def set_roledefs_and_parallel(roledefs, parallel=False):
@@ -320,14 +350,22 @@ def set_roledefs_and_parallel(roledefs, parallel=False):
 
     env.roledefs = roledefs
 
+    # LOGGER.debug(u'Fabric roledefs set to: %s', env.roledefs)
+
     # pre-set empty roles with empty lists to avoid the beautiful:
     #   Fatal error: The following specified roles do not exist:
     #       worker
+    existing_roles = env.roledefs.keys()
+
     for key in all_roles:
-        env.roledefs.setdefault(key, [])
+        # we do not use .setdefault()
+        if key not in existing_roles:
+            env.roledefs[key] = []
 
     # merge all hosts for tasks that can run on any of them.
-    env.roledefs['__all__'] = merge_roles_hosts()
+    env.roledefs.update({
+        '__all__': merge_roles_hosts(env.roledefs),
+    })
 
     LOGGER.debug(u'set_roledefs_and_parallel(): role “__all__” includes %s',
                  u', '.join(env.roledefs['__all__']))
@@ -348,6 +386,9 @@ def set_roledefs_and_parallel(roledefs, parallel=False):
             if parallel > 1:
                 env.parallel = True
                 env.pool_size = maximum if parallel > maximum else parallel
+
+    # LOGGER.debug(u'ROLEDEFS AFTER set_roledefs_and_parallel(): %s',
+    #              env.roledefs)
 
 
 def generate_random_name():
