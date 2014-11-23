@@ -35,14 +35,14 @@ try:
     from fabric.colors           import cyan
 
     # imported from utils
-    from fabric.contrib.files    import exists # NOQA
+    from fabric.contrib.files    import exists  # NOQA
 
     # used in sparks submodules, not directly here. Thus the # NOQA.
-    from fabric.api              import task # NOQA
-    from fabric.context_managers import cd # NOQA
-    from fabric.colors           import green # NOQA
+    from fabric.api              import task  # NOQA
+    from fabric.context_managers import cd  # NOQA
+    from fabric.colors           import green  # NOQA
 
-    #if not env.all_hosts:
+    # if not env.all_hosts:
     #    env.host_string = 'localhost'
 
     _wrap_fabric = False
@@ -85,10 +85,10 @@ except ImportError:
     # Everything will fail except the base system detection. We define the bare
     # minimum for it to work on a local Linux/OSX system.
 
-    run    = nofabric.run # NOQA
-    local  = nofabric.local # NOQA
-    sudo   = nofabric.sudo # NOQA
-    exists = nofabric.exists # NOQA
+    run    = nofabric.run  # NOQA
+    local  = nofabric.local  # NOQA
+    sudo   = nofabric.sudo  # NOQA
+    exists = nofabric.exists  # NOQA
 
 
 # Global way to turn all of this module silent.
@@ -194,7 +194,7 @@ def execute_or_not(task, *args, **kwargs):
 
     # execute kwargs: host, hosts, role, roles and exclude_hosts
 
-    roles = kwargs.pop('sparks_roles', ['__any__'])
+    roles = kwargs.pop('sparks_roles', ['__all__'])
     non_empty = [role for role in roles if env.roledefs.get(role, []) != []]
 
     # LOGGER.warning('roledefs: %s', env.roledefs)
@@ -327,10 +327,10 @@ def set_roledefs_and_parallel(roledefs, parallel=False):
         env.roledefs.setdefault(key, [])
 
     # merge all hosts for tasks that can run on any of them.
-    env.roledefs['__any__'] = merge_roles_hosts()
+    env.roledefs['__all__'] = merge_roles_hosts()
 
-    LOGGER.debug(u'set_roledefs_and_parallel(): role “__any__” includes %s',
-                 u', '.join(env.roledefs['__any__']))
+    LOGGER.debug(u'set_roledefs_and_parallel(): role “__all__” includes %s',
+                 u', '.join(env.roledefs['__all__']))
 
     if parallel is True:
         env.parallel = True

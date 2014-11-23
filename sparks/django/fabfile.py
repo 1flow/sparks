@@ -1328,7 +1328,7 @@ def git_pull(filename=None, confirm=True):
     """ Sparks wrapper task for :func:`git_pull_task`. """
 
     # re-wrap the internal task via execute() to catch roledefs.
-    # TODO: roles should be "__any__".except('db')
+    # TODO: roles should be "__all__".except('db')
     execute_or_not(git_pull_task, sparks_roles=['web'] + worker_roles[:]
                    + ['beat', 'flower', 'shell'])
 
@@ -1353,7 +1353,7 @@ def git_clean():
     """ Sparks wrapper task for :func:`git_clean_task`. """
 
     # re-wrap the internal task via execute() to catch roledefs.
-    # TODO: roles should be "__any__".except('db')
+    # TODO: roles should be "__all__".except('db')
     execute_or_not(git_clean_task, sparks_roles=['web'] + worker_roles[:]
                    + ['beat', 'flower', 'shell'])
 
@@ -2119,12 +2119,12 @@ def runable(fast=False, upgrade=False):
 
     if not fast:
         # Ensure Git is installed.
-        execute_or_not(fabfile.dev_mini, sparks_roles=('__any__', ))
+        execute_or_not(fabfile.dev_mini, sparks_roles=('__all__', ))
 
-        execute_or_not(init_environment, sparks_roles=('__any__', ))
+        execute_or_not(init_environment, sparks_roles=('__all__', ))
 
         execute_or_not(install_components, upgrade=upgrade,
-                       sparks_roles=('__any__', ))
+                       sparks_roles=('__all__', ))
 
 
     # Push everything first.
