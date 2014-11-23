@@ -182,9 +182,10 @@ def execute_or_not(task, *args, **kwargs):
     roles = kwargs.pop('sparks_roles', ['__any__'])
     non_empty = [role for role in roles if env.roledefs.get(role, []) != []]
 
-    #LOGGER.warning('roledefs: %s', env.roledefs)
-    #LOGGER.warning('roles: %s, current_context:%s, matching: %s',
-    #               roles, non_empty, env.roledefs.get(roles[0], []))
+    # LOGGER.warning('roledefs: %s', env.roledefs)
+    LOGGER.debug(u'Running task %s on roles: %s, current_context: %s, '
+                 u'matching: %s', task, roles, non_empty,
+                 env.roledefs.get(roles[0], []))
 
     # Reset in case. The role should be found preferably in
     # env.host_string.role, but in ONE case (when running sparks
@@ -218,9 +219,9 @@ def execute_or_not(task, *args, **kwargs):
                 # If the user manually specified a host string / list,
                 # we must not add superfluous roles / machines.
 
-                # LOGGER.info(u'Multi-run mode: execute(%s, *%s, **%s) '
-                #             u'with %s, %s and %s.', task, args, kwargs,
-                #             env.host_string, env.hosts, env.roles)
+                LOGGER.debug(u'Multi-run mode: execute(%s, *%s, **%s) '
+                             u'with %s, %s and %s.', task, args, kwargs,
+                             env.host_string, env.hosts, env.roles)
 
                 # NOTE: don't use Fabric's execute(), it duplicates tasks.
                 return task(*args, **kwargs)
@@ -239,8 +240,8 @@ def execute_or_not(task, *args, **kwargs):
         if non_empty:
             kwargs['roles'] = non_empty
 
-            #LOGGER.info('One-shot mode: execute(%s, *%s, **%s)',
-            #            task, args, kwargs)
+            LOGGER.debug(u'One-shot mode: execute(%s, *%s, **%s)',
+                         task, args, kwargs)
 
             return execute(task, *args, **kwargs)
 

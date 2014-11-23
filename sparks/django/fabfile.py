@@ -739,7 +739,7 @@ def run_command(cmd):
     """
 
     # Wrap the real task to eventually run on all hosts it none specified.
-    execute_or_not(run_command_task, cmd)
+    execute_or_not(run_command_task, cmd, *args, **kwargs)
 
 
 @task
