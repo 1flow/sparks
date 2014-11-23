@@ -1005,23 +1005,26 @@ def find_configuration_type(hostname):
         return RemoteConfiguration(hostname)
 
 
-if QUIET:
-    logging.basicConfig(format=
-                        '%(asctime)s %(name)s[%(levelname)s] %(message)s',
-                        level=logging.WARNING)
+if os.environ.get('SPARKS_PARAMIKO_VERBOSE', False):
+    paramiko_logging_level = logging.WARNING
+else:
+    # but please, no paramiko, it's just flooding my terminal.
+    paramiko_logging_level = logging.ERROR
 
-    if not os.environ.get('SPARKS_PARAMIKO_VERBOSE', False):
-        # but please, no paramiko, it's just flooding my terminal.
-        logging.getLogger('paramiko').setLevel(logging.ERROR)
+if DEBUG:
+    sparks_logging_level = logging.DEBUG
+
+elif QUIET:
+    sparks_logging_level = logging.WARNING
 
 else:
-    logging.basicConfig(format=
-                        '%(asctime)s %(name)s[%(levelname)s] %(message)s',
-                        level=logging.INFO)
+    sparks_logging_level = logging.INFO
 
-    if not os.environ.get('SPARKS_PARAMIKO_VERBOSE', False):
-        # but please, no paramiko, it's just flooding my terminal.
-        logging.getLogger('paramiko').setLevel(logging.WARNING)
+logging.basicConfig(
+    format='%(asctime)s %(name)s[%(levelname)s] %(message)s',
+    level=sparks_logging_level
+)
+logging.getLogger('paramiko').setLevel(paramiko_logging_level)
 
 if local_configuration is None:
     local_configuration = LocalConfiguration()
