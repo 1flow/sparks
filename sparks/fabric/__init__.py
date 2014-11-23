@@ -272,8 +272,8 @@ def merge_roles_hosts():
 
     merged = set()
 
-    for role, hosts in env.roledefs.items():
-        merged.union(hosts)
+    for role in env.roledefs.keys():
+        merged.union(env.roledefs[role])
 
     LOGGER.debug(u'Merged host list: %s', u', '.join(merged))
 
