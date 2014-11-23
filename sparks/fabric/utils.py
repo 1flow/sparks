@@ -21,9 +21,9 @@ if SPARKS_DOTFILES_PATH is None:
         SPARKS_DOTFILES_PATH = 'Dropbox/configuration/dotfiles'
 
     else:
-       LOGGER.info(u'Please define shell variable SPARKS_DOTFILES_PATH '
-                   u'if you would like to benefit from sparks personal '
-                   u'deployment facilities.')
+        LOGGER.info(u'Please define shell variable SPARKS_DOTFILES_PATH '
+                    u'if you would like to benefit from sparks personal '
+                    u'deployment facilities.')
 else:
     LOGGER.info(u'Using SPARKS_DOTFILES_PATH="%s".', SPARKS_DOTFILES_PATH)
 
@@ -33,7 +33,7 @@ def list_or_split(pkgs):
         return (p for p in pkgs.split() if p not in ('', None, ))
 
     except AttributeError:
-        #if type(pkgs) in (types.TupleType, types.ListType):
+        # if type(pkgs) in (types.TupleType, types.ListType):
         return pkgs
 
 
