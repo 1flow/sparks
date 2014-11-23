@@ -35,14 +35,14 @@ try:
     from fabric.colors           import cyan
 
     # imported from utils
-    from fabric.contrib.files    import exists # NOQA
+    from fabric.contrib.files    import exists  # NOQA
 
     # used in sparks submodules, not directly here. Thus the # NOQA.
-    from fabric.api              import task # NOQA
-    from fabric.context_managers import cd # NOQA
-    from fabric.colors           import green # NOQA
+    from fabric.api              import task  # NOQA
+    from fabric.context_managers import cd  # NOQA
+    from fabric.colors           import green  # NOQA
 
-    #if not env.all_hosts:
+    # if not env.all_hosts:
     #    env.host_string = 'localhost'
 
     _wrap_fabric = False
@@ -85,15 +85,15 @@ except ImportError:
     # Everything will fail except the base system detection. We define the bare
     # minimum for it to work on a local Linux/OSX system.
 
-    run    = nofabric.run # NOQA
-    local  = nofabric.local # NOQA
-    sudo   = nofabric.sudo # NOQA
-    exists = nofabric.exists # NOQA
+    run    = nofabric.run  # NOQA
+    local  = nofabric.local  # NOQA
+    sudo   = nofabric.sudo  # NOQA
+    exists = nofabric.exists  # NOQA
 
 
 # Global way to turn all of this module silent.
 DEBUG = bool(os.environ.get('SPARKS_DEBUG', False))
-QUIET = not DEBUG and not bool(os.environ.get('SPARKS_VERBOSE', False))
+QUIET = not DEBUG and not bool(os.environ.get('SPARKS_VERBOSE', True))
 LOGGER = logging.getLogger(__name__)
 remote_configuration = None
 local_configuration  = None
@@ -124,6 +124,7 @@ for worker_type, worker_name in (
     ('worker_sync',       'Synchronization'),
     ('worker_articles',   'Articles'),
     ('worker_longtasks',  'Long tasks'),
+    ('worker_permanent',  'Permanent tasks'),
     ('worker_swarm',      'Swarm-processing'),
     ('worker_check',      'Checker'),
     ('worker_create',     'Create'),
@@ -159,6 +160,39 @@ worker_roles = [r for r in all_roles if r.startswith('worker')]
 
 # ===================================================== Fabric helper functions
 
+
+def custom_roles():
+    """ Return custom roles defined in the fabfile, in `worker_information`. """
+
+    custom_roles = [
+        role for role in getattr(
+            env, 'sparks_options', {}).get(
+                'worker_information', {}).keys() if role.startswith('worker')
+    ]
+
+    LOGGER.debug(u'Custom roles picked: %s', u', '.join(custom_roles))
+
+    return custom_roles
+
+
+def non_empty_roles(roles):
+    """ Keep only non-empty roles. """
+
+    non_empty = []
+
+    # LOGGER.debug(u'__all__ is: %s', env.roledefs.get('__all__'))
+    # LOGGER.debug(u'roles is: %s', roles)
+
+    for role in roles:
+        if env.roledefs.get(role, []) != []:
+            non_empty.append(role)
+
+        # else:
+        #     LOGGER.debug(u'Role %s has no host, removing.', role)
+
+    return non_empty
+
+
 def execute_or_not(task, *args, **kwargs):
     """ Run Fabric's execute(), but only if there are hosts/roles to run it on.
         Else, just discard the task, and print a warning message.
@@ -178,12 +212,23 @@ def execute_or_not(task, *args, **kwargs):
 
     # execute kwargs: host, hosts, role, roles and exclude_hosts
 
-    roles = kwargs.pop('sparks_roles', ['__any__'])
-    non_empty = [role for role in roles if env.roledefs.get(role, []) != []]
+    # LOGGER.debug(u'ROLEDEFS AT execute_or_not(): %s', env.roledefs)
 
-    #LOGGER.warning('roledefs: %s', env.roledefs)
-    #LOGGER.warning('roles: %s, current_context:%s, matching: %s',
-    #               roles, non_empty, env.roledefs.get(roles[0], []))
+    roles = kwargs.pop('sparks_roles', ['__all__'])
+    non_empty = non_empty_roles(roles)
+
+    # If execute_or_not() is called without sparks_roles, there is a chance
+    # the user picked some roles / hosts manually with “R:” / “H:” fabric
+    # pseudo-tasks. In this case, pick them on-the-fly, else we won't have
+    # any host to run on, while in fact the user has selected some.
+    if not non_empty \
+        and getattr(env, 'roles_picked', False) \
+            or getattr(env, 'hosts_picked', False):
+        non_empty = non_empty_roles(env.roledefs.keys())
+
+    LOGGER.debug(u'Running task %s on roles: %s, current_context: %s, '
+                 u'matching: %s', task.func_name, roles, non_empty,
+                 env.roledefs.get(roles[0], []))
 
     # Reset in case. The role should be found preferably in
     # env.host_string.role, but in ONE case (when running sparks
@@ -217,9 +262,9 @@ def execute_or_not(task, *args, **kwargs):
                 # If the user manually specified a host string / list,
                 # we must not add superfluous roles / machines.
 
-                # LOGGER.info(u'Multi-run mode: execute(%s, *%s, **%s) '
-                #             u'with %s, %s and %s.', task, args, kwargs,
-                #             env.host_string, env.hosts, env.roles)
+                LOGGER.debug(u'Multi-run mode: execute(%s, *%s, **%s) '
+                             u'with %s, %s and %s.', task, args, kwargs,
+                             env.host_string, env.hosts, env.roles)
 
                 # NOTE: don't use Fabric's execute(), it duplicates tasks.
                 return task(*args, **kwargs)
@@ -238,8 +283,8 @@ def execute_or_not(task, *args, **kwargs):
         if non_empty:
             kwargs['roles'] = non_empty
 
-            #LOGGER.info('One-shot mode: execute(%s, *%s, **%s)',
-            #            task, args, kwargs)
+            LOGGER.debug(u'One-shot mode: execute(%s, *%s, **%s)',
+                         task, args, kwargs)
 
             return execute(task, *args, **kwargs)
 
@@ -249,16 +294,20 @@ def execute_or_not(task, *args, **kwargs):
                          args, kwargs, ', '.join(roles))
 
 
-def merge_roles_hosts():
+def merge_roles_hosts(roledefs):
     """ Get an exhaustive list of all machines listed
         in the current ``env.roledefs``. """
 
-    merged = []
+    merged = set()
 
-    for role in env.roledefs:
-        merged.extend(env.roledefs[role])
+    # LOGGER.debug(u'Roles to merge: %s', u', '.join(roledefs.keys()))
 
-    return merged
+    for role in roledefs.keys():
+        merged |= set(roledefs[role])
+
+    # LOGGER.debug(u'Merged host list: %s', u', '.join(merged))
+
+    return sorted(list(merged))
 
 
 def set_roledefs_and_parallel(roledefs, parallel=False):
@@ -301,14 +350,25 @@ def set_roledefs_and_parallel(roledefs, parallel=False):
 
     env.roledefs = roledefs
 
+    # LOGGER.debug(u'Fabric roledefs set to: %s', env.roledefs)
+
     # pre-set empty roles with empty lists to avoid the beautiful:
     #   Fatal error: The following specified roles do not exist:
     #       worker
+    existing_roles = env.roledefs.keys()
+
     for key in all_roles:
-        env.roledefs.setdefault(key, [])
+        # we do not use .setdefault()
+        if key not in existing_roles:
+            env.roledefs[key] = []
 
     # merge all hosts for tasks that can run on any of them.
-    env.roledefs['__any__'] = merge_roles_hosts()
+    env.roledefs.update({
+        '__all__': merge_roles_hosts(env.roledefs),
+    })
+
+    LOGGER.debug(u'set_roledefs_and_parallel(): role “__all__” includes %s',
+                 u', '.join(env.roledefs['__all__']))
 
     if parallel is True:
         env.parallel = True
@@ -326,6 +386,9 @@ def set_roledefs_and_parallel(roledefs, parallel=False):
             if parallel > 1:
                 env.parallel = True
                 env.pool_size = maximum if parallel > maximum else parallel
+
+    # LOGGER.debug(u'ROLEDEFS AFTER set_roledefs_and_parallel(): %s',
+    #              env.roledefs)
 
 
 def generate_random_name():
@@ -1003,23 +1066,26 @@ def find_configuration_type(hostname):
         return RemoteConfiguration(hostname)
 
 
-if QUIET:
-    logging.basicConfig(format=
-                        '%(asctime)s %(name)s[%(levelname)s] %(message)s',
-                        level=logging.WARNING)
+if os.environ.get('SPARKS_PARAMIKO_VERBOSE', False):
+    paramiko_logging_level = logging.WARNING
+else:
+    # but please, no paramiko, it's just flooding my terminal.
+    paramiko_logging_level = logging.ERROR
 
-    if not os.environ.get('SPARKS_PARAMIKO_VERBOSE', False):
-        # but please, no paramiko, it's just flooding my terminal.
-        logging.getLogger('paramiko').setLevel(logging.ERROR)
+if DEBUG:
+    sparks_logging_level = logging.DEBUG
+
+elif QUIET:
+    sparks_logging_level = logging.WARNING
 
 else:
-    logging.basicConfig(format=
-                        '%(asctime)s %(name)s[%(levelname)s] %(message)s',
-                        level=logging.INFO)
+    sparks_logging_level = logging.INFO
 
-    if not os.environ.get('SPARKS_PARAMIKO_VERBOSE', False):
-        # but please, no paramiko, it's just flooding my terminal.
-        logging.getLogger('paramiko').setLevel(logging.WARNING)
+logging.basicConfig(
+    format='%(asctime)s %(name)s[%(levelname)s] %(message)s',
+    level=sparks_logging_level
+)
+logging.getLogger('paramiko').setLevel(paramiko_logging_level)
 
 if local_configuration is None:
     local_configuration = LocalConfiguration()

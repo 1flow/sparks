@@ -1197,8 +1197,8 @@ def requirements(fast=False, upgrade=False):
                        sparks_roles=roles_to_run)
 
 
-
 def push_environment_task(project_envs_dir, fast=False, force=False):
+    """ Push environment file (Fabric task). """
 
     role_name = get_current_role()
 
@@ -1328,7 +1328,7 @@ def git_pull(filename=None, confirm=True):
     """ Sparks wrapper task for :func:`git_pull_task`. """
 
     # re-wrap the internal task via execute() to catch roledefs.
-    # TODO: roles should be "__any__".except('db')
+    # TODO: roles should be "__all__".except('db')
     execute_or_not(git_pull_task, sparks_roles=['web'] + worker_roles[:]
                    + ['beat', 'flower', 'shell'])
 
@@ -1353,7 +1353,7 @@ def git_clean():
     """ Sparks wrapper task for :func:`git_clean_task`. """
 
     # re-wrap the internal task via execute() to catch roledefs.
-    # TODO: roles should be "__any__".except('db')
+    # TODO: roles should be "__all__".except('db')
     execute_or_not(git_clean_task, sparks_roles=['web'] + worker_roles[:]
                    + ['beat', 'flower', 'shell'])
 
@@ -2119,12 +2119,12 @@ def runable(fast=False, upgrade=False):
 
     if not fast:
         # Ensure Git is installed.
-        execute_or_not(fabfile.dev_mini, sparks_roles=('__any__', ))
+        execute_or_not(fabfile.dev_mini, sparks_roles=('__all__', ))
 
-        execute_or_not(init_environment, sparks_roles=('__any__', ))
+        execute_or_not(init_environment, sparks_roles=('__all__', ))
 
         execute_or_not(install_components, upgrade=upgrade,
-                       sparks_roles=('__any__', ))
+                       sparks_roles=('__all__', ))
 
 
     # Push everything first.
@@ -2221,7 +2221,10 @@ def role(*roles):
 
     """
 
-    #LOGGER.info('before role-picking: %s %s', env.roledefs.keys(), roles)
+    LOGGER.debug(u'before role-picking: env.roledefs=%s', env.roledefs.keys())
+    LOGGER.debug(u'Roles to keep: %s', roles)
+
+    roledefs = env.roledefs.copy()
 
     # Don't use 'in env.roledefs', or only if you want to hit
     # 'RuntimeError: dictionary changed size during iteration'
@@ -2229,7 +2232,9 @@ def role(*roles):
         if role in roles:
             continue
 
-        del env.roledefs[role]
+        del roledefs[role]
+
+    env.roledefs = roledefs
 
     # This special case requires a special patch ;-)
     if len(env.roledefs.get('beat', [])) == 0:
@@ -2237,7 +2242,9 @@ def role(*roles):
         sparks_options['no_warn_for_missing_beat'] = True
         env.sparks_options = sparks_options
 
-    #LOGGER.info('after role-picking: %s %s', env.roledefs.keys())
+    env.roles_picked = True
+
+    LOGGER.debug('after role-picking: env.roledefs=%s', env.roledefs.keys())
 
 
 @task(aliases=('cherry-pick', 'select', 'hosts', 'H'))
@@ -2268,6 +2275,9 @@ def pick(*machines):
             if he reads too fast. Jeff, I just **loooove** ``Fabric`` ;-)
     """
 
+    LOGGER.debug('before machines-picking: env.roledefs=%s machines=%s',
+                 env.roledefs.keys(), machines)
+
     if len(machines) == 1:
         # Avoid messing with my fabfile switching
         # this on and off everytime something fails.
@@ -2285,3 +2295,8 @@ def pick(*machines):
         sparks_options = getattr(env, 'sparks_options', {})
         sparks_options['no_warn_for_missing_beat'] = True
         env.sparks_options = sparks_options
+
+    env.hosts_picked = True
+
+    LOGGER.debug('after machines-picking: env.roledefs=%s',
+                 env.roledefs.keys())
