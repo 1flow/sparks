@@ -2221,8 +2221,10 @@ def role(*roles):
 
     """
 
-    LOGGER.debug(u'before role-picking: env.roledefs=%s roles=%s',
-                 env.roledefs.keys(), roles)
+    LOGGER.debug(u'before role-picking: env.roledefs=%s', env.roledefs.keys())
+    LOGGER.debug(u'Roles to keep: %s', roles)
+
+    roledefs = env.roledefs.copy()
 
     # Don't use 'in env.roledefs', or only if you want to hit
     # 'RuntimeError: dictionary changed size during iteration'
@@ -2230,13 +2232,17 @@ def role(*roles):
         if role in roles:
             continue
 
-        del env.roledefs[role]
+        del roledefs[role]
+
+    env.roledefs = roledefs
 
     # This special case requires a special patch ;-)
     if len(env.roledefs.get('beat', [])) == 0:
         sparks_options = getattr(env, 'sparks_options', {})
         sparks_options['no_warn_for_missing_beat'] = True
         env.sparks_options = sparks_options
+
+    env.roles_picked = True
 
     LOGGER.debug('after role-picking: env.roledefs=%s', env.roledefs.keys())
 
@@ -2289,6 +2295,8 @@ def pick(*machines):
         sparks_options = getattr(env, 'sparks_options', {})
         sparks_options['no_warn_for_missing_beat'] = True
         env.sparks_options = sparks_options
+
+    env.hosts_picked = True
 
     LOGGER.debug('after machines-picking: env.roledefs=%s',
                  env.roledefs.keys())
