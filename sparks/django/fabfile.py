@@ -727,7 +727,7 @@ class ServiceRunner(SimpleObject):
 
 
 @task(aliases=('command', 'cmd'))
-def run_command(cmd):
+def run_command(cmd, **kwargs):
     """ Run a command on the remote side.
 
     The command will be run inside the virtualenv and ch'ed
@@ -739,7 +739,7 @@ def run_command(cmd):
     """
 
     # Wrap the real task to eventually run on all hosts it none specified.
-    execute_or_not(run_command_task, cmd)
+    execute_or_not(run_command_task, cmd, **kwargs)
 
 
 @task
@@ -1186,7 +1186,7 @@ def requirements(fast=False, upgrade=False):
             with other fab tasks which handle it.
     """
 
-    roles_to_run = set(all_roles)
+    roles_to_run = list(set(all_roles))
 
     for req_task in (pre_requirements_task,
                      requirements_task,
