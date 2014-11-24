@@ -1186,7 +1186,7 @@ def requirements(fast=False, upgrade=False):
             with other fab tasks which handle it.
     """
 
-    roles_to_run = set(all_roles)
+    roles_to_run = list(set(all_roles))
 
     for req_task in (pre_requirements_task,
                      requirements_task,
