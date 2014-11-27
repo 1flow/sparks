@@ -273,7 +273,7 @@ class DRFLoggerMixin(object):
             data = request.DATA
 
         except:
-            LOGGER.exception('Exception while getting request.DATA')
+            data = None
 
         else:
             try:
@@ -287,28 +287,28 @@ class DRFLoggerMixin(object):
             # dict((regex.sub('', header), value) for (header, value)
             #        in request.META.items() if header.startswith('HTTP_'))
 
-            LOGGER.info(u'%(method)s request on “%(path)s” for %(user)s '
-                        u'from %(origin)s (%(useragent)s):\n'
-                        u'auth: %(auth)s, authenticators: [\n%(auths)s\n]\n'
-                        u'content-type: %(content)s\n'
-                        u'data: %(data)s\n'
-                        u'files: {\n    %(files)s\n}' % {
-                            'method': request.method,
-                            'user': request.user.username,
-                            'path': request.get_full_path(),
-                            'origin': request.META.get('HTTP_HOST', u'Unknown'),
-                            'useragent': request.META.get('HTTP_USER_AGENT',
-                                                          u'Unknown'),
-                            'auth': request.auth,
-                            'auths': u'\n    '.join(
-                                unicode(x) for x in request.authenticators),
-                            'data': data,
-                            'files': u'\n    '.join(
-                                u'%s: %s' % (k, v)
-                                for k, v in sorted(request.FILES.items())
-                            ),
-                            'content': request.content_type,
-                        }
-                        )
+        LOGGER.info(u'%(method)s request on “%(path)s” for %(user)s '
+                    u'from %(origin)s (%(useragent)s):\n'
+                    u'auth: %(auth)s, authenticators: [\n%(auths)s\n]\n'
+                    u'content-type: %(content)s\n'
+                    u'data: %(data)s\n'
+                    u'files: {\n    %(files)s\n}' % {
+                        'method': request.method,
+                        'user': request.user.username,
+                        'path': request.get_full_path(),
+                        'origin': request.META.get('HTTP_HOST', u'Unknown'),
+                        'useragent': request.META.get('HTTP_USER_AGENT',
+                                                      u'Unknown'),
+                        'auth': request.auth,
+                        'auths': u'\n    '.join(
+                            unicode(x) for x in request.authenticators),
+                        'data': data,
+                        'files': u'\n    '.join(
+                            u'%s: %s' % (k, v)
+                            for k, v in sorted(request.FILES.items())
+                        ),
+                        'content': request.content_type,
+                    }
+                    )
 
         return super(DRFLoggerMixin, self).initial(request, *args, **kwargs)
