@@ -1014,6 +1014,7 @@ def new_fixture_filename(app_model, custom_suffix=None):
 
     except:
         try:
+            from django.conf import settings
             project = settings.PROJECT_ROOT
 
         except:
