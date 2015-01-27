@@ -993,23 +993,23 @@ def get_all_fixtures(order_by=None):
         raise RuntimeError('Bad order_by value "{0}"'.format(order_by))
 
 
-def new_fixture_filename(app_model):
+def new_fixture_filename(app_model, custom_suffix=None):
     """
 
         .. versionadded:: 1.16
     """
 
     def fixture_name(base, counter):
-        return '{0}_{1:04d}.json'.format(base, counter)
+        return u'{0}_{1:04d}.json'.format(base, counter)
 
     try:
-        app, model = app_model.split('.', 1)
+        app, model = app_model.split(u'.', 1)
 
     except ValueError:
         app   = app_model
         model = None
 
-    fixtures_dir = os.path.join(env.project, app, 'fixtures')
+    fixtures_dir = os.path.join(env.project, app, u'fixtures')
 
     if not os.path.exists(fixtures_dir):
         os.makedirs(fixtures_dir)
@@ -1017,8 +1017,10 @@ def new_fixture_filename(app_model):
     # WARNING: no dot '.' in fixtures names, else Django fails to install it.
     # 20130514: CommandError: Problem installing fixture 'landing':
     # 2013-05-14_0001 is not a known serialization format.
-    new_fixture_base = os.path.join(fixtures_dir, '{0}{1}_{2}'.format(app,
-                                    '' if model is None else ('.' + model),
+    new_fixture_base = os.path.join(fixtures_dir, u'{0}{1}{2}_{3}'.format(app,
+                                    u'' if model is None else (u'.' + model),
+                                    u'' if custom_suffix is None
+                                    else (u'_' + custom_suffix),
                                     datetime.date.today().isoformat()))
 
     fix_counter = 1
