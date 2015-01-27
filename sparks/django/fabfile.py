@@ -1009,7 +1009,17 @@ def new_fixture_filename(app_model, custom_suffix=None):
         app   = app_model
         model = None
 
-    fixtures_dir = os.path.join(env.project, app, u'fixtures')
+    try:
+        project = env.project
+
+    except:
+        try:
+            project = settings.PROJECT_ROOT
+
+        except:
+            project = '.'
+
+    fixtures_dir = os.path.join(project, app, u'fixtures')
 
     if not os.path.exists(fixtures_dir):
         os.makedirs(fixtures_dir)
