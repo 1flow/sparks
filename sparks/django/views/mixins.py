@@ -64,8 +64,16 @@ class RedirectOnNextView(object):
 
 class FilterMixin(object):
 
-    """
+    u"""
     View mixin which provides filtering for ListView.
+
+    Injects into the context:
+
+    - `self.filter_url_get_key` to get the full filter string into the template.
+    - `self.native_filters` if the attribute exists. It's usually set by the
+      :meth:`filter_queryset` method in case of multi-word or multiple query
+      methods for some filters (eg. “is:active” and “not:closed” will both
+      result in ``self.native_filters['is_active'] = True``).
 
     https://gist.github.com/robgolding63/4097500
     http://www.robgolding.com/blog/2012/11/17/django-class-based-view-mixins-part-2/
@@ -100,6 +108,12 @@ class FilterMixin(object):
         context.update({
             self.filter_url_get_key: self.get_filter_param(),
         })
+
+        if hasattr(self, 'native_filters'):
+            context.update({
+                'native_filters': self.native_filters
+            })
+
         return context
 
 
