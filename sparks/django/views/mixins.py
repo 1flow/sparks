@@ -141,14 +141,26 @@ class SortMixin(object):
         """
 
         if sort_by:
-            try:
-                qs = qs.order_by(sort_by)
 
-            except:
-                LOGGER.exception(u'Could not sort QuerySet by %s', sort_by)
-                # Most probably, the sort_by needs pre/post-processing
-                # by an overriden method. Too bad we couldn't help.
-                pass
+            if isinstance(sort_by, str) or isinstance(sort_by, unicode):
+                try:
+                    qs = qs.order_by(sort_by)
+
+                except:
+                    LOGGER.exception(u'Could not sort QuerySet by %s', sort_by)
+                    # Most probably, the sort_by needs pre/post-processing
+                    # by an overriden method. Too bad we couldn't help.
+                    pass
+
+            else:
+                try:
+                    qs = qs.order_by(*sort_by)
+
+                except:
+                    LOGGER.exception(u'Could not sort QuerySet by %s', sort_by)
+                    # Most probably, the sort_by needs pre/post-processing
+                    # by an overriden method. Too bad we couldn't help.
+                    pass
 
         return qs
 
