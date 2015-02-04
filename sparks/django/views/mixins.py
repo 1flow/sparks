@@ -145,6 +145,7 @@ class SortMixin(object):
                 qs = qs.order_by(sort_by)
 
             except:
+                LOGGER.exception(u'Could not sort QuerySet by %s', sort_by)
                 # Most probably, the sort_by needs pre/post-processing
                 # by an overriden method. Too bad we couldn't help.
                 pass
