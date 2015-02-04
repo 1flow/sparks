@@ -239,7 +239,18 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
 
 class OwnerQuerySetMixin(object):
 
-    """ Now update/delete views filter owner's objects only. """
+    """ Filter the QuerySet to get only owner's objects.
+
+    In case :attr:`superuser_gets_full_queryset` is ``True``,
+    the :meth:`get_queryset` method will honor a special property
+    called ``user.is_staff_or_superuser_and_enabled`` (which is
+    completely optional). This property is assumed to return a boolean
+    value.
+
+    This mechanism is used to allow dynamic filtering in case staff
+    members want to disable their permissions temporarily to get a
+    standard user interface.
+    """
 
     superuser_gets_full_queryset = False
     ownerqueryset_filter = None
@@ -249,8 +260,20 @@ class OwnerQuerySetMixin(object):
 
         qs = super(OwnerQuerySetMixin, self).get_queryset()
 
-        if self.superuser_gets_full_queryset and self.request.user.is_superuser:
-            return qs
+        if self.superuser_gets_full_queryset:
+
+            user = self.request.user
+
+            try:
+                # This is a 1flow specific thing, and
+                # will probably fail everywhere else.
+                really_full = user.is_staff_or_superuser_and_enabled
+
+            except AttributeError:
+                really_full = user.is_superuser
+
+            if really_full:
+                return qs
 
         if self.ownerqueryset_filter:
             kwargs = {self.ownerqueryset_filter: self.request.user}
