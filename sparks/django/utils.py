@@ -103,7 +103,7 @@ def NamedTupleChoices(name, *choices):
                   tuple(aname for aname, value, descr in choices))):
 
         __slots__ = ()
-        _reverse = tuple(value for aname, value, descr in choices)
+        _reverse = tuple(aname for aname, value, descr in choices)
         _choices = tuple(descr for aname, value, descr in choices)
 
         def get_choices(self):
