@@ -28,7 +28,7 @@ from django.core.urlresolvers import reverse
 from django.db.models.query import QuerySet
 
 from sparks.django.templatetags import register
-from sparks.django.utils import NamedTupleChoice
+from sparks.django.utils import NamedTupleChoices
 
 
 # ——————————————————————————————————————————————————————————————————— Internals
@@ -232,7 +232,7 @@ def lookup(d, key, symbolic=None):
         some people. Feel free to scream.
     """
 
-    if isinstance(d, NamedTupleChoice):
+    if isinstance(d, NamedTupleChoices):
         if bool(symbolic):
             return d.symbolic(key)
 
