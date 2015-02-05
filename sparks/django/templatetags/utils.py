@@ -221,7 +221,7 @@ def times(number):
 
 
 @register.filter
-def lookup(d, key, symbolic=None):
+def lookup(d, key):
     """ Get a value from a dictionnary, given a key.
 
     Too bad Django doesn't have this one included.
@@ -233,9 +233,6 @@ def lookup(d, key, symbolic=None):
     """
 
     if isinstance(d, NamedTupleChoices):
-        if bool(symbolic):
-            return d.symbolic(key)
-
         return d.index(key)
 
     try:
@@ -243,6 +240,13 @@ def lookup(d, key, symbolic=None):
 
     except KeyError:
         return d[key]
+
+
+@register.filter
+def symlookup(d, key):
+    """ Get a symbolic value from a named tuple choice. """
+
+    return d.symbolic(key)
 
 
 @register.filter(name='naturalsize')
