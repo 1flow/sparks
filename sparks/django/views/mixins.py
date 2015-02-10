@@ -64,8 +64,16 @@ class RedirectOnNextView(object):
 
 class FilterMixin(object):
 
-    """
+    u"""
     View mixin which provides filtering for ListView.
+
+    Injects into the context:
+
+    - `self.filter_url_get_key` to get the full filter string into the template.
+    - `self.native_filters` if the attribute exists. It's usually set by the
+      :meth:`filter_queryset` method in case of multi-word or multiple query
+      methods for some filters (eg. “is:active” and “not:closed” will both
+      result in ``self.native_filters['is_active'] = True``).
 
     https://gist.github.com/robgolding63/4097500
     http://www.robgolding.com/blog/2012/11/17/django-class-based-view-mixins-part-2/
@@ -100,6 +108,12 @@ class FilterMixin(object):
         context.update({
             self.filter_url_get_key: self.get_filter_param(),
         })
+
+        if hasattr(self, 'native_filters'):
+            context.update({
+                'native_filters': self.native_filters
+            })
+
         return context
 
 
@@ -127,13 +141,26 @@ class SortMixin(object):
         """
 
         if sort_by:
-            try:
-                qs = qs.order_by(sort_by)
 
-            except:
-                # Most probably, the sort_by needs pre/post-processing
-                # by an overriden method. Too bad we couldn't help.
-                pass
+            if isinstance(sort_by, str) or isinstance(sort_by, unicode):
+                try:
+                    qs = qs.order_by(sort_by)
+
+                except:
+                    LOGGER.exception(u'Could not sort QuerySet by %s', sort_by)
+                    # Most probably, the sort_by needs pre/post-processing
+                    # by an overriden method. Too bad we couldn't help.
+                    pass
+
+            else:
+                try:
+                    qs = qs.order_by(*sort_by)
+
+                except:
+                    LOGGER.exception(u'Could not sort QuerySet by %s', sort_by)
+                    # Most probably, the sort_by needs pre/post-processing
+                    # by an overriden method. Too bad we couldn't help.
+                    pass
 
         return qs
 
@@ -225,7 +252,18 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
 
 class OwnerQuerySetMixin(object):
 
-    """ Now update/delete views filter owner's objects only. """
+    """ Filter the QuerySet to get only owner's objects.
+
+    In case :attr:`superuser_gets_full_queryset` is ``True``,
+    the :meth:`get_queryset` method will honor a special property
+    called ``user.is_staff_or_superuser_and_enabled`` (which is
+    completely optional). This property is assumed to return a boolean
+    value.
+
+    This mechanism is used to allow dynamic filtering in case staff
+    members want to disable their permissions temporarily to get a
+    standard user interface.
+    """
 
     superuser_gets_full_queryset = False
     ownerqueryset_filter = None
@@ -235,8 +273,20 @@ class OwnerQuerySetMixin(object):
 
         qs = super(OwnerQuerySetMixin, self).get_queryset()
 
-        if self.superuser_gets_full_queryset and self.request.user.is_superuser:
-            return qs
+        if self.superuser_gets_full_queryset:
+
+            user = self.request.user
+
+            try:
+                # This is a 1flow specific thing, and
+                # will probably fail everywhere else.
+                really_full = user.is_staff_or_superuser_and_enabled
+
+            except AttributeError:
+                really_full = user.is_superuser
+
+            if really_full:
+                return qs
 
         if self.ownerqueryset_filter:
             kwargs = {self.ownerqueryset_filter: self.request.user}
@@ -273,7 +323,7 @@ class DRFLoggerMixin(object):
             data = request.DATA
 
         except:
-            LOGGER.exception('Exception while getting request.DATA')
+            data = None
 
         else:
             try:
@@ -287,28 +337,28 @@ class DRFLoggerMixin(object):
             # dict((regex.sub('', header), value) for (header, value)
             #        in request.META.items() if header.startswith('HTTP_'))
 
-            LOGGER.info(u'%(method)s request on “%(path)s” for %(user)s '
-                        u'from %(origin)s (%(useragent)s):\n'
-                        u'auth: %(auth)s, authenticators: [\n%(auths)s\n]\n'
-                        u'content-type: %(content)s\n'
-                        u'data: %(data)s\n'
-                        u'files: {\n    %(files)s\n}' % {
-                            'method': request.method,
-                            'user': request.user.username,
-                            'path': request.get_full_path(),
-                            'origin': request.META.get('HTTP_HOST', u'Unknown'),
-                            'useragent': request.META.get('HTTP_USER_AGENT',
-                                                          u'Unknown'),
-                            'auth': request.auth,
-                            'auths': u'\n    '.join(
-                                unicode(x) for x in request.authenticators),
-                            'data': data,
-                            'files': u'\n    '.join(
-                                u'%s: %s' % (k, v)
-                                for k, v in sorted(request.FILES.items())
-                            ),
-                            'content': request.content_type,
-                        }
-                        )
+        LOGGER.info(u'%(method)s request on “%(path)s” for %(user)s '
+                    u'from %(origin)s (%(useragent)s):\n'
+                    u'auth: %(auth)s, authenticators: [\n%(auths)s\n]\n'
+                    u'content-type: %(content)s\n'
+                    u'data: %(data)s\n'
+                    u'files: {\n    %(files)s\n}' % {
+                        'method': request.method,
+                        'user': request.user.username,
+                        'path': request.get_full_path(),
+                        'origin': request.META.get('HTTP_HOST', u'Unknown'),
+                        'useragent': request.META.get('HTTP_USER_AGENT',
+                                                      u'Unknown'),
+                        'auth': request.auth,
+                        'auths': u'\n    '.join(
+                            unicode(x) for x in request.authenticators),
+                        'data': data,
+                        'files': u'\n    '.join(
+                            u'%s: %s' % (k, v)
+                            for k, v in sorted(request.FILES.items())
+                        ),
+                        'content': request.content_type,
+                    }
+                    )
 
         return super(DRFLoggerMixin, self).initial(request, *args, **kwargs)

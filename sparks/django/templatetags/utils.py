@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+u"""
 Copyright 2012-2014 Olivier Cortès <oc@1flow.io>.
 
 This file is part of the 1flow project.
@@ -28,6 +28,8 @@ from django.core.urlresolvers import reverse
 from django.db.models.query import QuerySet
 
 from sparks.django.templatetags import register
+from sparks.django.utils import NamedTupleChoices
+
 
 # ——————————————————————————————————————————————————————————————————— Internals
 
@@ -51,7 +53,7 @@ def get_view_name(context):
 
 class CaptureasNode(Node):
 
-    """ Parsing node for “captureas” tag. """
+    u""" Parsing node for “captureas” tag. """
 
     def __init__(self, nodelist, varname):
         """ Hello, pep257. Stop boring me with 2-lines __init__ methods. """
@@ -69,7 +71,7 @@ class CaptureasNode(Node):
 
 class FirstOfAsNode(Node):
 
-    """ Parsing node for “firstofas” tag. """
+    u""" Parsing node for “firstofas” tag. """
 
     def __init__(self, args, variable_name=None):
         """ Hello, pep257. Stop boring me with 2-lines __init__ methods. """
@@ -145,7 +147,7 @@ def firstofas(parser, token):
 
 @register.simple_tag(takes_context=True)
 def reverse_active(context, views_names, return_value=None):
-    """ Return an ``active`` string if the current view matches.
+    u""" Return an ``active`` string if the current view matches.
 
     This is used to mark some CSS classes ``active``. If nothing matches,
     return an empty string.
@@ -213,7 +215,7 @@ def reqpath_active(context, pattern, return_value=None):
 
 @register.filter(name='times')
 def times(number):
-    """ Simply return a Python range 1 → :param:`number`. """
+    u""" Simply return a Python range 1 → :param:`number`. """
 
     return range(number)
 
@@ -230,11 +232,21 @@ def lookup(d, key):
         some people. Feel free to scream.
     """
 
+    if isinstance(d, NamedTupleChoices):
+        return d.index(key)
+
     try:
         return d[int(key)]
 
     except KeyError:
         return d[key]
+
+
+@register.filter
+def symlookup(d, key):
+    """ Get a symbolic value from a named tuple choice. """
+
+    return d.symbolic(key)
 
 
 @register.filter(name='naturalsize')

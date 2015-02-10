@@ -103,10 +103,17 @@ def NamedTupleChoices(name, *choices):
                   tuple(aname for aname, value, descr in choices))):
 
         __slots__ = ()
+        _reverse = tuple(aname for aname, value, descr in choices)
         _choices = tuple(descr for aname, value, descr in choices)
 
         def get_choices(self):
             return zip(tuple(self), self._choices)
+
+        def symbolic(self, index):
+            return self._reverse[index]
+
+        def get(self, index):
+            return self._choices[index]
 
     return Choices._make(tuple(value for aname, value, descr in choices))
 
