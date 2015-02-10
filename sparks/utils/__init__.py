@@ -30,7 +30,7 @@ LOGGER = logging.getLogger(__name__)
 def stats_datetime():
     """ Generate a string from now, suitable for benchmark() calls. """
 
-    return pytime.strftime('%Y-%m-%d %H:%M')
+    return time.strftime('%Y-%m-%d %H:%M')
 
 
 class benchmark(object):
