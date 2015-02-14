@@ -25,7 +25,7 @@ setup(
     packages=find_packages(),
     install_requires=['Fabric', 'paramiko', 'mistune',
                       'pyyaml', 'ua-parser', 'user-agents',
-                      'djangorestframework', ],
+                      'djangorestframework', 'beautifulsoup4', ],
     keywords=(
         'installation',
         'management',
