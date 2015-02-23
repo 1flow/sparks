@@ -42,3 +42,24 @@ def combine_dicts(dict1, dict2):
         output[item] = value
 
     return output
+
+
+def jaccard_similarity(string1, string2):
+    """ Return the Jaccard similarity of 2 strings.
+
+    Strings should be as simple as possible. No stemming, no bells,
+    no whistles. This function is very bare, but does the job if you
+    need simple operations.
+
+    Similarity belongs to [0.0, 1.0], 1.0 means its exact replica (whatever
+    words order).
+    """
+
+    a = set(string1.split())
+    b = set(string2.split())
+
+    similarity = float(
+        len(a.intersection(b)) * 1.0
+        / len(a.union(b)))
+
+    return similarity
