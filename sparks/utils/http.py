@@ -19,6 +19,7 @@ License along with sparks.  If not, see http://www.gnu.org/licenses/
 
 """
 
+import re
 import logging
 import charade
 
@@ -137,14 +138,27 @@ def detect_encoding_from_requests_response(response, meta=False, deep=False):
 
     html_content = BeautifulSoup(response.content, 'lxml')
 
+    found = False
     for meta_header in html_content.head.findAll('meta'):
         for attribute, value in meta_header.attrs.items():
             if attribute.lower() == 'http-equiv':
                 if value.lower() == 'content-type':
-                    content = meta_header.attrs.get('content').lower()
+                    # OMG o_O took time to find this one :
+                    # In [73]: meta_header
+                    # Out[73]: <meta content="text/html; charset=utf-8" …
+                    # In [74]: meta_header.get('content')
+                    # Out[74]: u'text/html; charset=iso-8859-1'
+                    #
+                    # We cannot rely on get('content') and need to
+                    # fallback to good ol' RE searching. Thanks BS4.
+                    content = unicode(meta_header).lower()
                     if 'charset' in content:
-                        encoding = content.split('charset=')[-1]
+                        encoding = re.search('charset=([\w-]*)',
+                                             content, re.I | re.U).group(1)
+                        found = True
                         break
+        if found:
+            break
 
     # If no deeper search is wanted, return it now.
     if encoding not in ('text/html', '', None) and not deep:
