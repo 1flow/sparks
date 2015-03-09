@@ -103,14 +103,19 @@ def detect_encoding_from_requests_response(response, meta=False, deep=False):
                          u'detected %s via `requests` module.',
                          response.encoding)
 
-        return response.encoding
+        # To understand, please read
+        # http://docs.python-requests.org/en/latest/user/advanced/#encodings
+        if response.encoding.lower() != 'iso-8859-1':
+            return response.encoding
 
-    # If requests doesn't bring us any encoding, we have 3 fallback options:
-    # - inspect the server headers ourselves (fast, but rarely they exist,
-    #   and sometimes they are wrong),
-    # - look up the META tags (fast, but sometimes the tag is not
-    #   present or is wrong too),
-    # - detect it via `charade` (slow, but gives good results).
+    # If requests doesn't bring us any encoding or returns 'iso-8859-1',
+    # we have 3 fallback options:
+    # - inspect the server headers ourselves. This is fast, but rarely
+    #   they exist (that's probably why requests failed), and sometimes
+    #   they disagree with META tags,
+    # - look up the META tags. This is fast too, but sometimes the tag
+    #   is not present or the value is wrong too,
+    # - detect it via `charade`. Quite slower, but gives accurate results.
 
     encoding = response.headers.get(
         'content-type', None).lower().split('charset=')[-1]
