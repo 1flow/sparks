@@ -117,11 +117,13 @@ def detect_encoding_from_requests_response(response, meta=False, deep=False):
     #   is not present or the value is wrong too,
     # - detect it via `charade`. Quite slower, but gives accurate results.
 
-    encoding = response.headers.get(
-        'content-type', None).lower().split('charset=')[-1]
+    content_type = response.headers.get('content-type', None)
 
     # If found and no deeper search is wanted, return it.
-    if encoding is not None and not (meta or deep):
+    if content_type is not None and 'charset' in content_type \
+            and not (meta or deep):
+
+        encoding = content_type.lower().split('charset=')[-1]
 
         if __debug__:
             LOGGER.debug(u'detect_encoding_from_requests_response(): '
