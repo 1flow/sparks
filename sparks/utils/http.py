@@ -98,14 +98,14 @@ def detect_encoding_from_requests_response(response, meta=False, deep=False):
 
     if getattr(response, 'encoding', None) and not (meta or deep):
 
-        if __debug__:
-            LOGGER.debug(u'detect_encoding_from_requests_response(): '
-                         u'detected %s via `requests` module.',
-                         response.encoding)
-
         # To understand, please read
         # http://docs.python-requests.org/en/latest/user/advanced/#encodings
         if response.encoding.lower() != 'iso-8859-1':
+            if __debug__:
+                LOGGER.debug(u'detect_encoding_from_requests_response(): '
+                             u'detected %s via `requests` module.',
+                             response.encoding)
+
             return response.encoding
 
     # If requests doesn't bring us any encoding or returns 'iso-8859-1',
@@ -141,12 +141,13 @@ def detect_encoding_from_requests_response(response, meta=False, deep=False):
         for attribute, value in meta_header.attrs.items():
             if attribute.lower() == 'http-equiv':
                 if value.lower() == 'content-type':
-                    content  = meta_header.attrs.get('content')
-                    encoding = content.lower().split('charset=')[-1]
-                    break
+                    content = meta_header.attrs.get('content').lower()
+                    if 'charset' in content:
+                        encoding = content.split('charset=')[-1]
+                        break
 
     # If no deeper search is wanted, return it now.
-    if encoding not in ('text/html', '') and not deep:
+    if encoding not in ('text/html', '', None) and not deep:
 
         if __debug__:
             LOGGER.debug(u'detect_encoding_from_requests_response(): '
