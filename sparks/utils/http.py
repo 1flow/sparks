@@ -20,8 +20,10 @@ License along with sparks.  If not, see http://www.gnu.org/licenses/
 """
 
 import logging
+import charade
 
 from collections import namedtuple
+from bs4 import BeautifulSoup
 
 url_tuple = namedtuple('url', ['scheme', 'host_and_port', 'remaining', ])
 url_port_tuple = namedtuple('url_port',
@@ -77,3 +79,90 @@ def split_url(url, split_port=False):
         return url_port_tuple(proto, hostname, int(port), remaining)
 
     return url_tuple(proto, host_and_port, remaining)
+
+
+def detect_encoding_from_requests_response(response, meta=False, deep=False):
+    """ Try to detect encoding as much as possible.
+
+    :param:`response` beiing a :module:`requests` response, this function
+    will try to detect the encoding as much as possible. Fist, the "normal"
+    response encoding will be tried, else the headers will be parsed, and
+    finally the ``<head>`` of the ``<html>`` content will be parsed. If
+    nothing succeeds, we will rely on :module:`charade` to guess from the
+    content.
+
+    .. todo:: we have to check if content-type is HTML before parsing the
+        headers. For now you should use this function only on responses
+        which you are sure they will contain HTML.
+    """
+
+    if getattr(response, 'encoding', None) and not (meta or deep):
+
+        if __debug__:
+            LOGGER.debug(u'detect_encoding_from_requests_response(): '
+                         u'detected %s via `requests` module.',
+                         response.encoding)
+
+        return response.encoding
+
+    # If requests doesn't bring us any encoding, we have 3 fallback options:
+    # - inspect the server headers ourselves (fast, but rarely they exist,
+    #   and sometimes they are wrong),
+    # - look up the META tags (fast, but sometimes the tag is not
+    #   present or is wrong too),
+    # - detect it via `charade` (slow, but gives good results).
+
+    encoding = response.headers.get(
+        'content-type', None).lower().split('charset=')[-1]
+
+    # If found and no deeper search is wanted, return it.
+    if encoding is not None and not (meta or deep):
+
+        if __debug__:
+            LOGGER.debug(u'detect_encoding_from_requests_response(): '
+                         u'detected %s via server headers.',
+                         encoding)
+
+        return encoding
+
+    # HTTP headers don't contain any encoding.
+    # Search in page head, then try to detect from data.
+
+    html_content = BeautifulSoup(response.content, 'lxml')
+
+    for meta_header in html_content.head.findAll('meta'):
+        for attribute, value in meta_header.attrs.items():
+            if attribute.lower() == 'http-equiv':
+                if value.lower() == 'content-type':
+                    content  = meta_header.attrs.get('content')
+                    encoding = content.lower().split('charset=')[-1]
+                    break
+
+    # If no deeper search is wanted, return it now.
+    if encoding not in ('text/html', '') and not deep:
+
+        if __debug__:
+            LOGGER.debug(u'detect_encoding_from_requests_response(): '
+                         u'detected %s via HTML meta tags.',
+                         encoding)
+
+        return encoding
+
+    try:
+        charade_result = charade.detect(response)
+
+    except:
+        pass
+
+    else:
+        if __debug__:
+            LOGGER.debug(u'detect_encoding_from_requests_response(): '
+                         u'detected %s via `charade` module (with %s%% '
+                         u'confidence).',
+                         charade_result['encoding'],
+                         charade_result['confidence'])
+        return charade_result['encoding']
+
+    LOGGER.critical('detect_encoding_from_requests_response(): could not '
+                    u'detect encoding of %s via all test methods.', response)
+    return None
