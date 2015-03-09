@@ -63,3 +63,20 @@ def jaccard_similarity(string1, string2):
         / len(a.union(b)))
 
     return similarity
+
+
+def lookahead(iterable):
+    """ Yield (item, item_is_last) from iterable. """
+
+    # Cf. http://stackoverflow.com/a/1630350/654755
+
+    it = iter(iterable)
+
+    # next(it) in Python 3
+    last = it.next()
+
+    for val in it:
+        yield last, False
+        last = val
+
+    yield last, True
