@@ -161,7 +161,7 @@ def detect_encoding_from_requests_response(response, meta=False, deep=False):
             break
 
     # If no deeper search is wanted, return it now.
-    if encoding not in ('text/html', '', None) and not deep:
+    if found and encoding not in ('text/html', '', None) and not deep:
 
         if __debug__:
             LOGGER.debug(u'detect_encoding_from_requests_response(): '
