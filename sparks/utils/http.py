@@ -171,7 +171,7 @@ def detect_encoding_from_requests_response(response, meta=False, deep=False):
         return encoding
 
     try:
-        charade_result = charade.detect(response)
+        charade_result = charade.detect(response.content)
 
     except:
         pass
