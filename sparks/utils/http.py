@@ -171,7 +171,7 @@ def detect_encoding_from_requests_response(response, meta=False, deep=False):
         return encoding
 
     try:
-        charade_result = charade.detect(response)
+        charade_result = charade.detect(response.content)
 
     except:
         pass
@@ -182,7 +182,7 @@ def detect_encoding_from_requests_response(response, meta=False, deep=False):
                          u'detected %s via `charade` module (with %s%% '
                          u'confidence).',
                          charade_result['encoding'],
-                         charade_result['confidence'])
+                         charade_result['confidence'] * 100)
         return charade_result['encoding']
 
     LOGGER.critical('detect_encoding_from_requests_response(): could not '
