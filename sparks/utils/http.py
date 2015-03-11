@@ -141,9 +141,16 @@ def detect_encoding_from_requests_response(response, meta=False, deep=False):
     found = False
     for meta_header in html_content.head.findAll('meta'):
         for attribute, value in meta_header.attrs.items():
-            if attribute.lower() == 'http-equiv':
+
+            if attribute.lower() == 'charset':
+                encoding = value
+                found = True
+                break
+
+            elif attribute.lower() == 'http-equiv':
                 if value.lower() == 'content-type':
                     # OMG o_O took time to find this one :
+                    #
                     # In [73]: meta_header
                     # Out[73]: <meta content="text/html; charset=utf-8" …
                     # In [74]: meta_header.get('content')
