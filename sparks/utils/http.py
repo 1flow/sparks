@@ -139,7 +139,14 @@ def detect_encoding_from_requests_response(response, meta=False, deep=False):
     html_content = BeautifulSoup(response.content, 'lxml')
 
     found = False
-    for meta_header in html_content.head.findAll('meta'):
+    try:
+        metas = html_content.head.findAll('meta')
+
+    except AttributeError:
+        # Happens on non-HTML pages (eg. RSS feed, other XML resources…)
+        metas = []
+
+    for meta_header in metas:
         for attribute, value in meta_header.attrs.items():
 
             if attribute.lower() == 'charset':
