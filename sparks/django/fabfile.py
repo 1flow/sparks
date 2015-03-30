@@ -967,7 +967,7 @@ def django_settings_env_var():
         env.project) if hasattr(env, 'project') else ''
 
 
-def get_all_fixtures(order_by=None):
+def get_all_fixtures(root=None, order_by=None):
     """ Find all fixtures files in the current project, eg. files whose name
         ends with ``.json`` and which are located in any `fixtures/` directory.
 
@@ -981,13 +981,17 @@ def get_all_fixtures(order_by=None):
 
     # OMG: http://stackoverflow.com/a/11456468/654755 ILOVESO!
 
+    if root is None:
+        root = u'.'
+
     if order_by is None:
-        return local("find . -name '*.json' -path '*/fixtures/*'",
-                     capture=True).splitlines()
+        return local(u"find {0} -name '*.json' -path '*/fixtures/*'".format(
+                     root), capture=True).splitlines()
 
     elif order_by == 'date':
-        return local("find . -name '*.json' -path '*/fixtures/*' -print0 "
-                     "| xargs -0 ls -1t", capture=True).splitlines()
+        return local(u"find {0} -name '*.json' -path '*/fixtures/*' "
+                     u"-print0 | xargs -0 ls -1t".format(root),
+                     capture=True).splitlines()
 
     else:
         raise RuntimeError('Bad order_by value "{0}"'.format(order_by))
