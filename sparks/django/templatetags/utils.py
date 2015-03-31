@@ -22,7 +22,7 @@ License along with 1flow.  If not, see http://www.gnu.org/licenses/
 import re
 import humanize
 
-from collections import namedtuple
+# from collections import namedtuple
 
 from django.template import Node, TemplateSyntaxError
 from django.utils.encoding import smart_text
@@ -235,14 +235,21 @@ def lookup(d, key):
         some people. Feel free to scream.
     """
 
-    # We cannot test against NamedTupleChoices, it's a def, not a class.
-    if isinstance(d, namedtuple):
+    # We cannot test against NamedTupleChoices nor
+    # namedtuple, they are defs, not classes…
+    try:
         return d.index(key)
 
+    except AttributeError:
+        pass
+
     try:
+        # if we lookup a list, or a dict with
+        # int indices, this could do the trick.
         return d[int(key)]
 
     except KeyError:
+        # It's a simple list.
         return d[key]
 
 
