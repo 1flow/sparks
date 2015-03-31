@@ -270,6 +270,21 @@ class IsSelfOrAdminOrReadOnly(permissions.BasePermission):
         return obj.id == request.user.id
 
 
+class IsAuthenticatedReadOnly(IsOwner):
+
+    """ R/O to authenticated users. """
+
+    def has_object_permission(self, request, view, obj):
+
+        user = request.user
+
+        if request.method in permissions.SAFE_METHODS:
+            if user.is_authenticated():
+                return True
+
+        return False
+
+
 # ——————————————————————————————————————————————————————————— Signals receivers
 
 
