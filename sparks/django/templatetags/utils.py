@@ -22,13 +22,16 @@ License along with 1flow.  If not, see http://www.gnu.org/licenses/
 import re
 import humanize
 
+from collections import namedtuple
+
 from django.template import Node, TemplateSyntaxError
 from django.utils.encoding import smart_text
 from django.core.urlresolvers import reverse
 from django.db.models.query import QuerySet
 
 from sparks.django.templatetags import register
-from sparks.django.utils import NamedTupleChoices
+
+# from sparks.django.utils import NamedTupleChoices
 
 
 # ——————————————————————————————————————————————————————————————————— Internals
@@ -232,7 +235,8 @@ def lookup(d, key):
         some people. Feel free to scream.
     """
 
-    if isinstance(d, NamedTupleChoices):
+    # We cannot test against NamedTupleChoices, it's a def, not a class.
+    if isinstance(d, namedtuple):
         return d.index(key)
 
     try:
