@@ -13,15 +13,18 @@ def unique_hash(only_letters=False):
     return uuid.uuid4().hex
 
 
-def combine_dicts(dict1, dict2):
-    """ Some kind of recursive `update()` for dictionnaries.
+def combine_dicts(dict1, dict2, *args):
+    u""" Some kind of recursive `update()` for dictionnaries.
 
-    Used in place of `update()`, when you know the dicts have sub-dicts,
-    potentially with same names, and you want sub-dicts to be merged (the
-    way `update()` does) instead of one overwring the other.
+    Used in replacement of `update()`, when you know the dicts have
+    sub-dicts in their values, potentially with same keys names, and
+    you want sub-dicts to be also merged the way `update()` does,
+    instead beiing overwritten.
 
-    .. warning: like in `update()`, :param:`dict2` values take precedence
-        over the ones from :param:`dict1`.
+    .. warning: like in dict standard `update()` method, :param:`dict2`
+        values take precedence over the ones from :param:`dict1`. In case
+        you give more than 2 dictionnaries, the last takes precedence
+        over the previous, and so on (eg. “right-most priority”).
     """
 
     # source: http://stackoverflow.com/a/7205234/654755
@@ -40,6 +43,12 @@ def combine_dicts(dict1, dict2):
 
     for item, value in dict2.iteritems():
         output[item] = value
+
+    if args:
+        if len(args) > 1:
+            return combine_dicts(output, args[0], *args[1:])
+
+        return combine_dicts(output, args[0])
 
     return output
 
