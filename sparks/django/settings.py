@@ -10,6 +10,10 @@ from ..fabric import local_configuration as platform
 LOGGER = logging.getLogger(__name__)
 
 
+if 'execfile' not in __builtins__.__dict__:
+    from sparks.utils import execfile
+
+
 def find_settings(settings__file__name):
     """ Returns the first existing settings file, out of:
 
@@ -38,8 +42,12 @@ def find_settings(settings__file__name):
 
         In the file :file:`__init__.py`: just write:
 
-            from sparks.django.settings import find_settings()
+            # for Python 3.x, add this line:
+            from sparks.utils import execfile
+
+            from sparks.django.settings import find_settings
             execfile(find_settings(__file__))
+
 
         The :file:`myhostname_domain_ext.py` and others are completely
         standard settings file. You are free to use them as you like, eg.
