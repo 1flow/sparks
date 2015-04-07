@@ -3,7 +3,6 @@
 
 import os
 import logging
-import __builtins__
 
 from os.path import dirname, abspath, join, exists
 from ..fabric import local_configuration as platform
@@ -11,7 +10,7 @@ from ..fabric import local_configuration as platform
 LOGGER = logging.getLogger(__name__)
 
 
-if 'execfile' not in __builtins__.__dict__:
+if 'execfile' not in __builtins__:
     from sparks.utils import execfile
 
 
