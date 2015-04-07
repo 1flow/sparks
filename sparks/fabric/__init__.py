@@ -16,9 +16,15 @@ except:
     import pickle
 
 try:
+    # The fast Python 2.7.x module
     import cStringIO as StringIO
 except:
-    import StringIO
+    try:
+        # Python 2.x fallback
+        from StringIO import StringIO
+    except ImportError:
+        # Python 3.x
+        from io import StringIO
 
 from ..foundations.classes import SimpleObject
 
