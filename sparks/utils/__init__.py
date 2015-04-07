@@ -20,7 +20,6 @@ License along with sparks.  If not, see http://www.gnu.org/licenses/
 """
 
 import logging
-import __builtins__
 
 import time as time
 from humanize.time import naturaldelta
@@ -61,7 +60,7 @@ class benchmark(object):
         return False
 
 
-if 'execfile' not in __builtins__.__dict__:
+if 'execfile' not in __builtins__:
     def execfile(filename, global_vars, local_vars):
         """ Provide a simple execfile wrapper in Python 3. """
 
