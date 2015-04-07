@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-    A global and environment/host-dependant settings system for Django.
-
-"""
+""" A global and environment/host-dependant settings system for Django. """
 
 import os
 import logging
