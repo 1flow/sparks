@@ -1,4 +1,4 @@
 from .fabric import local_configuration as platform  # NOQA
 
-version = '5.8.1'
+version = '5.9'
 
