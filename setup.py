@@ -27,7 +27,7 @@ setup(
         'Fabric', 'charade', 'paramiko', 'mistune',
         'pyyaml', 'ua-parser', 'user-agents', 'humanize',
         'djangorestframework', 'beautifulsoup4',
-        'dj_database_url',
+        'dj_database_url', 'psycopg2',
     ],
     keywords=(
         'installation',
