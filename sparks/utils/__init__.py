@@ -20,6 +20,8 @@ License along with sparks.  If not, see http://www.gnu.org/licenses/
 """
 
 import logging
+import __builtins__
+
 import time as time
 from humanize.time import naturaldelta
 

@@ -3,6 +3,7 @@
 
 import os
 import logging
+import __builtins__
 
 from os.path import dirname, abspath, join, exists
 from ..fabric import local_configuration as platform
