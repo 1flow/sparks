@@ -57,3 +57,12 @@ class benchmark(object):
         LOGGER.info("%s started %s, ran in %s.", self.name, self.dtstart,
                     naturaldelta(time.time() - self.start))
         return False
+
+
+if 'execfile' not in __builtins__.__dict__:
+    def execfile(filename, global_vars, local_vars):
+        """ Provide a simple execfile wrapper in Python 3. """
+
+        with open(filename) as f:
+            code = compile(f.read(), filename, 'exec')
+            exec(code, global_vars, local_vars)
