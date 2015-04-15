@@ -1096,6 +1096,10 @@ def pre_requirements_task(fast=False, upgrade=False):
 
     role_name = get_current_role()
 
+    if role_name is None:
+        LOGGER.warning(u'no role found, no pre-requirements ran.')
+        return
+
     custom_script = os.path.join(env.root, env.requirements_dir,
                                  role_name + '.sh')
 
@@ -1124,6 +1128,10 @@ def post_requirements_task(fast=False, upgrade=False):
         return
 
     role_name = get_current_role()
+
+    if role_name is None:
+        LOGGER.warning(u'no role found, no post-requirements ran.')
+        return
 
     custom_script = os.path.join(env.root, env.requirements_dir,
                                  role_name + '.sh')
