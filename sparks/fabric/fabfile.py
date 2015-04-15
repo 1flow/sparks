@@ -839,7 +839,13 @@ def dev_web_ruby(remote_configuration=None):
         pkg.pkg_add(('ruby', ))
 
     elif remote_configuration.is_deb:
-        pkg.pkg_add(('ruby', 'ruby-dev', 'rubygems', ))
+        pkg.pkg_add(('ruby', 'ruby-dev', ))
+
+        major_distro_version = \
+            int(remote_configuration.lsb.RELEASE.split('.')[0])
+
+        if major_distro_version < 14:
+            pkg.pkg_add(('rubygems', ))
 
     elif remote_configuration.is_freebsd:
         # Ruby 2.1 is the recommended version for new
