@@ -937,7 +937,7 @@ class activate_venv(object):
             if activate_venv.use_jenkins \
             else 'workon {0}'.format(env.virtualenv)
 
-        if env_file and is_local_environment():
+        if env_file and is_development_environment():
             LOGGER.info(u'Sourcing environment file %s', env_file)
 
             base_prefix += '; source {0}'.format(env_file)
