@@ -927,10 +927,20 @@ class activate_venv(object):
                                                           '.project')
                 activate_venv.has_project  = exists(activate_venv.project_file)
 
-        self.my_prefix = prefix(
-            'source {0}/venv/bin/activate'.format(env.root)) \
+        env_dir = get_project_envs_dir()
+        if env_dir:
+            env_file = get_environment_file(env_dir)
+        else:
+            env_file = None
+
+        base_prefix = 'source {0}/venv/bin/activate'.format(env.root) \
             if activate_venv.use_jenkins \
-            else prefix('workon %s' % env.virtualenv)
+            else 'workon {0}'.format(env.virtualenv)
+
+        if env_file:
+            base_prefix += '; . {0}'.format(env_file)
+
+        self.my_prefix = prefix(base_prefix)
 
     def __call__(self, *args, **kwargs):
         return self
