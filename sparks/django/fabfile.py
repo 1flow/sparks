@@ -1221,13 +1221,52 @@ def requirements(fast=False, upgrade=False):
                        fast=fast, upgrade=upgrade,
                        sparks_roles=roles_to_run)
 
+def get_project_envs_dir():
+    """ Return the directory where env files are located.
 
-def push_environment_task(project_envs_dir, fast=False, force=False):
-    """ Push environment file (Fabric task). """
+    If none can be found , None is returned.
+
+    The environment file ``SPARKS_ENV_DIR`` must be defined prior to running
+    this function. It will be scanned and run through ``os.path.expand*()``
+    functions if needed.
+    """
+
+    envs_dir = os.environ.get('SPARKS_ENV_DIR', None)
+
+    if envs_dir is None:
+        LOGGER.warning('$SPARKS_ENV_DIR is not defined, will not push any '
+                       'environment file to any remote host.')
+        return
+
+    if u'~' in envs_dir:
+        envs_dir = os.path.expanduser(envs_dir)
+
+    if u'$' in envs_dir:
+        envs_dir = os.path.expandvars(envs_dir)
+
+    project_envs_dir = os.path.join(envs_dir, env.project)
+
+    if not os.path.exists(project_envs_dir):
+        LOGGER.warning('$SPARKS_ENV_DIR/{0} does not exist. Will not push any '
+                       'environment file to any remote host.'.format(
+                           env.project))
+        return None
+
+    return project_envs_dir
+
+
+def get_environment_file(project_envs_dir):
+    """ Try to find an environment shell file for the project.
+
+    This environment file is the one sourced before launching the Django
+    project, it contains the identifiers / passwords / private names that
+    must not be commited into the project sources files for obvious
+    security reasons.
+
+    If no env file can be found, None is returned.
+    """
 
     role_name = get_current_role()
-
-    not_found = True
 
     for env_file_candidate in (
         '{0}.env'.format(env.host_string.lower()),
@@ -1237,18 +1276,27 @@ def push_environment_task(project_envs_dir, fast=False, force=False):
         candidate_fullpath = os.path.join(project_envs_dir, env_file_candidate)
 
         if os.path.exists(candidate_fullpath):
-            put(candidate_fullpath, '.env')
-            not_found = False
-            break
+            return candidate_fullpath
 
-    if not_found:
+    return None
+
+
+def push_environment_task(project_envs_dir, fast=False, force=False):
+    """ Push environment file (Fabric task). """
+
+    environment_vars_file = get_environment_file(project_envs_dir)
+
+    if environment_vars_file:
+        put(environment_vars_file, '.env')
+
+    else:
         raise RuntimeError(u'$SPARKS_ENV_DIR is defined but no environment '
                            u'file matched {0} in {1}!'.format(env.host_string,
                                                               project_envs_dir))
 
     # Push a global SSH key too, to be able to execute remote
     # tasks (eg. from cron jobs) from any machine to any other.
-    #env_ssh_path = os.path.join(project_envs_dir, 'ssh/id_dsa')
+    # env_ssh_path = os.path.join(project_envs_dir, 'ssh/id_dsa')
 
     # if os.path.exists(env_ssh_path):
     #     if force or not exists('.ssh/id_dsa'):
@@ -1288,25 +1336,9 @@ def push_environment(fast=False, force=False):
 
     """
 
-    envs_dir = os.environ.get('SPARKS_ENV_DIR', None)
+    project_envs_dir = get_project_envs_dir()
 
-    if envs_dir is None:
-        LOGGER.warning('$SPARKS_ENV_DIR is not defined, will not push any '
-                       'environment file to any remote host.')
-        return
-
-    if u'~' in envs_dir:
-        envs_dir = os.path.expanduser(envs_dir)
-
-    if u'$' in envs_dir:
-        envs_dir = os.path.expandvars(envs_dir)
-
-    project_envs_dir = os.path.join(envs_dir, env.project)
-
-    if not os.path.exists(project_envs_dir):
-        LOGGER.warning('$SPARKS_ENV_DIR/{0} does not exist. Will not push any '
-                       'environment file to any remote host.'.format(
-                           env.project))
+    if project_envs_dir is None:
         return
 
     LOGGER.info('Pushing environment files…')
