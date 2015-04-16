@@ -940,7 +940,7 @@ class activate_venv(object):
         if env_file:
             LOGGER.info(u'Sourcing environment file %s', env_file)
 
-            base_prefix += '; . {0}'.format(env_file)
+            base_prefix += '; source {0}'.format(env_file)
 
         self.my_prefix = prefix(base_prefix)
 
