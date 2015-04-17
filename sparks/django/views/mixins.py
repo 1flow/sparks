@@ -198,10 +198,15 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
 
     You can specify:
 
-    - a :meth:`list_queryset_filter(self, qs)` method, that will
-      filter the model queryset exactly how you want.
-    - class.list_queryset_filter_user to ``False`` if you do not want to
-      filter the QS on the user field, against the self.request.user value.
+    - an optional fully custom :meth:`get_list_queryset` to generate the
+      listing queryset exactly as you need it.
+    - or an optional :meth:`list_queryset_filter(self, qs)` method, that
+      will filter the model queryset after the :meth:`get_context_data`
+      has generated a ``model.objects.all()`` and eventually filtered it
+      against the request user if the next class attribute is ``True``:
+    - a :attr:`list_queryset_filter_user` class attribute to ``False`` if
+      you do not want to filter the QS on the user field against the
+      ``self.request.user`` value.
       This filter is so common (only superusers get all "things") that it
       defaults to ``True``.
 
@@ -222,6 +227,16 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
         if object_list_name in kwargs:
             raise RuntimeError(u'Multiple instances of {0} in context!'.format(
                                object_list_name))
+
+        try:
+            # See if our class has a custom method to build the queryset.
+            kwargs[object_list_name] = self.get_list_queryset()
+
+        except AttributeError:
+            pass
+
+        else:
+            return super(ListCreateViewMixin, self).get_context_data(**kwargs)
 
         # We build an independant QuerySet; the CreateView part already
         # handles the main one, which with we must not interfere.
