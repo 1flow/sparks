@@ -196,10 +196,12 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
 
     Inspired from http://stackoverflow.com/a/12883683/654755
 
-    You can specify:
+    You can specify / create:
 
-    - an optional fully custom :meth:`get_list_queryset` to generate the
-      listing queryset exactly as you need it.
+    - either an optional fully custom :meth:`get_list_queryset` to generate
+      the listing queryset exactly as you need it. The returned queryset will
+      run through sort/filter methods, but not the
+      ``list_queryset_filter_user`` processing (see below).
     - or an optional :meth:`list_queryset_filter(self, qs)` method, that
       will filter the model queryset after the :meth:`get_context_data`
       has generated a ``model.objects.all()`` and eventually filtered it
@@ -230,17 +232,14 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
 
         try:
             # See if our class has a custom method to build the queryset.
-            kwargs[object_list_name] = self.get_list_queryset()
+            qs = self.get_list_queryset()
+            full_run = True
 
         except AttributeError:
-            pass
-
-        else:
-            return super(ListCreateViewMixin, self).get_context_data(**kwargs)
-
-        # We build an independant QuerySet; the CreateView part already
-        # handles the main one, which with we must not interfere.
-        qs = self.model.objects.all()
+            # We build an independant QuerySet; the CreateView part already
+            # handles the main one, which with we must not interfere.
+            qs = self.model.objects.all()
+            full_run = False
 
         # Call the SortMixin & FilterMixin methods on this alternate QS.
         qs = self.sort_queryset(
@@ -248,7 +247,7 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
                 qs, self.get_filter_param()),
             self.get_sort_params())
 
-        if self.list_queryset_filter_user:
+        if full_run and self.list_queryset_filter_user:
             try:
                 qs = qs.filter(user=self.request.user)
 
@@ -256,10 +255,14 @@ class ListCreateViewMixin(SortMixin, FilterMixin):
                 LOGGER.exception(u'Could not filter %s on user field '
                                  u'against %s', qs, self.request.user)
 
-        try:
-            kwargs[object_list_name] = self.list_queryset_filter(qs)
+        if full_run:
+            try:
+                kwargs[object_list_name] = self.list_queryset_filter(qs)
 
-        except AttributeError:
+            except AttributeError:
+                kwargs[object_list_name] = qs
+
+        else:
             kwargs[object_list_name] = qs
 
         return super(ListCreateViewMixin, self).get_context_data(**kwargs)
