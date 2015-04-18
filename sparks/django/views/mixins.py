@@ -105,8 +105,11 @@ class FilterMixin(object):
 
         kwargs[self.filter_url_get_key] = self.get_filter_param()
 
+        LOGGER.debug(u'FilterMixin: %s in context', self.filter_url_get_key)
+
         if hasattr(self, 'native_filters'):
             kwargs['native_filters'] = self.native_filters
+            LOGGER.debug(u'FilterMixin: native_filters in context')
 
         return super(FilterMixin, self).get_context_data(*args, **kwargs)
 
@@ -175,6 +178,8 @@ class SortMixin(object):
         """ Forward the sort parameter in the context. """
 
         kwargs[self.sort_url_get_key] = self.get_sort_params()
+
+        LOGGER.debug(u'SortMixin: %s in context', self.sort_url_get_key)
 
         return super(SortMixin, self).get_context_data(*args, **kwargs)
 
