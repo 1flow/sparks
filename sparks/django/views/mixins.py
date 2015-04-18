@@ -103,18 +103,12 @@ class FilterMixin(object):
     def get_context_data(self, *args, **kwargs):
         """ Forward the filter parameter in the context. """
 
-        context = super(FilterMixin, self).get_context_data(*args, **kwargs)
-
-        context.update({
-            self.filter_url_get_key: self.get_filter_param(),
-        })
+        kwargs[self.filter_url_get_key] = self.get_filter_param()
 
         if hasattr(self, 'native_filters'):
-            context.update({
-                'native_filters': self.native_filters
-            })
+            kwargs['native_filters'] = self.native_filters
 
-        return context
+        return super(FilterMixin, self).get_context_data(*args, **kwargs)
 
 
 class SortMixin(object):
@@ -180,12 +174,9 @@ class SortMixin(object):
     def get_context_data(self, *args, **kwargs):
         """ Forward the sort parameter in the context. """
 
-        context = super(SortMixin, self).get_context_data(*args, **kwargs)
+        kwargs[self.sort_url_get_key] = self.get_sort_params()
 
-        context.update({
-            self.sort_url_get_key: self.get_sort_params(),
-        })
-        return context
+        return super(SortMixin, self).get_context_data(*args, **kwargs)
 
 
 class ListCreateViewMixin(SortMixin, FilterMixin):
