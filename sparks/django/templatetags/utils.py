@@ -298,3 +298,13 @@ def prevcurnext(orig):
         + zip(orig, orig[1:], orig[2:])
         + [(orig[-2], orig[-1], None)]
     )
+
+
+@register.filter(name='sort')
+def listsort(value):
+    """ Sort a list. Anything else is returned untouched. """
+
+    if isinstance(value, list):
+        return sorted(value, key=lambda k: k[0])
+    else:
+        return value
