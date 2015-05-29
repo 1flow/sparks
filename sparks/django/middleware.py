@@ -3,6 +3,8 @@
 
 from threading import local
 
+from django.contrib.auth.models import AnonymousUser
+
 _user = local()
 
 
@@ -51,7 +53,14 @@ def get_current_user():
     """ Return current thread user, or None. """
 
     try:
-        return _user.value
+        user = _user.value
 
     except:
         return None
+
+    if isinstance(user, AnonymousUser):
+        # else this borks with
+        # http://sentry.codegastudio.com/televista/server/group/325/
+        return None
+
+    return user
