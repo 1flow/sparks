@@ -104,6 +104,7 @@ def NamedTupleChoices(name, *choices):
 
         __slots__ = ()
         _reverse = dict((value, aname) for aname, value, descr in choices)
+        _revsymb = dict((value, descr) for aname, value, descr in choices)
         _choices = tuple(descr for aname, value, descr in choices)
 
         def get_choices(self):
@@ -113,7 +114,10 @@ def NamedTupleChoices(name, *choices):
             return self._reverse[index]
 
         def get(self, index):
-            return self._choices[index]
+            try:
+                return self._choices[index]
+            except:
+                return self._revsymb[index]
 
     return Choices._make(tuple(value for aname, value, descr in choices))
 
