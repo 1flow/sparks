@@ -270,6 +270,24 @@ class IsSelfOrAdminOrReadOnly(permissions.DjangoObjectPermissions):
         return obj.id == request.user.id
 
 
+class IsSelfOrAdminOrAuthenticatedReadOnly(permissions.DjangoObjectPermissions):
+
+    """ Grant R/W to self and superusers/staff members, R/O to auth. """
+
+    def has_object_permission(self, request, view, obj):
+
+        user = request.user
+
+        if request.method in permissions.SAFE_METHODS:
+            if request.user.is_authenticated():
+                return True
+
+        if user.is_superuser or user.is_staff:
+            return True
+
+        return obj.id == request.user.id
+
+
 class IsAuthenticatedReadOnly(permissions.BasePermission):
 
     """ R/O to authenticated users. """
