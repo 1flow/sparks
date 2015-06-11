@@ -87,7 +87,7 @@ class IsAdminOrReadOnly(permissions.BasePermission):
 # ———————————————————————————————————————————————————————————————————— IsOwner*
 
 
-class IsOwner(permissions.DjangoObjectPermissions):
+class IsOwner(permissions.BasePermission):
 
     """ R/W to owner, nothing to any other.
 
@@ -101,6 +101,14 @@ class IsOwner(permissions.DjangoObjectPermissions):
         fields are compared. Eg. `instance.user` is not accessed, but
         `instance.user_id` instead.
     """
+
+    def has_permission(self, request, view):
+        """ Always return True here.
+
+        The fine-grained permissions are handled in has_object_permission().
+        """
+
+        return True
 
     def has_object_permission(self, request, view, obj):
 
@@ -212,7 +220,7 @@ class IsOwnerOrAdminOrReadOnly(IsOwnerOrAdmin):
 # ————————————————————————————————————————————————————————————————————— IsSelf*
 
 
-class IsSelf(permissions.DjangoObjectPermissions):
+class IsSelf(permissions.BasePermission):
 
     """ Grant permission only if the current instance is the request user.
 
@@ -220,11 +228,19 @@ class IsSelf(permissions.DjangoObjectPermissions):
     superusers).
     """
 
+    def has_permission(self, request, view):
+        """ Always return True here.
+
+        The fine-grained permissions are handled in has_object_permission().
+        """
+
+        return True
+
     def has_object_permission(self, request, view, obj):
         return obj.id == request.user.id
 
 
-class IsSelfOrReadOnly(permissions.DjangoObjectPermissions):
+class IsSelfOrReadOnly(IsSelf):
 
     """ Grant permissions if instance *IS* the request user, or read-only.
 
@@ -236,10 +252,10 @@ class IsSelfOrReadOnly(permissions.DjangoObjectPermissions):
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        return obj.id == request.user.id
+        return IsSelf.has_object_permission(self, request, view, obj)
 
 
-class IsSelfOrAdmin(permissions.DjangoObjectPermissions):
+class IsSelfOrAdmin(IsSelf):
 
     """ Grant R/W to self and superusers/staff members. Deny others. """
 
@@ -250,27 +266,22 @@ class IsSelfOrAdmin(permissions.DjangoObjectPermissions):
         if user.is_superuser or user.is_staff:
             return True
 
-        return obj.id == request.user.id
+        return IsSelf.has_object_permission(self, request, view, obj)
 
 
-class IsSelfOrAdminOrReadOnly(permissions.DjangoObjectPermissions):
+class IsSelfOrAdminOrReadOnly(IsSelfOrAdmin):
 
     """ Grant R/W to self and superusers/staff members, R/O to others. """
 
     def has_object_permission(self, request, view, obj):
 
-        user = request.user
-
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        if user.is_superuser or user.is_staff:
-            return True
-
-        return obj.id == user.id
+        return IsSelfOrAdmin.has_object_permission(self, request, view, obj)
 
 
-class IsSelfOrAdminOrAuthenticatedReadOnly(permissions.DjangoObjectPermissions):
+class IsSelfOrAdminOrAuthenticatedReadOnly(IsSelfOrAdmin):
 
     """ Grant R/W to self and superusers/staff members, R/O to auth. """
 
@@ -282,13 +293,10 @@ class IsSelfOrAdminOrAuthenticatedReadOnly(permissions.DjangoObjectPermissions):
             if user.is_authenticated():
                 return True
 
-        if user.is_superuser or user.is_staff:
-            return True
+        return IsSelfOrAdmin.has_object_permission(self, request, view, obj)
 
-        LOGGER.info('OBJ: %s, %s, USER: %s, %s',
-                    obj, obj.id, user, user.id)
 
-        return obj.id == user.id
+# ——————————————————————————————————————————————————————————— Other permissions
 
 
 class IsAuthenticatedReadOnly(permissions.BasePermission):
