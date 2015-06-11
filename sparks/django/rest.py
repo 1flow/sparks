@@ -267,7 +267,7 @@ class IsSelfOrAdminOrReadOnly(permissions.DjangoObjectPermissions):
         if user.is_superuser or user.is_staff:
             return True
 
-        return obj.id == request.user.id
+        return obj.id == user.id
 
 
 class IsSelfOrAdminOrAuthenticatedReadOnly(permissions.DjangoObjectPermissions):
@@ -279,13 +279,16 @@ class IsSelfOrAdminOrAuthenticatedReadOnly(permissions.DjangoObjectPermissions):
         user = request.user
 
         if request.method in permissions.SAFE_METHODS:
-            if request.user.is_authenticated():
+            if user.is_authenticated():
                 return True
 
         if user.is_superuser or user.is_staff:
             return True
 
-        return obj.id == request.user.id
+        LOGGER.info('OBJ: %s, %s, USER: %s, %s',
+                    obj, obj.id, user, user.id)
+
+        return obj.id == user.id
 
 
 class IsAuthenticatedReadOnly(permissions.BasePermission):
