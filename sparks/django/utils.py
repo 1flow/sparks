@@ -2,6 +2,7 @@
 """ Sparks Django utils. """
 
 # import uuid
+import time
 import logging
 
 from collections import namedtuple
@@ -177,3 +178,47 @@ class WithoutNoneFieldsSerializer(serializers.ModelSerializer):
         self.fields.update(removed_fields)
 
         return result
+
+
+def wait_for_redis(host=None, port=None, timeout=None, loopdelay=None):
+    """ Wait for Redis to be ready before continuing.
+
+    :param host: defaults to ``127.0.0.1``.
+    :type host: str or unicode.
+    :param port: defaults to 6379 if not given.
+    :type port: int
+    :param timeout: defaults to ``None`` (wait indefinitely).
+    :type timeout: int
+    :param loopdelay: time to wait between each poll. Defaults to ``0.1``.
+    :type loopdelay: float
+
+    Freely inspired from https://github.com/Stupeflix/waitredis/
+    """
+
+    # We import here to avoid depending on it directly in sparks.
+    # Projects calling this function will already depend on it.
+    import redis
+
+    if host is None:
+        host = '127.0.0.1'
+
+    if port is None:
+        port = 6379
+
+    if loopdelay is None:
+        loopdelay = 0.1
+
+    client = redis.StrictRedis(host=host, port=port)
+    start_time = time.time()
+
+    while (timeout is None or time.time() - start_time < timeout):
+        try:
+            client.dbsize()
+
+        except redis.ResponseError as exc:
+            if exc.args[0].startswith('LOADING'):
+                time.sleep(loopdelay)
+            else:
+                raise
+        else:
+            break
