@@ -6,7 +6,7 @@ from django.template.defaultfilters import filesizeformat
 from django.utils.translation import ugettext_lazy as _
 
 
-from .models import EmailUser
+from .models.emailuser import EmailUser
 
 
 class EmailUserCreationForm(forms.ModelForm):
