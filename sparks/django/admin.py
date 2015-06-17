@@ -16,6 +16,7 @@ from django.http import HttpResponseRedirect, Http404
 from django.shortcuts import get_object_or_404
 from django.contrib import admin
 from django.contrib import messages
+from django.contrib.admin.filters import SimpleListFilter
 from django.template.response import TemplateResponse
 from django.contrib.auth.forms import AdminPasswordChangeForm
 from django.utils.html import escape
@@ -198,3 +199,33 @@ class UserAdmin(admin.ModelAdmin):
 
         return super(UserAdmin, self).response_add(request, obj,
                                                    post_url_continue)
+
+
+class NullListFilter(SimpleListFilter):
+
+    """ Thanks http://stackoverflow.com/a/9593302/654755 . """
+
+    title = u''
+    parameter_name = u''
+    is_charfield = False
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ('1', _('Has value'), ),
+            ('0', _('None'), ),
+        )
+
+    def queryset(self, request, queryset):
+
+        kwargs = {
+            self.parameter_name: u'' if self.is_charfield else None,
+        }
+
+        if self.value() == '0':
+            return queryset.filter(**kwargs)
+
+        if self.value() == '1':
+            return queryset.exclude(**kwargs)
+
+        return queryset
