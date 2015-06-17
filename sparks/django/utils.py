@@ -180,7 +180,8 @@ class WithoutNoneFieldsSerializer(serializers.ModelSerializer):
         return result
 
 
-def wait_for_redis(host=None, port=None, timeout=None, loopdelay=None):
+def wait_for_redis(host=None, port=None, timeout=None,
+                   loopdelay=None, wait_start=False):
     """ Wait for Redis to be ready before continuing.
 
     :param host: defaults to ``127.0.0.1``.
@@ -191,6 +192,11 @@ def wait_for_redis(host=None, port=None, timeout=None, loopdelay=None):
     :type timeout: int
     :param loopdelay: time to wait between each poll. Defaults to ``0.1``.
     :type loopdelay: float
+    :param wait_start: also wait for redis to start, in case we get a
+        connection error. This helps when redis is on another machine that
+        will eventually start / restart after the current function is called.
+        Defaults to false though, as it not considered common case.
+    :type wait_start: bool
 
     Freely inspired from https://github.com/Stupeflix/waitredis/
     """
@@ -198,6 +204,11 @@ def wait_for_redis(host=None, port=None, timeout=None, loopdelay=None):
     # We import here to avoid depending on it directly in sparks.
     # Projects calling this function will already depend on it.
     import redis
+    from redis.exceptions import (
+        BusyLoadingError,
+        ResponseError,
+        ConnectionError
+    )
 
     if host is None:
         host = '127.0.0.1'
@@ -215,10 +226,22 @@ def wait_for_redis(host=None, port=None, timeout=None, loopdelay=None):
         try:
             client.dbsize()
 
-        except redis.ResponseError as exc:
+        except BusyLoadingError:
+            time.sleep(loopdelay)
+
+        except ResponseError as exc:
             if exc.args[0].startswith('LOADING'):
+                # Legacy way of handling things in `wait_redis`. We keep it
+                # just in case there is a problem with the previous case.
                 time.sleep(loopdelay)
             else:
                 raise
+
+        except ConnectionError:
+            if wait_start:
+                time.sleep(loopdelay)
+            else:
+                raise
+
         else:
             break
