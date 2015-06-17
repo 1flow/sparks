@@ -201,7 +201,7 @@ class UserAdmin(admin.ModelAdmin):
                                                    post_url_continue)
 
 
-class NullFilterSpec(SimpleListFilter):
+class NullListFilter(SimpleListFilter):
 
     """ Thanks http://stackoverflow.com/a/9593302/654755 . """
 
