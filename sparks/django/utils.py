@@ -116,9 +116,9 @@ def NamedTupleChoices(name, *choices):
 
         def get(self, index):
             try:
-                return self._choices[index]
-            except:
                 return self._revsymb[index]
+            except:
+                return self._choices[index]
 
     return Choices._make(tuple(value for aname, value, descr in choices))
 
