@@ -20,13 +20,20 @@ u""" Django REST Framework permissions, signals, utils.
     License along with sparks. If not, see http://www.gnu.org/licenses/
 """
 
+import os
 import logging
+import importlib
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save
+from django.utils.text import slugify
 
-from rest_framework import permissions
+from rest_framework import permissions, routers, viewsets
 from rest_framework.authtoken.models import Token
+# from rest_framework.response import Response
+# from rest_framework import status, mixins, authentication
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -351,3 +358,95 @@ def connect_create_drf_auth_token_to_user_post_save(UserClass=None):
 
     post_save.connect(create_drf_auth_token,
                       sender=UserClass or get_user_model())
+
+
+def autodiscover_api_resources(router=None):
+    """ Scan all api.py files in apps, and register them into a router. """
+
+    if router is None:
+        router = routers.DefaultRouter(trailing_slash=False)
+
+    PROJECT_NAME = os.path.basename(os.path.dirname(__file__))
+
+    if settings.DEBUG:
+        LOGGER.info(u'scanning for API resources…')
+
+    for app_name in settings.INSTALLED_APPS:
+        LOGGER.debug(u'Scanning app %s for API…', app_name)
+
+        api_module_path = os.path.join(
+            app_name.replace('.', os.path.sep), 'api')
+
+        api_init = os.path.join(api_module_path, '__init__.py')
+        api_py   = api_module_path + '.py'
+
+        LOGGER.debug(u'Introspecting app %s…\n'
+                     u'\t\t→ testing existence of %s: %s or %s: %s',
+                     app_name, api_init, os.path.exists(api_init),
+                     api_py, os.path.exists(api_py))
+
+        # Either we can have app/api/ or app/api.py
+        if os.path.exists(api_init) or os.path.exists(api_py):
+
+            module_name = '{}.api'.format(app_name)
+
+            LOGGER.debug(u'Introspecting app %s API → importing %s…',
+                         app_name, module_name)
+
+            apimod = importlib.import_module(module_name)
+
+            for objekt_name in (apimod.__all__ if hasattr(
+                                apimod, '__all__') else dir(apimod)):
+                objekt = getattr(apimod, objekt_name)
+
+                # LOGGER.debug(u'On %s (%s).', objekt, type(objekt))
+
+                try:
+                    # HEADS UP: ModelViewSet is not a subclass of ViewSet.
+                    #           ModelMixin is really the root of all.
+                    if issubclass(objekt, viewsets.ViewSetMixin):
+                        if hasattr(objekt, 'model'):
+                            objekt_model = objekt.model
+                        else:
+                            objekt_model = objekt.queryset.model
+
+                        # automatically create an API endpoint and base_name,
+                        # as many of our ViewSets do not have a .queryset.
+                        prefix = slugify(unicode(
+                            objekt_model._meta.verbose_name_plural)
+                        ).replace(u'-', u'')
+
+                        base_name = slugify(unicode(
+                            objekt_model._meta.verbose_name)
+                        ).replace(u'-', u'')
+
+                        try:
+                            router.register(prefix, objekt, base_name)
+
+                        except:
+                            LOGGER.exception(u'Unable to register %s in '
+                                             u'the API', objekt)
+                        else:
+                            if settings.DEBUG:
+                                LOGGER.info(
+                                    'Automatically registered %(module_name)s'
+                                    u'.%(class_name)s with prefix “%(prefix)s” '
+                                    u'and base_name “%(base_name)s” in the '
+                                    u'global API.' % {
+                                        'module_name': module_name,
+                                        'class_name': objekt_name,
+                                        'prefix': prefix,
+                                        'base_name': base_name
+                                    }
+                                )
+
+                except TypeError, e:
+                    if 'issubclass() arg 1 must be a class' not in str(e):
+                        LOGGER.exception('Exception while determining subclass '
+                                         'of %s.%s.', module_name, objekt_name)
+
+                except Exception:
+                    LOGGER.exception('Exception while determining subclass '
+                                     'of %s.%s.', module_name, objekt_name)
+
+    return router
