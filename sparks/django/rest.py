@@ -366,7 +366,7 @@ def autodiscover_api_resources(router=None):
     if router is None:
         router = routers.DefaultRouter(trailing_slash=False)
 
-    PROJECT_NAME = os.path.basename(os.path.dirname(__file__))
+    PROJECT_NAME = os.path.basename(settings.PROJECT_ROOT)
 
     if settings.DEBUG:
         LOGGER.info(u'scanning for API resources…')
