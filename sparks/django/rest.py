@@ -429,7 +429,7 @@ def autodiscover_api_resources(router=None):
                         else:
                             if settings.DEBUG:
                                 LOGGER.info(
-                                    'Automatically registered %(module_name)s'
+                                    u'Automatically registered %(module_name)s'
                                     u'.%(class_name)s with prefix “%(prefix)s” '
                                     u'and base_name “%(base_name)s” in the '
                                     u'global API.' % {
@@ -442,11 +442,12 @@ def autodiscover_api_resources(router=None):
 
                 except TypeError, e:
                     if 'issubclass() arg 1 must be a class' not in str(e):
-                        LOGGER.exception('Exception while determining subclass '
-                                         'of %s.%s.', module_name, objekt_name)
+                        LOGGER.exception(u'Exception while determining '
+                                         u'subclass of %s.%s.', module_name,
+                                         objekt_name)
 
                 except Exception:
-                    LOGGER.exception('Exception while determining subclass '
-                                     'of %s.%s.', module_name, objekt_name)
+                    LOGGER.exception(u'Exception while determining subclass '
+                                     u'of %s.%s.', module_name, objekt_name)
 
     return router
