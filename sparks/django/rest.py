@@ -29,7 +29,7 @@ from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save
 from django.utils.text import slugify
 
-from rest_framework import permissions, viewsets
+from rest_framework import permissions
 from rest_framework.authtoken.models import Token
 # from rest_framework.response import Response
 # from rest_framework import status, mixins, authentication
@@ -364,8 +364,12 @@ def autodiscover_api_resources(router=None):
     """ Scan all api.py files in apps, and register them into a router. """
 
     if router is None:
+        # Import it here to avoid an import loop with permissions.
         from rest_framework import routers
         router = routers.DefaultRouter(trailing_slash=False)
+
+    # Import it here to avoid an import loop with permissions.
+    from rest_framework import viewsets
 
     # PROJECT_NAME = os.path.basename(settings.PROJECT_ROOT)
 
