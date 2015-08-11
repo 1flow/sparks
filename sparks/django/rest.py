@@ -24,6 +24,9 @@ import os
 import logging
 import importlib
 
+from pytz import utc
+from datetime import datetime  # , timedelta
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save
@@ -36,6 +39,7 @@ from rest_framework.authtoken.models import Token
 
 
 LOGGER = logging.getLogger(__name__)
+EPOCH_UTC = datetime(1970, 1, 1, tzinfo=utc)
 
 
 # ———————————————————————————————————————————————————————————————————— IsAdmin*
@@ -236,7 +240,7 @@ class IsSelf(permissions.BasePermission):
     """
 
     def has_permission(self, request, view):
-        """ Always return True here.
+        """ OMG, always return True here.
 
         The fine-grained permissions are handled in has_object_permission().
         """
@@ -456,3 +460,12 @@ def autodiscover_api_resources(router=None):
                                      u'of %s.%s.', module_name, objekt_name)
 
     return router
+
+
+def totimestamp(dt, epoch=None):
+    """ Convert a datetime to a timestamp. """
+
+    td = dt - (epoch or EPOCH_UTC)
+    # return td.total_seconds()
+    return (td.microseconds + (td.seconds + td.days
+            * 24 * 3600) * 10 ** 6) / 1e6
