@@ -48,4 +48,4 @@ class M2MListFilter(django_filters.Filter):
             kwargs = {self.name: v}
             f |= Q(**kwargs)
 
-        return qs.filter(f)
+        return qs.filter(f).distinct()
