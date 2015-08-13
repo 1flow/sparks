@@ -208,12 +208,14 @@ class NullListFilter(SimpleListFilter):
     title = u''
     parameter_name = u''
     is_charfield = False
+    has_value_label = _('Has value')
+    no_value_label = _('None')
 
     def lookups(self, request, model_admin):
 
         return (
-            ('1', _('Has value'), ),
-            ('0', _('None'), ),
+            ('1', self.has_value_label, ),
+            ('0', self.no_value_label, ),
         )
 
     def queryset(self, request, queryset):
