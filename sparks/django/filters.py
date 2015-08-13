@@ -27,10 +27,13 @@ class M2MListFilter(django_filters.Filter):
 
     """ A filter that can span across M2M relationships with =1,2,3 syntax. """
 
-    def __init__(self, filter_value=lambda x: x, **kwargs):
+    def __init__(self, filter_value=lambda x: x,
+                 empty_returns_nothing=False,
+                 **kwargs):
         """ Pep257, would you please stop bugging me about inits. """
         super(M2MListFilter, self).__init__(**kwargs)
         self.filter_value_fn = filter_value
+        self.empty_returns_nothing = empty_returns_nothing
 
     def sanitize(self, value_list):
         """ Return only non-empty values. """
@@ -42,7 +45,11 @@ class M2MListFilter(django_filters.Filter):
         values = self.sanitize(value.split(u","))
 
         if not values:
-            return qs
+            if self.empty_returns_nothing:
+                return qs.none()
+
+            else:
+                return qs
 
         values = map(self.filter_value_fn, values)
 
