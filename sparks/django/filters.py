@@ -40,6 +40,10 @@ class M2MListFilter(django_filters.Filter):
         """ Filter the QS. """
 
         values = self.sanitize(value.split(u","))
+
+        if not values:
+            return qs
+
         values = map(self.filter_value_fn, values)
 
         f = Q()
