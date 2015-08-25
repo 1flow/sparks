@@ -5,13 +5,17 @@
 import time
 import logging
 
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 
 from django.http import HttpResponse
 from django.conf import settings
 
 from rest_framework import serializers
-
+try:
+    from rest_framework.fields import SkipField
+except:
+    # Doesn't exist in DRF 2.x
+    pass
 
 LOGGER = logging.getLogger(__name__)
 
@@ -140,6 +144,8 @@ class WithoutNoneFieldsSerializer(serializers.ModelSerializer):
         """ Remove all ``None`` fields from serialized JSON.
 
         .. todo:: the action test is probably superfluous.
+
+        for DRF 2.x
         """
 
         try:
@@ -187,8 +193,32 @@ class WithoutNoneFieldsSerializer(serializers.ModelSerializer):
 
         return result
 
-    # DRF 3.x compat.
-    to_representation = to_native
+    def to_representation(self, instance):
+        """ Object instance -> Dict of primitive datatypes. For DRF 3.x. """
+
+        ret = OrderedDict()
+
+        fields = [field for field in self.fields.values()
+                  if not field.write_only]
+
+        for field in fields:
+            try:
+                attribute = field.get_attribute(instance)
+            except SkipField:
+                continue
+
+            if attribute is not None:
+                representation = field.to_representation(attribute)
+                if representation is None:
+                    # Do not seralize empty objects
+                    continue
+                if isinstance(representation, list) and not representation:
+                    # Do not serialize empty lists
+                    continue
+
+                ret[field.field_name] = representation
+
+        return ret
 
 
 def wait_for_redis(host=None, port=None, timeout=None,
