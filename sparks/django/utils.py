@@ -187,6 +187,9 @@ class WithoutNoneFieldsSerializer(serializers.ModelSerializer):
 
         return result
 
+    # DRF 3.x compat.
+    to_representation = to_native
+
 
 def wait_for_redis(host=None, port=None, timeout=None,
                    loopdelay=None, wait_start=False):
