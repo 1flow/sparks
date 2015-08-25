@@ -132,6 +132,10 @@ class WithoutNoneFieldsSerializer(serializers.ModelSerializer):
     Source: https://gist.github.com/Karmak23/5a40beb1e18da7a61cfc
     """
 
+    # used on subclasses to remove fields that are ''.
+    # None is remove by default, because '' could be an expected value.
+    remove_empty_fields = []
+
     def to_native(self, obj):
         """ Remove all ``None`` fields from serialized JSON.
 
@@ -163,7 +167,11 @@ class WithoutNoneFieldsSerializer(serializers.ModelSerializer):
 
                     else:
                         try:
-                            if getattr(obj, field_name) is None:
+                            attr_val = getattr(obj, field_name)
+
+                            if attr_val is None \
+                                or field_name in self.remove_empty_fields \
+                                    and attr_val == '':
                                 removed_fields[field_name] = \
                                     self.fields.pop(field_name)
                         except:
