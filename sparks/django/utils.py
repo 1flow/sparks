@@ -214,7 +214,7 @@ class WithoutNoneFieldsSerializer(serializers.ModelSerializer):
                     continue
 
                 if representation == '' \
-                        and field.name in self.remove_empty_fields:
+                        and field.field_name in self.remove_empty_fields:
                     continue
 
                 if isinstance(representation, list) and not representation:
