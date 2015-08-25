@@ -212,6 +212,11 @@ class WithoutNoneFieldsSerializer(serializers.ModelSerializer):
                 if representation is None:
                     # Do not seralize empty objects
                     continue
+
+                if representation == '' \
+                        and field.name in self.remove_empty_fields:
+                    continue
+
                 if isinstance(representation, list) and not representation:
                     # Do not serialize empty lists
                     continue
